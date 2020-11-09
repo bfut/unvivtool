@@ -1,0 +1,6 @@
+/release/
+/test/bin/
+/test/examples/car_*
+/test/examples/foo*
+unvivtool
+*.exe
