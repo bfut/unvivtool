@@ -1,5 +1,5 @@
 /*
-  unvivtool.c - VIV/BIG decoder/encoder CLI
+  unvivtool.c - Viv/Big decoder/encoder CLI
   unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright other contributors, see below.
@@ -25,11 +25,13 @@
 
   For usage see README.md or run the executable without any parameters.
 
+  TODO:
+
   BUILD:
   - Linux:
-      gcc -std=c89 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool2.c -o unvivtool
+      gcc -std=c89 -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool.c -o unvivtool
   - Win32: cross-compile on Linux with MinGW
-      i686-w64-mingw32-gcc -std=c89 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool.c -o unvivtool.exe
+      i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
  **/
 
 #define UNVIVTOOL
@@ -40,24 +42,35 @@
 
 void Usage()
 {
-  fprintf(stderr, "\n"
+  fprintf(stdout, "\n"
                   "Usage: unvivtool e [<options>...] <output.viv> [<input_files>...]\n"
                   "       unvivtool d [<options>...] <input.viv> [<output_directory>]\n"
-                  "       unvivtool p <input.viv>\n"
                   "\n"
                   "Commands:\n"
                   "  e        encode files in new archive\n"
-                  "  d        decode archive, extract to directory\n"
-                  "  p        print archive contents\n"
+                  "  d        decode and extract archive\n"
                   "\n"
                   "Options:\n"
-                  "  -o       overwrite existing output directory or file\n"
-                  "  -v       verbose\n");
+                  "  -o       overwrite existing\n"
+                  "  -p       print archive contents, do not write to disk\n"
+                  "  -v       verbose\n"
+                  "  -strict  extra format checks\n"
+/*                   "  -n       no format checks (unsafe)\n" */
+                  );
 }
 
 int SanityCheck()  /* Copyright (C) Denis Auroux 1998-2002 (GPLv2) */
 {
   int x;
+
+  /* Is little-endian? */
+  x = 0;
+  *((char *)(&x)) = 1;
+  if (x != 1)
+  {
+    fprintf(stderr, "Problem: incorrect endianness on this architecture\n");
+    return 0;
+  }
 
   if (sizeof(int) != 4)
   {
@@ -72,18 +85,9 @@ int SanityCheck()  /* Copyright (C) Denis Auroux 1998-2002 (GPLv2) */
   }
 
   if ((sizeof(struct VivHeader) != 16) ||
-      (sizeof(struct VivDirectory) != 8 + FILENAME_MAX_SIZE))
+      (sizeof(struct VivDirEntry) != 8 + kFileNameMaxSize))
   {
     fprintf(stderr, "Problem: structs are not correctly packed\n");
-    return 0;
-  }
-
-  /* Is little-endian? */
-  x = 0;
-  * ((char *)(&x)) = 1;
-  if (x != 1)
-  {
-    fprintf(stderr, "Problem: incorrect endianness on this architecture\n");
     return 0;
   }
 
@@ -114,11 +118,14 @@ char *CreateOutfolder(char *name, const int increment)  /* modified from FSHTool
       }
       if (j == 10)
       {
+        fprintf(stderr, "\nCannot create incremented output directory %s ", name);
+        name[i] = 0;
+        fprintf(stderr, "while %s already exists\n", name);
         free(name);
-        fprintf(stderr, "\nCould not create incremented output directory names.\n");
         return 0;
       }
     }
+    /* else: keep existing */
   }
 
   return name;
@@ -167,7 +174,8 @@ int main(int argc, char **argv)
   int overwrite;
   char *p;
 
-  fprintf(stdout, "unvivtool 1.0RC2 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-09\n");
+  fprintf(stdout, "==========================================================================\n"
+                  "unvivtool 1.0RC4 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-15\n");
 
   if (argc < 3)
   {
@@ -175,10 +183,15 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  if (!SanityCheck()) return -1;
+  if (!SanityCheck())
+    return -1;
 
   overwrite = 0;
   libnfsviv_verbose = 0;
+  libnfsviv_dryrun = 0;
+  libnfsviv_nochecks = 0;
+  libnfsviv_strictchecks = 0;
+
   count_options = 0;
 
   for (i = 2; i < argc; ++i)
@@ -188,6 +201,26 @@ int main(int argc, char **argv)
     if (!strcmp(argv[i], "-o"))
     {
       overwrite = 1;
+      ++count_options;
+    }
+    else if (!strcmp(argv[i], "-p"))
+    {
+      fprintf(stderr, "Begin dry run\n");
+
+      libnfsviv_dryrun = 1;
+      libnfsviv_verbose = 1;
+      ++count_options;
+    }
+    else if (!strcmp(argv[i], "-strict"))
+    {
+      libnfsviv_strictchecks = 1;
+      ++count_options;
+    }
+    else if (!strcmp(argv[i], "-n"))
+    {
+      fprintf(stderr, "No format checks\n");
+
+      libnfsviv_nochecks = 1;
       ++count_options;
     }
     else if (!strcmp(argv[i], "-v"))
@@ -201,33 +234,35 @@ int main(int argc, char **argv)
       Usage();
       return -1;
     }
+    else if (p[0] == '&' || p[0] == '(' || p[0] == ')' || p[0] == ';' ||
+             p[0] == '|' || p[0] == '{' || p[0] == '}' || p[0] == '>')
+    {
+      argc = ++i;
+      break;
+    }
     else break;
-  }
-
-  /* Decoder dry-run */
-  if (!strcmp(argv[1], "p") && (argc > count_options + 2))
-  {
-    libnfsviv_print_content = 1;
-    libnfsviv_verbose = 1;
-
-    if (Unviv(argv[count_options + 2], 0))
-      return -1;
-
-    return 0;
   }
 
   /* e outfile name, d outfolder name */
   p = argv[count_options + 2];
-  length = strlen(p);
-  if (length < 5)
+  if (!p)
   {
-    fprintf(stderr, "Filename '%s' too short.\n", p);
-    return 1;
-  }
-  if (p[length - 4] != '.')
-  {
-    fprintf(stderr, "Expects filename extension '.viv' or '.big' for %s \n", p);
+    Usage();
     return -1;
+  }
+  length = strlen(p);
+  if (!libnfsviv_dryrun)
+  {
+    if (length < 5)
+    {
+      fprintf(stderr, "Filename '%s' too short\n", p);
+      return 1;
+    }
+    if (p[length - 4] != '.')
+    {
+      fprintf(stderr, "Expects filename extension '.viv' or '.big' for %s\n", p);
+      return -1;
+    }
   }
 
   /* Encoder */
@@ -235,9 +270,9 @@ int main(int argc, char **argv)
   {
     /* Set outpath from outfile */
     p = argv[count_options + 2];
-    length = strlen(p);  /* not counting nul */
+    length = strlen(p);
 
-    outpath = (char *) malloc(length + 3);
+    outpath = (char *)malloc(length + 3);
     if (!outpath)
     {
       fprintf(stderr, "Not enough memory\n");
@@ -247,7 +282,7 @@ int main(int argc, char **argv)
     memset(outpath, 0, length + 3);
     memcpy(outpath, p, length);
 
-    if (!overwrite)
+    if (!overwrite && !libnfsviv_dryrun)
     {
       outpath = IncrementFilename(outpath, length - 4);
       if (!outpath)
@@ -257,13 +292,14 @@ int main(int argc, char **argv)
       }
     }
 
-    if (Viv(outpath, (const char **) &argv[count_options + 3], argc - count_options - 3))
+    if (Viv(outpath, (const char **)&argv[count_options + 3], argc - count_options - 3))
     {
       fprintf(stdout, "Encoder failed.\n");
       free(outpath);
       return -1;
     }
     fprintf(stdout, "Encoder successful.\n");
+
     free(outpath);
   }
 
@@ -273,33 +309,58 @@ int main(int argc, char **argv)
     /* Set outpath from optional outfolder or infile */
     p = argv[count_options + 3];
     if (!p)
-    {
       p = argv[count_options + 2];
-    }
+    else if (!strcmp(p, "."))
+      ++p;  /* outpath will be current working dir */
+
     length = strlen(p);
-    outpath = (char *) malloc(length + 3);  /* + 3 for increment + nul */
-    if (!outpath)
-    {
-      fprintf(stderr, "Not enough memory\n");
-      return -1;
-    }
-    memset(outpath, 0, length + 3);
-    strcpy(outpath, p);
-    if (!argv[count_options + 3])
-      outpath[length - 4] = '_';
 
-    outpath = CreateOutfolder(outpath, !overwrite);
-    if (!outpath)
+    if (length == 0)
     {
-      fprintf(stderr, "Target path might be read-only.\n");
-      if (!argv[count_options + 3])
+      length = 220;
+
+      outpath = (char *)malloc(length);
+      if (!outpath)
       {
-        fprintf(stderr, "Please specify an output directory or overwrite with option '-o'\n");
+        fprintf(stderr, "Not enough memory\n");
+        return -1;
       }
-      return -1;
+
+      if (!getcwd(outpath, (size_t)length))
+      {
+        fprintf(stderr, "Cannot get current working directory\n");
+        return -1;
+      }
+    }
+    else
+    {
+      outpath = (char *)malloc(length + 3);  /* + 3 for increment + nul */
+      if (!outpath)
+      {
+        fprintf(stderr, "Not enough memory\n");
+        return -1;
+      }
+
+      memset(outpath, 0, length + 3);
+      strcpy(outpath, p);
+
+      if (!argv[count_options + 3])
+        outpath[length - 4] = '_';
+
+      if (!libnfsviv_dryrun)
+      {
+        outpath = CreateOutfolder(outpath, !overwrite);
+        if (!outpath)
+        {
+          fprintf(stderr, "Please specify an output directory or overwrite with option '-o'\n");
+          return -1;
+        }
+      }
     }
 
-    /* Decode */
+    fprintf(stdout, "\n"
+                    "Extracting to: %s\n", outpath);
+
     if (Unviv(argv[count_options + 2], outpath))
     {
       fprintf(stdout, "Decoder failed.\n");

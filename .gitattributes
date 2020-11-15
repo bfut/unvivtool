@@ -1,0 +1,14 @@
+*        -text
+*.c      text=auto
+*.cpp    text=auto
+*.cc     text=auto
+*.h      text=auto
+*.hpp    text=auto
+
+*.txt    text=auto
+
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+*.sh                text eol=lf
+Makefile            text eol=lf

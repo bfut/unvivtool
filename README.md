@@ -1,14 +1,14 @@
 # VIV/BIG decoder/encoder
-unvivtool - command-line tool for Windows, and Linux  
-libnfsviv.h - implements viv/big decoding/encoding
+unvivtool - command-line tool for Windows, and Linux (GPLv3)  
+libnfsviv.h - implements viv/big decoding/encoding (MIT License)
 
-Compiles in C89, and C++.
+Should compile without warnings in C89, and C++.
 
 ## Installation
 
 #### Linux:
 
-Run the following from a terminal app:
+Run the following commands from a terminal app:
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git
@@ -22,7 +22,7 @@ With MinGW installed on your system, run the following commands to cross-compile
        cd ~
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       i686-w64-mingw32-gcc -std=c89 -s -O2 unvivtool.c -o unvivtool.exe
+       i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
 
 
 ## Usage
@@ -30,46 +30,51 @@ With MinGW installed on your system, run the following commands to cross-compile
 ```
 Usage: unvivtool e [<options>...] <output.viv> [<input_files>...]
        unvivtool d [<options>...] <input.viv> [<output_directory>]
-       unvivtool p <input.viv>
 
 Commands:
   e        encode files in new archive
-  d        decode archive, extract to directory
-  p        print archive contents
+  d        decode and extract archive
 
 Options:
-  -o       overwrite existing output directory or file
+  -o       overwrite existing
+  -p       print archive contents, do not write to disk
   -v       verbose
+  -strict  extra format checks
 ```
+A batch script can be found in ```./stuff```
 
 ## Examples
 
 ```
 EXAMPLE 1
-      unvivtool.exe d CAR.VIV
+      unvivtool d CAR.VIV
       
-            decodes and extracts all files from archive "CAR.VIV" to folder "CAR_VIV".
-            when folder "CAR_VIV" already exists, increments foldername to "CAR_VIV_1"
+            decodes and extracts all files from archive "CAR.VIV" to folder 
+            "CAR_VIV". when folder "CAR_VIV" already exists, increments 
+            foldername to "CAR_VIV_1"
 ```
 ```
 EXAMPLE 2
-      unvivtool.exe d -v -o CAR.VIV FOO
+      unvivtool d -p CAR.VIV
       
-            decodes and extracts all files from archive "CAR.VIV" to folder "FOO"
-            
-      -v    prints a message for each step
-      
-      -o    overwrites files in folder "FOO", if it exists
+      -p    prints contents of archive "CAR.VIV", does not write to disk
 ```
 ```
 EXAMPLE 3
-      unvivtool.exe p CAR.VIV
+      unvivtool d -v -o CAR.VIV FOO
       
-            prints contents of archive "CAR.VIV", does not write disk
+            decodes and extracts all files from archive "CAR.VIV" to folder 
+            "FOO"
+            
+      -v    verbose
+      
+      -o    overwrites files in folder "FOO", if they exist. "FOO" is relative
+            to current working directory.
 ```
 ```
 EXAMPLE 4
-      unvivtool.exe e CAR.VIV car.fce car00.tga carp.txt fedata.fsh fedata.eng
+      unvivtool e CAR.VIV car.fce car00.tga carp.txt fedata.fsh fedata.eng
 
-            encodes minimum needed files for NFS3 car in a new archive file "CAR.VIV"
+            encodes minimum needed files for an NFS3 car in a new archive file 
+            "CAR.VIV"
 ```
