@@ -1,5 +1,5 @@
 /*
-  unvivtool.c - Viv/Big decoder/encoder CLI
+  unvivtool.c - VIV/BIG decoder/encoder CLI
   unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright other contributors, see below.
@@ -21,11 +21,7 @@
 
 /**
   unvivtool.c - command-line tool for Windows, and Linux (GPLv3)
-  libnfsviv.h - implements VIV/BIG decoding/encoding (MIT License)
-
-  For usage see README.md or run the executable without any parameters.
-
-  TODO:
+  libnfsviv.h - implements VIV/BIG decoding/encoding (zlib License)
 
   BUILD:
   - Linux:
@@ -37,6 +33,7 @@
 #define UNVIVTOOL
 
 #include <stdio.h>
+#include <ctype.h>  /* isdigit */
 
 #include "libnfsviv.h"
 
@@ -47,47 +44,43 @@ void Usage()
                   "       unvivtool d [<options>...] <input.viv> [<output_directory>]\n"
                   "\n"
                   "Commands:\n"
-                  "  e        encode files in new archive\n"
-                  "  d        decode and extract archive\n"
-                  "\n"
-                  "Options:\n"
-                  "  -o       overwrite existing\n"
-                  "  -p       print archive contents, do not write to disk\n"
-                  "  -v       verbose\n"
-                  "  -strict  extra format checks\n"
+                  "  e             encode files in new archive\n"
+                  "  d             decode and extract archive\n"
+                  "\n");
+  fprintf(stdout, "Options:\n"
+                  "  -o            overwrite existing\n"
+                  "  -p            print archive contents, do not write to disk\n"
+                  "  -v            verbose\n"
+                  "  -strict       extra format checks\n"
+                  "  -fn <name>    decode file <name> (cAse-sEnsitivE) from archive (overrides -id)\n"
+                  "  -id #         decode file at index (1-based)\n"
+                  "  -fs #         decode single file with filesize (requires either -fn or -id)\n"
+                  "  -fofs #       decode file at offset (requires either -fn or -id)\n"
 /*                   "  -n       no format checks (unsafe)\n" */
                   );
 }
 
-int SanityCheck()  /* Copyright (C) Denis Auroux 1998-2002 (GPLv2) */
+int SanityCheck()
 {
   int x;
 
-  /* Is little-endian? */
   x = 0;
   *((char *)(&x)) = 1;
   if (x != 1)
   {
-    fprintf(stderr, "Problem: incorrect endianness on this architecture\n");
+    fprintf(stderr, "architecture is not little-endian\n");
     return 0;
   }
 
   if (sizeof(int) != 4)
   {
-    fprintf(stderr, "Problem: int is not 32-bit\n");
+    fprintf(stderr, "int is not 32-bit\n");
     return 0;
   }
 
-  if (sizeof(short)!=2)
+  if (sizeof(short) != 2)
   {
-    fprintf(stderr, "Problem: short is not 16-bit\n");
-    return 0;
-  }
-
-  if ((sizeof(struct VivHeader) != 16) ||
-      (sizeof(struct VivDirEntry) != 8 + kFileNameMaxSize))
-  {
-    fprintf(stderr, "Problem: structs are not correctly packed\n");
+    fprintf(stderr, "short is not 16-bit\n");
     return 0;
   }
 
@@ -173,9 +166,14 @@ int main(int argc, char **argv)
   int i;
   int overwrite;
   char *p;
+  char request_file_name[kLibnfsvivFilenameMaxLen];
+  int request_file_idx = 0;
+  int request_file_size = 0;
+  int request_file_offset = 0;
+
 
   fprintf(stdout, "==========================================================================\n"
-                  "unvivtool 1.0RC4 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-15\n");
+                  "unvivtool 1.0RC6 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-23\n\n");
 
   if (argc < 3)
   {
@@ -194,11 +192,99 @@ int main(int argc, char **argv)
 
   count_options = 0;
 
+  memset(request_file_name, 0, kLibnfsvivFilenameMaxLen);
+
   for (i = 2; i < argc; ++i)
   {
     p = argv[i];
 
-    if (!strcmp(argv[i], "-o"))
+    if (!strcmp(argv[i], "-fn"))
+    {
+      ++count_options;
+      ++i;
+
+      if (i < argc)
+      {
+        if (!sscanf(argv[i], "%s", request_file_name))
+        {
+          Usage();
+          return -1;
+        }
+
+        fprintf(stdout, "Requested file: %s\n", request_file_name);
+        ++count_options;
+      }
+      else
+      {
+        Usage();
+        return -1;
+      }
+    }
+    else if (!strcmp(argv[i], "-id"))
+    {
+      ++count_options;
+      ++i;
+
+      if (i < argc)
+      {
+        if (!sscanf(argv[i], "%d", &request_file_idx))
+        {
+          Usage();
+          return -1;
+        }
+
+        fprintf(stdout, "Requested file at index: %d\n", request_file_idx);
+        ++count_options;
+      }
+      else
+      {
+        Usage();
+        return -1;
+      }
+    }
+    else if (!strcmp(argv[i], "-fs"))
+    {
+      ++count_options;
+      ++i;
+
+      if (i < argc)
+      {
+        if (!sscanf(argv[i], "%d", &request_file_size))
+        {
+          Usage();
+          return -1;
+        }
+        fprintf(stdout, "Requested file with size: %d\n", request_file_size);
+        ++count_options;
+      }
+      else
+      {
+        Usage();
+        return -1;
+      }
+    }
+    else if (!strcmp(argv[i], "-fofs"))
+    {
+      ++count_options;
+      ++i;
+
+      if (i < argc)
+      {
+        if (!sscanf(argv[i], "%d", &request_file_offset))
+        {
+          Usage();
+          return -1;
+        }
+        fprintf(stdout, "Requested file at offset: %d\n", request_file_offset);
+        ++count_options;
+      }
+      else
+      {
+        Usage();
+        return -1;
+      }
+    }
+    else if (!strcmp(argv[i], "-o"))
     {
       overwrite = 1;
       ++count_options;
@@ -240,7 +326,8 @@ int main(int argc, char **argv)
       argc = ++i;
       break;
     }
-    else break;
+    else
+      break;
   }
 
   /* e outfile name, d outfolder name */
@@ -292,7 +379,10 @@ int main(int argc, char **argv)
       }
     }
 
-    if (Viv(outpath, (const char **)&argv[count_options + 3], argc - count_options - 3))
+    fprintf(stdout, "\n"
+                    "Creating archive: %s\n", outpath);
+
+    if (Viv(outpath, &argv[count_options + 3], argc - count_options - 3))
     {
       fprintf(stdout, "Encoder failed.\n");
       free(outpath);
@@ -308,6 +398,7 @@ int main(int argc, char **argv)
   {
     /* Set outpath from optional outfolder or infile */
     p = argv[count_options + 3];
+
     if (!p)
       p = argv[count_options + 2];
     else if (!strcmp(p, "."))
@@ -359,9 +450,12 @@ int main(int argc, char **argv)
     }
 
     fprintf(stdout, "\n"
-                    "Extracting to: %s\n", outpath);
+                    "Archive: %s\n", argv[count_options + 2]);
+    fprintf(stdout, "Extracting to: %s\n", outpath);
 
-    if (Unviv(argv[count_options + 2], outpath))
+    if (Unviv(argv[count_options + 2], outpath,
+              request_file_idx, request_file_name,
+              request_file_size, request_file_offset))
     {
       fprintf(stdout, "Decoder failed.\n");
       rmdir(outpath);  /* Try cleaning up. */
