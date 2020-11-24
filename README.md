@@ -2,16 +2,16 @@
 unvivtool - command-line tool for Windows, and Linux (GPLv3)  
 libnfsviv.h - implements VIV/BIG decoding/encoding (zlib License)
 
-A portable, open-source approach with permissive license.
+Portable, open-source approach under a permissive license.
 
 Features:
 
  * decodes/encodes dozens of archives in a tenth of a second via batch script
  * dry run option lists archive's contents
- * decodes an entire archive at once or removes a single file either by index or
-   by filename
- * surgically decodes a single file, from archive with broken header, by offset
-   and filesize
+ * decodes an entire archive at once or retrieves a single file either by index or by
+   filename
+ * surgically retrieve a single file, from archive with broken header, by offset
+   and/or filesize
    
 ## Installation
 
@@ -19,11 +19,6 @@ Features:
 
 Download the latest release and extract ```unvivtool.exe``` to the directory of
 your choice.
-
-```
-sha256sum:  <hash>  unvivtool
-md5sum:     <hash>  unvivtool
-```
 
 #### Linux:
 
@@ -36,13 +31,13 @@ Run the following commands from a terminal app:
 
 #### Build for Windows
 
-The released win32 executables are cross-compiled on Linux with MinGW by running
-the following commands:
+The released win32 executables have been cross-compiled on Linux with MinGW 
+by running the following commands from a terminal app:
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
+       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
 
 ## Usage
 
@@ -64,7 +59,7 @@ Options:
   -fs #         decode single file with filesize (requires either -fn or -id)
   -fofs #       decode file at offset (requires either -fn or -id)
 ```
-Batch scripts are provided in the ```batch``` folder. Recommended for encoding.
+Batch scripts are provided in the ```batch``` folder.
 
 ## Examples
 

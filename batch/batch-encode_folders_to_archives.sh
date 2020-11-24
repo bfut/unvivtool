@@ -2,30 +2,29 @@
 
 DESCRIPTION="loop subdirectories of current_working_dir/$INPATH named car_viv, encode all files to respective car.viv archives     NB: add option -p for dry run"
 
-"backups save!"
-
-
-# Full Example:
+# Example:
 #
 #   current working directory: carmodel
 #
-# carmodel
-# |     --/cout/
+# carmodel/
+# |     -- cout/
 #          | -- car.viv
-# |     --/...
+# |     -- ...
 # After running batch-decode_archives_to_folders.sh, you may have this
-# carmodel
-# |     --/cout/
+# carmodel/
+# |     -- cout/
 #          | -- car.viv
 #          | -- car_viv/
 #               |    -- car.fce
 #               |    -- car00.tga
 #               |       ...
-# |     --/...
-# Running this script, batch-encode_folders_to_archives.sh, 
+# |     -- ...
+# Running this script, batch-encode_folders_to_archives.sh,
 # all files from the car_viv directories will be encoded, overwriting car.viv
 # archives, respectively.
 
+
+"backups save!"
 
 
 clear

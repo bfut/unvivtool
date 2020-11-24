@@ -1,5 +1,5 @@
 /*
-  libnfsviv.h - 2020-11-23
+  libnfsviv.h - 2020-11-24
   Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   This software is provided 'as-is', without any express or implied

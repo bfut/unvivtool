@@ -172,8 +172,8 @@ int main(int argc, char **argv)
   int request_file_offset = 0;
 
 
-  fprintf(stdout, "==========================================================================\n"
-                  "unvivtool 1.0RC6 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-23\n\n");
+  fprintf(stdout, "=======================================================================\n"
+                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-24\n\n");
 
   if (argc < 3)
   {

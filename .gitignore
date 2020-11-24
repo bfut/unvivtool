@@ -1,5 +1,5 @@
 /release/
-/test/bin/
+/test/bin/*
 /test/examples/
 unvivtool
 *.exe
