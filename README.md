@@ -6,12 +6,12 @@ Portable, open-source approach under a permissive license.
 
 Features:
 
- * decodes/encodes dozens of archives in a tenth of a second via batch script
+ * decodes/encodes dozens of archives at once with batch script
  * dry run option lists archive's contents
  * decodes an entire archive at once or retrieves a single file either by index or by
    filename
- * surgically retrieve a single file, from archive with broken header, by offset
-   and/or filesize
+ * surgically retrieve a single file, by offset and/or filesize, from archive with 
+   broken header
    
 ## Installation
 
@@ -31,8 +31,7 @@ Run the following commands from a terminal app:
 
 #### Build for Windows
 
-The released win32 executables have been cross-compiled on Linux with MinGW 
-by running the following commands from a terminal app:
+Executables for Win32 are cross-compiled on Linux with MinGW:
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git
@@ -106,7 +105,7 @@ EXAMPLE 4
 
 ## References
 
-McMullen et al. [1998]: [_The unofficial Need For Speed III file format specifications - Version 1.0_](/stuff/unofficial_nfs3_file_specs_10%2Bbf1.txt)
+Auroux et al. [1998]: [_The unofficial Need For Speed III file format specifications - Version 1.0_](/stuff/unofficial_nfs3_file_specs_10%2Bbf1.txt)
 
 ## Website
 
