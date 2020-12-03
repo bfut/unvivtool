@@ -10,22 +10,22 @@ clear
 SCRIPT_PATH="${0%/*}"
 
 EXE="unvivtool"
-OPTIONS="d -o -p"
+OPTIONS="d -o "
 
 
 INPATH='*/*'    # '*/*' looks for archives in subdirectories of current working directory
 OUTPATH=$SCRIPT_PATH/out
 
-mkdir $OUTPATH
+#mkdir $OUTPATH
 
 
 for FILE in $INPATH
 do
-  if [ "${FILE##*/}" == "car.viv" ] || [ "${FILE##*/}" == "*.VIV" ]; then  # filter for filename
+#  if [ "${FILE##*/}" == "*.viv" ] || [ "${FILE##*/}" == "*.VIV" ]; then  # filter for filename
     FOLDER="${FILE%%/*}"  # get containing foldername
     echo ""
     echo "$folder" "$FILE"  "${FILE##/*}"
-    mkdir $OUTPATH/$FOLDER
-    $SCRIPT_PATH/../$EXE $OPTIONS $FILE "$OUTPATH/$FOLDER/car_viv"
-  fi
+#    mkdir $OUTPATH/$FOLDER
+    $SCRIPT_PATH/../$EXE $OPTIONS $FILE # "$OUTPATH/$FOLDER/car_viv"
+ # fi
 done

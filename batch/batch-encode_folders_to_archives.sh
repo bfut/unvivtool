@@ -30,7 +30,6 @@ DESCRIPTION="loop subdirectories of current_working_dir/$INPATH named car_viv, e
 clear
 
 SCRIPT_PATH="${0%/*}"
-cd $SCRIPT_PATH
 
 EXE="unvivtool"
 OPTIONS="e -o -p"
