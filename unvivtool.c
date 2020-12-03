@@ -27,7 +27,12 @@
   - Linux:
       gcc -std=c89 -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool.c -o unvivtool
   - Win32: cross-compile on Linux with MinGW
-      i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
+      i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
+
+  CHANGELOG:
+    2020-12-03: no longer set libnfsviv_nochecks
+    2020-11-26: completely remove option -n
+                remove SanityCheck(), instead use new SanityTest() from "libnfsviv.h"
  **/
 
 #define UNVIVTOOL
@@ -56,35 +61,7 @@ void Usage()
                   "  -id #         decode file at index (1-based)\n"
                   "  -fs #         decode single file with filesize (requires either -fn or -id)\n"
                   "  -fofs #       decode file at offset (requires either -fn or -id)\n"
-/*                   "  -n       no format checks (unsafe)\n" */
                   );
-}
-
-int SanityCheck()
-{
-  int x;
-
-  x = 0;
-  *((char *)(&x)) = 1;
-  if (x != 1)
-  {
-    fprintf(stderr, "architecture is not little-endian\n");
-    return 0;
-  }
-
-  if (sizeof(int) != 4)
-  {
-    fprintf(stderr, "int is not 32-bit\n");
-    return 0;
-  }
-
-  if (sizeof(short) != 2)
-  {
-    fprintf(stderr, "short is not 16-bit\n");
-    return 0;
-  }
-
-  return 1;
 }
 
 /* Creates and returns new directory name. Increments name, if (increment) */
@@ -173,7 +150,7 @@ int main(int argc, char **argv)
 
 
   fprintf(stdout, "=======================================================================\n"
-                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-11-24\n\n");
+                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-03\n\n");
 
   if (argc < 3)
   {
@@ -181,13 +158,12 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  if (!SanityCheck())
+  if (!SanityTest())
     return -1;
 
   overwrite = 0;
   libnfsviv_verbose = 0;
   libnfsviv_dryrun = 0;
-  libnfsviv_nochecks = 0;
   libnfsviv_strictchecks = 0;
 
   count_options = 0;
@@ -300,13 +276,6 @@ int main(int argc, char **argv)
     else if (!strcmp(argv[i], "-strict"))
     {
       libnfsviv_strictchecks = 1;
-      ++count_options;
-    }
-    else if (!strcmp(argv[i], "-n"))
-    {
-      fprintf(stderr, "No format checks\n");
-
-      libnfsviv_nochecks = 1;
       ++count_options;
     }
     else if (!strcmp(argv[i], "-v"))

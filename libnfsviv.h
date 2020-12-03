@@ -1,5 +1,5 @@
 /*
-  libnfsviv.h - 2020-11-24
+  libnfsviv.h
   Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   This software is provided 'as-is', without any express or implied
@@ -21,6 +21,11 @@
 
 /**
   implements VIV/BIG decoding/encoding. unviv() decodes, viv() encodes.
+
+  CHANGELOG:
+    2020-12-03: improved performance
+    2020-11-26: implement new api function int SanityTest()
+                remove active sanity testing
  **/
 
 #ifndef LIBNFSVIV_H
@@ -127,9 +132,11 @@ void PrintStatisticsDec(VivDirEntr *viv_dir, const VivHeader viv_hdr,
   int contents_size = 0;
   int hdr_size;
   int chunk_size = Min(viv_filesize,
-                       viv_dir[count_dir_entries].ofs_begin_filename +
+                       viv_dir[count_dir_entries - 1].ofs_begin_filename +
                        kLibnfsvivFilenameMaxLen + 1);
-  unsigned char *tmpbuf = (unsigned char *)malloc(chunk_size);
+  unsigned char *tmpbuf = (unsigned char *)malloc((size_t)chunk_size);
+  if (!tmpbuf)
+    return;
 
   fprintf(stdout, "Header Size (header) = %d\n", viv_hdr.header_size);
   fprintf(stdout, "Directory Entries (parsed) = %d\n", count_dir_entries);
@@ -264,7 +271,8 @@ int CheckVivDirectory(const VivHeader viv_header, VivDirEntr *viv_dir,
   }
 
   /* Normally, should be equal. See strictchecks section.
-     counterexample: NFS3 /walm/car.viv has gaps between contained files */
+     counterexample: /walm/car.viv broken header alleges gaps between contained
+     files */
   if (viv_dir[0].offset + contents_size > viv_filesize)
   {
     fprintf(stderr, "Format error (Viv directory filesizes too large)\n");
@@ -653,6 +661,45 @@ int VivWriteFile(FILE *outfile, const char *infile_path, const int infile_size,
 
 /* api ---------------------------------------------------------------------- */
 
+int SanityTest()
+{
+  int x;
+
+  x = 0;
+  *((char *)(&x)) = 1;
+  if (x != 1)
+  {
+    fprintf(stderr, "architecture is not little-endian\n");
+    return 0;
+  }
+
+  if (sizeof(int) != 4)
+  {
+    fprintf(stderr, "int is not 32-bit\n");
+    return 0;
+  }
+
+  if (sizeof(short) != 2)
+  {
+    fprintf(stderr, "short is not 16-bit\n");
+    return 0;
+  }
+
+  if ((sizeof(struct VivHeader) != 16) || (sizeof(struct VivDirEntr) != 12))
+  {
+    fprintf(stderr, "structs are not correctly packed\n");
+    return 0;
+  }
+
+  if (kLibnfsvivFilenameMaxLen + 8 > kLibnfsvivBufferSize)
+  {
+    fprintf(stderr, "buffer is too small\n");
+    return 0;
+  }
+
+  return 1;
+}
+
 /* Assumes (viv_name). Overwrites in directory 'outpath', if it exists.
 
    If optional 'request_file_idx' is non-zero, extract file at given 1-based
@@ -676,13 +723,6 @@ int Unviv(const char *viv_name, const char *outpath,
   unsigned char buffer[kLibnfsvivBufferSize];
   int count_dir_entries;
   int i;
-
-  /* Sanity check */
-  if (kLibnfsvivFilenameMaxLen + 8 > kLibnfsvivBufferSize)
-  {
-    fprintf(stderr, "Buffer too small\n");
-    return -1;
-  }
 
   file = fopen(viv_name, "rb");
   if (!file)
