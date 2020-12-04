@@ -30,7 +30,7 @@
       i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
 
   CHANGELOG:
-    2020-12-03: no longer set libnfsviv_nochecks
+    2020-12-04: no longer set libnfsviv_nochecks
     2020-11-26: completely remove option -n
                 remove SanityCheck(), instead use new SanityTest() from "libnfsviv.h"
  **/
@@ -148,9 +148,8 @@ int main(int argc, char **argv)
   int request_file_size = 0;
   int request_file_offset = 0;
 
-
   fprintf(stdout, "=======================================================================\n"
-                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-03\n\n");
+                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-04\n\n");
 
   if (argc < 3)
   {

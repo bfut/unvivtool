@@ -36,7 +36,7 @@ Executables for Win32 are cross-compiled on Linux with MinGW:
        cd ~
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 unvivtool.c -o unvivtool.exe
+       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
 
 ## Usage
 

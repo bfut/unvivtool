@@ -23,8 +23,11 @@
   implements VIV/BIG decoding/encoding. unviv() decodes, viv() encodes.
 
   CHANGELOG:
+    2020-12-04: new constraints in CheckVivHeader()
+                validate Viv() output
+                added some casts
     2020-12-03: improved performance
-    2020-11-26: implement new api function int SanityTest()
+    2020-11-26: implement new api function SanityTest()
                 remove active sanity testing
  **/
 
@@ -136,7 +139,10 @@ void PrintStatisticsDec(VivDirEntr *viv_dir, const VivHeader viv_hdr,
                        kLibnfsvivFilenameMaxLen + 1);
   unsigned char *tmpbuf = (unsigned char *)malloc((size_t)chunk_size);
   if (!tmpbuf)
+  {
+    fprintf(stderr, "Not enough memory (PrintStatisticsDec)\n");
     return;
+  }
 
   fprintf(stdout, "Header Size (header) = %d\n", viv_hdr.header_size);
   fprintf(stdout, "Directory Entries (parsed) = %d\n", count_dir_entries);
@@ -225,6 +231,24 @@ int CheckVivHeader(const VivHeader viv_header, const int viv_filesize)
       return 0;
     }
 
+    if (viv_header.count_dir_entries < 0)
+    {
+      fprintf(stderr, "Format error (number of directory entries < 0)\n");
+      return 0;
+    }
+
+    if (viv_header.count_dir_entries * 2 > viv_filesize)
+    {
+      fprintf(stderr, "Format error (invalid number of directory entries)\n");
+      return 0;
+    }
+
+    if (viv_header.header_size > viv_header.count_dir_entries * (8 + kLibnfsvivFilenameMaxLen) + 16)
+    {
+      fprintf(stderr, "Format error (invalid headersize)\n");
+      return 0;
+    }
+
     if (viv_header.header_size > viv_filesize)
     {
       fprintf(stderr, "Format error (headersize > filesize)\n");
@@ -307,7 +331,10 @@ static
 int GetVivHeader(VivHeader *viv_hdr, FILE *file, const int viv_filesize)
 {
   if (fread(viv_hdr, 1, (size_t) 16, file) != 16)
+  {
+    fprintf(stderr, "File read error (header)\n");
     return 0;
+  }
 
   viv_hdr->filesize          = SwapEndian(viv_hdr->filesize);
   viv_hdr->count_dir_entries = SwapEndian(viv_hdr->count_dir_entries);
@@ -735,16 +762,15 @@ int Unviv(const char *viv_name, const char *outpath,
 
   if (!(GetVivHeader(&viv_header, file, viv_filesize)))
   {
-    fprintf(stderr, "File read error (header)\n");
     fclose(file);
     return -1;
   }
 
   count_dir_entries = viv_header.count_dir_entries;
-  viv_directory = (VivDirEntr *)malloc(sizeof(*viv_directory) * count_dir_entries);
+  viv_directory = (VivDirEntr *)malloc((size_t)sizeof(*viv_directory) * (size_t)count_dir_entries);
   if (!viv_directory)
   {
-    fprintf(stderr, "Not enough memory\n");
+    fprintf(stderr, "Not enough memory (%lu)\n", (unsigned long)((size_t)sizeof(*viv_directory) * (size_t)count_dir_entries));
     fclose(file);
     return -1;
   }
@@ -841,11 +867,12 @@ int Viv(const char *viv_name, char **infiles_paths, int count_infiles)
   VivDirEntr *viv_directory;
   unsigned char buffer[kLibnfsvivBufferSize];
   int i;
+  int hdr_size;
 
-  viv_directory = (VivDirEntr *)malloc(sizeof(*viv_directory) * count_infiles);
+  viv_directory = (VivDirEntr *)malloc((size_t)sizeof(*viv_directory) * (size_t)count_infiles);
   if (!viv_directory)
   {
-    fprintf(stderr, "Not enough memory\n");
+    fprintf(stderr, "Not enough memory (%lu)\n", (unsigned long)((size_t)sizeof(*viv_directory) * (size_t)count_infiles));
     return -1;
   }
 
@@ -877,8 +904,9 @@ int Viv(const char *viv_name, char **infiles_paths, int count_infiles)
   {
     WriteVivHeader(viv_header, file);
     WriteVivDirectory(viv_directory, infiles_paths, count_infiles, file);
-    /** TODO: optional legacy mode.  add padding to directory until its length
-              is divisible by 4, see NFS3, NFS:HS **/
+    hdr_size = ftell(file);
+    /** TODO: optional legacy mode (add padding to directory until its length
+              is divisible by 4, see NFS3, NFS:HS) **/
 
     for (i = 0; i < count_infiles; ++i)
     {
@@ -891,6 +919,19 @@ int Viv(const char *viv_name, char **infiles_paths, int count_infiles)
     }
 
     break;
+  }
+
+  if (!CheckVivHeader(viv_header, GetFilesize(file)))
+  {
+    fprintf(stderr, "Something may be wrong with the new archive\n");
+    retv = -1;
+  }
+
+  if (!CheckVivDirectory(viv_header, viv_directory,
+                         hdr_size, GetFilesize(file), count_infiles))
+  {
+    fprintf(stderr, "Something may be wrong with the new archive\n");
+    retv = -1;
   }
 
   fclose(file);
