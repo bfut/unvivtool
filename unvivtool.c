@@ -31,13 +31,13 @@
 
   CHANGELOG:
     2020-12-04: no longer set libnfsviv_nochecks
-    2020-11-26: completely remove option -n
-                remove SanityCheck(), instead use new SanityTest() from "libnfsviv.h"
+                add casts
  **/
 
 #define UNVIVTOOL
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>  /* isdigit */
 
 #include "libnfsviv.h"
@@ -71,25 +71,25 @@ char *CreateOutfolder(char *name, const int increment)  /* modified from FSHTool
   int j;
 
   rmdir(name);
-  if (mkdir(name, 0777) != 0)
+  if (mkdir(name, (unsigned int)0777) != 0)
   {
     if (increment)
     {
-      i = strlen(name);
+      i = (int)strlen(name);
       name[i] = '_';
-      name[i + 2] = 0;
+      name[i + 2] = '\0';
 
       for (j = 1; j <= 9; ++j)
       {
         name[i + 1] = '0' + j;
 
         rmdir(name);
-        if (mkdir(name, 0777) == 0) break;
+        if (mkdir(name, (unsigned int)0777) == 0) break;
       }
       if (j == 10)
       {
         fprintf(stderr, "\nCannot create incremented output directory %s ", name);
-        name[i] = 0;
+        name[i] = '\0';
         fprintf(stderr, "while %s already exists\n", name);
         free(name);
         return 0;
@@ -112,7 +112,7 @@ char *IncrementFilename(char *name, const int i)  /* modified from FSHTool Copyr
     return name;
   fclose(f);
 
-  memmove(name + i + 2, name + i, 4);
+  memmove(name + i + 2, name + i, (size_t)4);
   name[i] = '_';
 
   for (j = 1; j <= 9; ++j)
@@ -148,8 +148,8 @@ int main(int argc, char **argv)
   int request_file_size = 0;
   int request_file_offset = 0;
 
-  fprintf(stdout, "=======================================================================\n"
-                  "unvivtool 1.0 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-04\n\n");
+  fprintf(stdout, "===========================================================================\n"
+                  "unvivtool 1.0+dev - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-04\n\n");
 
   if (argc < 3)
   {
@@ -167,7 +167,7 @@ int main(int argc, char **argv)
 
   count_options = 0;
 
-  memset(request_file_name, 0, kLibnfsvivFilenameMaxLen);
+  memset(request_file_name, 0, (size_t)kLibnfsvivFilenameMaxLen);
 
   for (i = 2; i < argc; ++i)
   {
@@ -305,7 +305,7 @@ int main(int argc, char **argv)
     Usage();
     return -1;
   }
-  length = strlen(p);
+  length = (int)strlen(p);
   if (!libnfsviv_dryrun)
   {
     if (length < 5)
@@ -325,17 +325,17 @@ int main(int argc, char **argv)
   {
     /* Set outpath from outfile */
     p = argv[count_options + 2];
-    length = strlen(p);
+    length = (int)strlen(p);
 
-    outpath = (char *)malloc(length + 3);
+    outpath = (char *)malloc((size_t)(length + 3));
     if (!outpath)
     {
       fprintf(stderr, "Not enough memory\n");
       return -1;
     }
 
-    memset(outpath, 0, length + 3);
-    memcpy(outpath, p, length);
+    memset(outpath, 0, (size_t)(length + 3));
+    memcpy(outpath, p, (size_t)length);
 
     if (!overwrite && !libnfsviv_dryrun)
     {
@@ -372,13 +372,13 @@ int main(int argc, char **argv)
     else if (!strcmp(p, "."))
       ++p;  /* outpath will be current working dir */
 
-    length = strlen(p);
+    length = (int)strlen(p);
 
     if (length == 0)
     {
       length = 220;
 
-      outpath = (char *)malloc(length);
+      outpath = (char *)malloc((size_t)length);
       if (!outpath)
       {
         fprintf(stderr, "Not enough memory\n");
@@ -393,14 +393,14 @@ int main(int argc, char **argv)
     }
     else
     {
-      outpath = (char *)malloc(length + 3);  /* + 3 for increment + nul */
+      outpath = (char *)malloc((size_t)(length + 3));  /* + 3 for increment + nul */
       if (!outpath)
       {
         fprintf(stderr, "Not enough memory\n");
         return -1;
       }
 
-      memset(outpath, 0, length + 3);
+      memset(outpath, 0, (size_t)(length + 3));
       strcpy(outpath, p);
 
       if (!argv[count_options + 3])
