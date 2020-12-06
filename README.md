@@ -6,8 +6,10 @@ Portable, open-source approach under a permissive license.
 
 Features:
 
- * decodes/encodes dozens of archives at once with batch script
- * dry run option lists archive's contents
+ * chunked I/O for low memory usage
+ * numerous format checks
+ * lists archive contents without writing to disk (encode/decode)
+ * batch decodes/encodes multiple archives (example scripts provided)
  * decodes an entire archive at once or retrieves a single file either by index or by
    filename
  * surgically retrieve a single file, by offset and/or filesize, from archive with 
@@ -58,7 +60,6 @@ Options:
   -fs #         decode single file with filesize (requires either -fn or -id)
   -fofs #       decode file at offset (requires either -fn or -id)
 ```
-Batch scripts are provided in the ```batch``` folder.
 
 ## Examples
 
@@ -82,7 +83,7 @@ EXAMPLE 3
 
             decodes and extracts file dash.qfs from archive car.viv to folder
             dir1. this example recovers dash.qfs from the partially broken
-            official DLC NFS3 car /walm/car.viv
+            official DLC walm/car.viv
 
       -v    verbose
 
@@ -99,7 +100,7 @@ EXAMPLE 3
 EXAMPLE 4
       unvivtool e CAR.VIV car.fce car00.tga carp.txt fedata.fsh fedata.eng
 
-            encodes minimum needed files for an NFS3 car in a new archive file
+            encodes minimum needed files for an :HP car in a new archive file
             CAR.VIV. for bash terminals, find/xargs is recommended instead.
 ```
 
