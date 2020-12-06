@@ -28,10 +28,6 @@
       gcc -std=c89 -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool.c -o unvivtool
   - Win32: cross-compile on Linux with MinGW
       i686-w64-mingw32-gcc -std=c89 -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
-
-  CHANGELOG:
-    2020-12-04: no longer set libnfsviv_nochecks
-                add casts
  **/
 
 #define UNVIVTOOL
@@ -42,7 +38,13 @@
 
 #include "libnfsviv.h"
 
-void Usage()
+#ifdef _WIN32
+#define kUnvivtoolMaxPathLen 245
+#else
+#define kUnvivtoolMaxPathLen 4086
+#endif
+
+void Usage(void)
 {
   fprintf(stdout, "\n"
                   "Usage: unvivtool e [<options>...] <output.viv> [<input_files>...]\n"
@@ -69,6 +71,14 @@ char *CreateOutfolder(char *name, const int increment)  /* modified from FSHTool
 {
   int i;
   int j;
+  char *p;
+
+  p = GetBasename(name);
+  if (!IsSupportedName(p, (int)strlen(p)))
+  {
+    free(name);
+    return 0;
+  }
 
   rmdir(name);
   if (mkdir(name, (unsigned int)0777) != 0)
@@ -76,15 +86,16 @@ char *CreateOutfolder(char *name, const int increment)  /* modified from FSHTool
     if (increment)
     {
       i = (int)strlen(name);
-      name[i] = '_';
-      name[i + 2] = '\0';
+      name[i] = (char)'_';
+      name[i + 2] = (char)'\0';
 
       for (j = 1; j <= 9; ++j)
       {
-        name[i + 1] = '0' + j;
+        name[i + 1] = (char)('0' + j);
 
         rmdir(name);
-        if (mkdir(name, (unsigned int)0777) == 0) break;
+        if (mkdir(name, (unsigned int)0777) == 0)
+          break;
       }
       if (j == 10)
       {
@@ -143,13 +154,14 @@ int main(int argc, char **argv)
   int i;
   int overwrite;
   char *p;
+  char *p2;
   char request_file_name[kLibnfsvivFilenameMaxLen];
   int request_file_idx = 0;
   int request_file_size = 0;
   int request_file_offset = 0;
 
-  fprintf(stdout, "===========================================================================\n"
-                  "unvivtool 1.0+dev - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-04\n\n");
+  fprintf(stdout, "=================================================================================\n"
+                  "unvivtool 1.0+dev201206 - Copyright (C) 2020 Benjamin Futasz (GPLv3) - 2020-12-06\n\n");
 
   if (argc < 3)
   {
@@ -289,7 +301,8 @@ int main(int argc, char **argv)
       return -1;
     }
     else if (p[0] == '&' || p[0] == '(' || p[0] == ')' || p[0] == ';' ||
-             p[0] == '|' || p[0] == '{' || p[0] == '}' || p[0] == '>')
+             p[0] == '|' || p[0] == '{' || p[0] == '}' || p[0] == '>' ||
+             ((p[0] == '#') && (p[0] == ' ')))
     {
       argc = ++i;
       break;
@@ -306,7 +319,8 @@ int main(int argc, char **argv)
     return -1;
   }
   length = (int)strlen(p);
-  if (!libnfsviv_dryrun)
+
+    if (!libnfsviv_dryrun)
   {
     if (length < 5)
     {
@@ -323,14 +337,29 @@ int main(int argc, char **argv)
   /* Encoder */
   if (!strcmp(argv[1], "e") && (argc > count_options + 3))
   {
+    libnfsviv_strictchecks = 1;
+
     /* Set outpath from outfile */
     p = argv[count_options + 2];
     length = (int)strlen(p);
 
+    if (length > kUnvivtoolMaxPathLen)
+    {
+        fprintf(stderr, "Output path exceeds length allowed by filesystem (%d)\n", length);
+        return 1;
+    }
+
+    p2 = GetBasename(p);
+    if (!IsSupportedName(p2, (int)strlen(p2)))
+    {
+      fprintf(stderr, "Please specify another output file\n");
+      return 1;
+    }
+
     outpath = (char *)malloc((size_t)(length + 3));
     if (!outpath)
     {
-      fprintf(stderr, "Not enough memory\n");
+      fprintf(stderr, "Not enough memory (%d) main\n", length + 3);
       return -1;
     }
 
@@ -350,7 +379,7 @@ int main(int argc, char **argv)
     fprintf(stdout, "\n"
                     "Creating archive: %s\n", outpath);
 
-    if (Viv(outpath, &argv[count_options + 3], argc - count_options - 3))
+    if (!Viv(outpath, &argv[count_options + 3], argc - count_options - 3))
     {
       fprintf(stdout, "Encoder failed.\n");
       free(outpath);
@@ -381,7 +410,7 @@ int main(int argc, char **argv)
       outpath = (char *)malloc((size_t)length);
       if (!outpath)
       {
-        fprintf(stderr, "Not enough memory\n");
+        fprintf(stderr, "Not enough memory (%d) main\n", length);
         return -1;
       }
 
@@ -393,10 +422,16 @@ int main(int argc, char **argv)
     }
     else
     {
+      if (length > kUnvivtoolMaxPathLen)
+      {
+          fprintf(stderr, "Output path exceeds allowed length (%d)\n", length);
+          return 1;
+      }
+
       outpath = (char *)malloc((size_t)(length + 3));  /* + 3 for increment + nul */
       if (!outpath)
       {
-        fprintf(stderr, "Not enough memory\n");
+        fprintf(stderr, "Not enough memory (%d) main\n", length + 3);
         return -1;
       }
 
@@ -411,7 +446,7 @@ int main(int argc, char **argv)
         outpath = CreateOutfolder(outpath, !overwrite);
         if (!outpath)
         {
-          fprintf(stderr, "Please specify an output directory or overwrite with option '-o'\n");
+          fprintf(stderr, "Please specify a supported output directory or overwrite with option '-o'\n");
           return -1;
         }
       }
