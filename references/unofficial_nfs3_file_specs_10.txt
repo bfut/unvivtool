@@ -1,0 +1,346 @@
+ NFS3 - The unofficial file format descriptions
+****************************************************************************
+*  Unofficial Need For Speed III file format specifications - Version 1.0  *
+*     Copyright (c) 1998-99, Robert McMullen - webmaster@nfscheats.com     *
+****************************************************************************
+      Last updated:  December 4, 1998
+Portions Copyright:  Denis Auroux, Vitaly 'Necromancer', EdasX, Ian Brown,
+                     Jesper Juul-Mortensen
+               URL:  http://www.nfscheats.com/
+            Notice:  It is illegal to use the information within this file
+                     for commercial use.  Happy Hacking!
+======================
+FeData English (*.ENG)
+======================
+These files contain the car information, not the performance.  They
+are stored in the Car Files (VIV).
+--------|------|-------------|------|-------------------------------------->
+hex dec | size | in hex      | type | description
+--------|------|-------------|------|-------------------------------------->
+00h 000 | .... | 57 61 6C 6D | str  | Identity
+04h 004 | ..   | 09 00       | word | Always 09h 00h -> Unknown ??
+06h 006 | ..   | 00 00       | word |
+08h 008 | ..   | 01 00       | word |
+0Ah 010 | ..   | 01 00       | word | Class (A=00 | B=01 | C=02 | Weird)
+0Ch 012 | ..   | 03 00       | word |
+0Eh 014 | ..   | 00 00       | word |
+10h 016 | ..   | 00 00       | word | Police Car (01=Yes | 00=No)
+12h 018 | ..   | 00 00       | word |
+14h 020 | ..   | 00 00       | word |
+16h 022 | ..   | 80 00       | word |
+18h 024 | ..   | 29 00       | word | Unique car serial number
+1Ah 026 | ..   | 00 00       | word |
+1Ch 028 | ..   | 00 00       | word |
+1Eh 030 | ..   | 00 00       | word |
+20h 032 | ..   | 00 00       | word |
+22h 034 | ..   | 00 00       | word |
+24h 036 | ..   | 00 00       | word |
+26h 038 | ..   | 00 00       | word |
+28h 040 | ..   | 0F          | byte | Car Acceleration for Compare
+29h 041 | ..   | 0C          | byte | Car Top Speed for Compare
+2Ah 042 | ..   | 0B          | byte | Car Handling for Compare
+2Bh 043 | ..   | 0C          | byte | Car Braking for Compare
+2Ch 044 | .    | 05          | byte | ???
+2Dh 045 | ..   | 28 00       | word | ???
+2Fh 047 | .... | CF 00 00 00 | dwor | FILEPOS of Manufactuer (1st line)
+33h 051 | .... | D7 00 00 00 | dwor | FILEPOS of Model (2nd line)
+37h 055 | .... | E5 00 00 00 | dwor | FILEPOS of Car Name (menu)
+3Bh 059 | .... | FB 00 00 00 | dwor | FILEPOS of Price
+3Fh 063 | .... | 03 01 00 00 | dwor | FILEPOS of Status (prototype etc.)
+43h 067 | .... | 0E 01 00 00 | dwor | FILEPOS of Weight
+47h 071 | .... | 1D 01 00 00 | dwor | FILEPOS of Weight Dist F/R (58%/42%)
+4Bh 075 | .... | 27 01 00 00 | dwor | FILEPOS of Length
+4Fh 079 | .... | 31 01 00 00 | dwor | FILEPOS of Width
+53h 083 | .... | 3A 01 00 00 | dwor | FILEPOS of Height
+57h 087 | .... | 43 01 00 00 | dwor | FILEPOS of Engine (OHV V8 etc.)
+5Bh 091 | .... | 4A 01 00 00 | dwor | FILEPOS of Displacement (5672 cc etc.)
+5Fh 095 | .... | 52 01 00 00 | dwor | FILEPOS of HP (345 bhp @ 5600 rpm etc.)
+63h 099 | .... | 65 01 00 00 | dwor | FILEPOS of Torque (350 lb-ft @ 4400rpm)
+67h 103 | .... | 7A 01 00 00 | dwor | FILEPOS of MaxEngine Speed (6000rpm)
+6Bh 107 | .... | 83 01 00 00 | dwor | FILEPOS of Brakes (11.9 in. / 11.9 in.)
+6Fh 111 | .... | 97 01 00 00 | dwor | FILEPOS of Tires (245/45ZR17-275/40ZR18)
+73h 115 | .... | AF 01 00 00 | dwor | FILEPOS of Top Speed
+77h 119 | .... | B7 01 00 00 | dwor | FILEPOS of 0-60mph
+7Bh 123 | .... | BF 01 00 00 | dwor | FILEPOS of 0-100mph
+7Fh 127 | .... | C3 01 00 00 | dwor | FILEPOS of Type Transmision (auto/manual)
+83h 131 | .... | D6 01 00 00 | dwor | FILEPOS of Gearbox (6-speed/4-speed)
+87h 135 | .... | E8 01 00 00 | dwor | FILEPOS of Hist. Ln #1 (Chevrolet)
+8Bh 139 | .... | F2 01 00 00 | dwor | FILEPOS of Hist. Ln #2 (GM Founded-1908)
+8Fh 143 | .... | 04 02 00 00 | dwor | FILEPOS of Hist. Ln #3 (Model #1 - year)
+93h 147 | .... | 14 02 00 00 | dwor | FILEPOS of Hist. Ln #4 (Model #2 - year)
+97h 151 | .... | 24 02 00 00 | dwor | FILEPOS of Hist. Ln #5 (Model #3 - year)
+9Bh 155 | .... | 38 02 00 00 | dwor | FILEPOS of Hist. Ln #6 (Model #4 - year)
+9Fh 159 | .... | 48 02 00 00 | dwor | FILEPOS of Hist. Ln #7 (Model #5 - year)
+A3h 163 | .... | 54 02 00 00 | dwor | FILEPOS of Hist. Ln #8 (Model #6 - year)
+A7h 167 | .... | 67 02 00 00 | dwor | FILEPOS of Color Name #1
+ABh 171 | .... | 71 02 00 00 | dwor | FILEPOS of Color Name #2
+AFh 175 | .... | 7F 02 00 00 | dwor | FILEPOS of Color Name #3
+B3h 179 | .... | 8C 02 00 00 | dwor | FILEPOS of Color Name #4
+B7h 183 | .... | 98 02 00 00 | dwor | FILEPOS of Color Name #5
+BBh 187 | .... | 9E 02 00 00 | dwor | FILEPOS of Color Name #6
+BFh 191 | .... | AA 02 00 00 | dwor | FILEPOS of Color Name #7
+C3h 195 | .... | B9 02 00 00 | dwor | FILEPOS of Color Name #8
+C7h 199 | .... | BF 02 00 00 | dwor | FILEPOS of Color Name #9
+CBh 203 | .... | C5 02 00 00 | dwor | FILEPOS of Color Name #10
+--------|------|-------------|------|-------------------------------------->
+==============
+Replay (*.RP3)
+==============
+These files contain the replay information (not the actual replay in
+movie format).  It tells specifics, like the keyboard movements, which
+cheats were used, time of race, car used, etc.
+--------|-------|-------|------|------------------------------------------->
+offset  |  len  | value | type | description
+--------|-------|-------|------|------------------------------------------->
+00h     |  ...  |  240  | word | Identity
+19BCh   |  ..   |   0   | word | GoFast cheat not used
+19BCh   |  ..   |   1   | word | GoFast cheat used
+1a20h   | ????? |   ?   | str  | Name of Player (max length is 10)
+17bch   | ????? |   ?   | str  | Name of Player (max length is 10)
+--------|-------|---------------------------------------------------------->
+==============
+Vivian (*.VIV)
+==============
+Vivian files are compressed files that contain all of the car data
+of a single car.  The 16-byte header format is the following:
+--------|-------|---------------------------------------------------------->
+offset  |  len  | data
+--------|-------|---------------------------------------------------------->
+00      | 4     | 'BIGF'
+04      | 4     | Size of entire file
+08      | 4     | Number of directories
+0C      | 4     | ? (Seems to always point to the first object)
+--------|-------|---------------------------------------------------------->
+This header is followed by the directory entries, each consisting of a
+4-byte length, a 4-byte offset inside the file pointing to the
+beginning of the corresponding object and a null-terminated string
+for the name.
+Files Extracted from the VIV File:
+----------------------------------
+The following files are extracted from a VIV if decompressed properly.
+Note:  These are the files that are most likely in the VIV, not always.
+       The FEDATA.ENG file can also be coded in different languages.
+------------|-------------------------------------------------------------->
+file name   | contents
+------------|-------------------------------------------------------------->
+CARP.TXT    | Car Performance Data (Text Format)
+CAR.FCE     | 3D Mesh
+CAR00.TGA   | Car Textures in a Targa 2D Graphics File
+FEDATA.ENG  | Car Data in English (Other Languages Supported)
+CAR.BNK     | Sound File
+OCARD.BNK   | Sound File
+OCAR.BNK    | Sound File
+SCAR.BNK    | Sound File
+DASH.QFS    | Dashboard Files (Usually 2 Compressed FSH Images)
+------------|-------------------------------------------------------------->
+=======================
+BNK Sound Files (*.BNK)
+=======================
+These sound bank files contain multiple sound effects for the car.
+--------|----------|--------|---------------------------------------------->
+offset  |  length  |  type  | description
+--------|----------|--------|---------------------------------------------->
+0h      |   ....   |  str   | Identity (BNK1)
+--------|----------|--------|---------------------------------------------->
+16 Bit
+Channels: Mono
+Sampling Rate: 22050 Hz
+Signed
+=============================
+QFS Compressed Images (*.QFS)
+=============================
+A QFS file contains a compressed FSH image. It uses a LZ77 algorithm.
+Compressed data files start with a 5 byte header.
+offset len  data
+------ ---  ----
+000     1   Pack Code Hi byte
+001     1   Pack Code Lo byte (== FBh or 32h)
+002     1   Expanded length Hi byte
+003     1   Expanded length Mid byte
+004     1   Expanded length Lo byte
+If bit 0 of the pack code Hi byte (ie Offset 0 & 0x01) is set, then there
+are now 3 padding bytes to allow the data to begin on a 32 bit boundary.
+Otherwise, the data starts at offset 5. The interpretation of the data is
+different for different pack codes. In the description that follows, it is
+assumed that bit zero of the pack code Hi byte has been cleared.
+Pack code == 10FBh, or 1032h
+----------------------------
+This is the pack code used by the .QFS files, and it indicates LZ77
+compression has been used.  To decode we read and decode chunks.
+==================
+FSH Images (*.FSH)
+==================
+FSH images are found in QFS compressed files. The 16-byte header format
+is the following:
+offset len data
+------ --- ----
+00      4  'SHPI'
+04      4  length of the file in bytes
+08      4  number of objects in the directory
+0C      4  directory identifier string
+The directory identifier is 'GIMX' in .FSH.
+This header is followed by the directory entries, each consisting of a
+4-byte identifier string, and a 4-byte offset inside the file pointing to
+the beginning of the corresponding data.
+Each entry in the directory represents a piece of the dashboard.
+There are gaps between the directory and the first bitmap, and between
+consecutive bitmaps (significance unknown).
+Each directory entry points to a bitmap block with the following structure:
+offset len data
+------ --- ----
+00      1  7Bh
+01      3  size of the block (= width x length + 10h)
+04      2  width of the bitmap in pixels
+06      2  heigth of the bitmap in pixels
+08      4  ?
+0C      2  x position to display the bitmap
+0E      2  y position to display the bitmap
+10     w.h bitmap data : 1 byte per pixel
+Note that the object called 'dash' in the directory takes the whole screen
+(320x200 or 640x480, at position x=0, y=0).
+The various objects, depending on their 4-letter identifier, represent:
+the dashboard itself, the steering wheel in various positions, the radar
+detector lights, the gauges, and also pieces of the steering wheel to redraw
+over the gauges when necessary. Note that value FF in the bitmaps stands for
+the background : this is useful when a bitmap is drawn on top of another one.
+Also note that some SHPI bitmap directories contain entries that actually
+describe the palette to be used with the bitmaps. Typically, entries with
+names like '!PAL', and with bitmap dimension 256x3, correspond to palettes.
+The palette data consists of 256 3-byte records, each record containing the
+red, green and blue components of the corresponding color (1 byte each).
+=========================
+FCE 3D Mesh Files (*.FCE)
+=========================
+1) The .FCE file starts with following 7940-byte header:
+-------------------------------------------------------------------------------
+ Offset  Length  Type         Field             Description
+-------------------------------------------------------------------------------
+ 0x0000  0x0004  ????         unknown           Unknown purposes
+ 0x0004  0x0004  long         NumTriangles      Number of triangles in model
+ 0x0008  0x0004  long         NumVertices       Number of vertices in model
+ 0x000C  0x0004  long         NumArts           Number of arts
+ 0x0010  0x0004  long         VertTblOffset     Vertex  table offs. from 0x1F04
+ 0x0014  0x0004  long         NormTblOffset     Normals table offs. from 0x1F04
+ 0x0018  0x0004  long         TriaTblOffset     3angles table offs. from 0x1F04
+ 0x001C  0x0004  long         Reserve1offset    Res. area #1 offset from 0x1F04
+ 0x0020  0x0004  long         Reserve2offset    Res. area #2 offset from 0x1F04
+ 0x0024  0x0004  long         Reserve3offset    Res. area #3 offset form 0x1F04
+ 0x0028  0x0004  float        XHalfSize         X half-size of whole model
+ 0x002C  0x0004  float        YHalfSize         Y half-size of whole model
+ 0x0030  0x0004  float        ZHalfSize         Z half-size of whole model
+ 0x0034  0x0004  long         NumDummies        Number of light sources (dummy
+                                                objects in CARTOOL terminology)
+                                                Valid values: 0..16
+ 0x0038  0x00C0  tVector[16]  Dummies           Coordinates of dummies
+ 0x00F8  0x0004  long         NumParts          Number of car parts
+                                                Valid values: 0..64
+ 0x00FC  0x0300  tVector[64]  Parts             Global coords of car parts
+                                                local coordinate systems
+ 0x03FC  0x0100  long[64]     P1stVertices      First vertex index for each
+                                                part
+ 0x04FC  0x0100  long[64]     PNumVertices      Number of vertices for
+                                                each part
+ 0x05FC  0x0100  long[64]     P1stTriangle      First triangle index for each
+                                                part
+ 0x06FC  0x0100  long[64]     PNumTriangles     Number of triangles for
+                                                each part
+ 0x07FC  0x0004  long         NumPriColors      Number of primary colors
+                                                Valid values: 0..16
+ 0x0800  0x0100  tColor[16]   PriColors         Primary colors
+ 0x0900  0x0004  long         NumSecColors      Number of secondary colors
+                                                Valid values: 0..16
+ 0x0904  0x0100  tColor[16]   SecColors         Secondary colors
+ 0x0A04  0x0400  char[64][16] DummyNames        Dummy object names (ASCIIZ,
+                                                max. length = 63)
+ 0x0E04  0x1000  char[64][64] PartNames         Part names (ASCIIZ,
+                                                max. length = 63)
+ 0x1E04  0x0100  long[64]?    unknown           Unknown purposes
+-------------------------------------------------------------------------------
+         0x1F04  -  size of this header
+-------------------------------------------------------------------------------
+  1a) tVector structure:
+  ----------------------------------------------
+   Offset  Length  Type   Field   Description
+  ----------------------------------------------
+    0x00    0x04   float    X     X-coordinate
+    0x04    0x04   float    Y     Y-coordinate
+    0x08    0x04   float    Z     Z-coordinate
+  ----------------------------------------------
+            0x0C  -  size of tVector
+  ----------------------------------------------
+  1b) tColor structure:
+  ----------------------------------------------
+   Offset  Length  Type    Field   Description
+  ----------------------------------------------
+    0x00    0x04   long     H      Hue
+    0x04    0x04   long     S      Saturation
+    0x08    0x04   long     B      Brightness
+    0x0C    0x04   long     T      Transparency?
+  ----------------------------------------------
+            0x10  -  size of tColor
+  ----------------------------------------------
+  Valid values for all four components: 0..255
+  H = hue<degrees>  / 360 * 255
+  S = saturation<%> / 100 * 255
+  B = brightness<%> / 100 * 255
+2) Data in .FCE file from offset DATA_START = 0x1F04
+  2a) Table of vertices
+    Offset      : DATA_START + VertTblOffset
+    Length      : NumVertices * SizeOf(tVector)
+    Type        : tVector[NumVertices]
+  All coordinates are local. Use values from 'Parts' table
+  (file offset 0x00FC) to make them global.
+  2b) Table of normals
+    Offset      : DATA_START + NormTblOffset
+    Length      : NumVertices * SizeOf(tVector)
+    Type        : tVector[NumVertices]
+  These vectors should be normalized. Each normal in this table
+  corresponds to the vertex in the vertex table with the same index.
+  2c) Table of triangles
+    Offset      : DATA_START + TriaTblOffset
+    Length      : NumTriangles * SizeOf(tTriangle)
+    Type        : tTriangle[NumTriangles]
+    tTriangle structure:
+    -------------------------------------------------------------------------
+     Offset  Length  Type    Field      Description
+    -------------------------------------------------------------------------
+      0x00    0x04   long    TexPage    Texture page number
+      0x04    0x04   long    I1         Vertex #1 index (local)
+      0x08    0x04   long    I2         Vertex #2 index (local)
+      0x0C    0x04   long    I3         Vertex #3 index (local)
+      0x10    0x0C   int[6]  unknown    Unknown purpose, all items = 0xFF00
+      0x1C    0x04   long    Smoothing  Smoothing bits
+      0x20    0x04   float   U1         Vertex #1 texture U-coordinate
+      0x24    0x04   float   U2         Vertex #2 texture U-coordinate
+      0x28    0x04   float   U3         Vertex #3 texture U-coordinate
+      0x2C    0x04   float   V1         Vertex #1 texture V-coordinate
+      0x30    0x04   float   V2         Vertex #2 texture V-coordinate
+      0x34    0x04   float   V3         Vertex #3 texture V-coordinate
+    -------------------------------------------------------------------------
+              0x38  -  size of tTriangle
+    -------------------------------------------------------------------------
+    Vertex indices are local. Use values from 'P1stVertices' table
+    (file offset 0x03FC) to make them global.
+  2d) Reserved area #1
+    Offset      : DATA_START + Reserve1offset
+    Length      : NumVertices * 32
+    Type        : ????
+  2e) Reserved area #2
+    Offset      : DATA_START + Reserve2offset
+    Length      : NumVertices * 12
+    Type        : ????
+  2f) Reserved area #3
+    Offset      : DATA_START + Reserve3offset
+    Length      : NumVertices * 12
+    Type        : ????
+  The purpose of reserved areas is unknown, but all three should exist.
+3) Coordinate system. From the car:
+        X axis points to the right;
+        Y axis points upward;
+        Z axis points forward.
+=========================
+Installation Data (*.WIN)
+=========================
+This Installation Data contains information about which language was chosen
+to install, what type of install was done, and where NFS3.EXE should get
+each directory from (the CD-ROM or local hard drive).

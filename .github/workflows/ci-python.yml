@@ -1,0 +1,70 @@
+name: ci-python
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  python:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-20.04, windows-2019, macos-latest ]
+        python-version: [ '3.7', '3.8', '3.9' ]  # 'pypy-3.7' no tracemalloc
+
+    name: Python ${{ matrix.python-version }} (${{ matrix.os }})
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Python version
+      run: python -c "import sys; print(sys.version)"
+
+    - name: "build: setup_debug.py"
+      run: |
+        cd python
+        python setup_debug.py build
+
+    - name: "build: tests.py d"
+      shell: bash
+      run: |
+        cd python
+
+        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'd']); print('Exit code', retcode); sys.exit(retcode)"
+
+    - name: "build: tests.py e"
+      shell: bash
+      run: |
+        cd python
+
+        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'e']); print('Exit code', retcode); sys.exit(retcode)"
+
+    - name: remove local build
+      shell: bash
+      run: |
+        cd python
+        rm -rf build dist unvivtool.egg-info
+        # python -c "import shutil; shutil.rmtree('build'); shutil.rmtree('dist'); shutil.rmtree('unvivtool.egg-info')"
+        #dir
+
+    - name: "install: setup_debug.py"
+      run: |
+        cd python
+        python setup_debug.py install
+
+    - name: "install: tests.py"
+      shell: bash
+      run: |
+        cd python
+
+        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'd']); print('Exit code', retcode); sys.exit(retcode)"
+        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'e']); print('Exit code', retcode); sys.exit(retcode)"

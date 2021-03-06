@@ -1,0 +1,87 @@
+name: release
+
+on: workflow_dispatch
+
+env:
+  version: 15
+  dotversion: 1.5
+
+jobs:
+  win32:
+    runs-on: ubuntu-20.04  # required for -fstack-clash-protection
+
+    name: Compile (Windows x86)
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install compiler
+        run: |
+          sudo apt install gcc-mingw-w64-i686
+
+      - name: Build
+        run: |
+          SRC='unvivtool.c'
+          DEST='unvivtool'
+
+          MINGWFLAGS='-std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp'
+          # MINGWFLAGS='-std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
+
+          echo "mingw-win32"
+          i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "$DEST.exe"
+
+          sha256sum "$DEST.exe"
+          md5sum "$DEST.exe"
+
+      - name: Create archive
+        run: |
+          mkdir release
+
+          7z a -tzip "release/unvivtool${{ env.version }}_cli_win32.zip" \
+          batch \
+          doc/unvivtool_cli.md \
+          references \
+          libnfsviv.h \
+          LICENSE \
+          README.md \
+          unvivtool.exe \
+          unvivtool.c
+
+      - name: Store archive
+        uses: actions/upload-artifact@v2
+        with:
+          name: release
+          path: release/*
+          retention-days: 1
+
+  upload-win32:
+    runs-on: ubuntu-20.04
+    needs: win32
+
+    name: Release (Windows x86)
+    steps:
+    - name: Download release archive
+      uses: actions/download-artifact@v2
+      with:
+        name: release
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.dotversion }}
+        release_name: "unvivtool${{ env.version }}_cli_win32.zip"
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./unvivtool${{ env.version }}_cli_win32.zip
+        asset_name: unvivtool${{ env.version }}_cli_win32.zip
+        asset_content_type: application/zip

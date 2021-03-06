@@ -1,0 +1,217 @@
+name: ci-cli
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  windows:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2019, windows-2016 ]
+        arch: [ x86, x64 ]
+
+    name: Windows (${{ matrix.arch }})
+    steps:
+    - name: Setup Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Compile
+      run: |
+        cl.exe /W3 /utf-8 /O2 unvivtool.c
+
+    - name: Smoke test
+      shell: bash
+      run: |
+        ./unvivtool
+
+    - shell: bash
+      run: mkdir tests
+
+    - name: Test encode -v with existing
+      shell: bash
+      run: |
+        ./unvivtool e -v tests/car_out.viv LICENSE python/pyproject.toml
+
+        cd tests
+        ls -lg
+
+    - name: Test encode -v with skip
+      shell: bash
+      run: |
+        ./unvivtool e -v tests/car_out.viv not_a_file LICENSE python/pyproject.toml
+
+        cd tests
+        ls -lg
+
+    - name: Test encode to invalid archive path -v
+      shell: bash
+      run: |
+        cd tests
+        {
+          ../unvivtool e -v not_a_dir/car.viv LICENSE python/pyproject.toml && true
+        } || {
+          RESULT="$?"
+          echo "Exit Code = $RESULT"
+        }
+
+    - name: Test decode all -v, to existing folder
+      shell: bash
+      run: |
+        cd tests
+        rm -rf ../python/tests/car_viv
+        mkdir -p ../python/tests/car_viv
+        ../unvivtool d -v ../python/tests/car.viv ../python/tests/car_viv
+
+        ls -lg
+        cd ../python/tests/car_viv
+        ls -lg
+
+    - name: Test decode all -v, to existing folder, -strict
+      shell: bash
+      run: |
+        cd tests
+        rm -rf ../python/tests/car_viv
+        mkdir -p ../python/tests/car_viv
+        ../unvivtool d -strict ../python/tests/car.viv ../python/tests/car_viv
+
+        ls -lg
+
+    - name: Test decode existing file -v
+      shell: bash
+      run: |
+        cd tests
+        rm -rf ../python/tests/car_viv
+        mkdir -p ../python/tests/car_viv
+        ../unvivtool d -v -fn pyproject.toml ../python/tests/car.viv ../python/tests/car_viv
+
+        ls -lg
+        cd ../python/tests/car_viv
+        ls -lg
+
+    - name: Test decode not existing file -v
+      shell: bash
+      run: |
+        cd tests
+
+        # https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
+        {
+          ../unvivtool d -v -fn not_in_archive ../python/tests/car.viv ../python/tests/car_viv  && true
+        } || {
+          RESULT="$?"
+          echo "Exit Code = $RESULT"
+
+          ls -lg
+          cd ../python/tests/car_viv
+          ls -lg
+        }
+
+
+  linux:
+    runs-on: ubuntu-20.04
+
+    env:
+      valgrind: "valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes"
+
+    name: Ubuntu
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install valgrind
+      shell: bash
+      run: |
+        sudo apt install valgrind
+        # valgrind --help
+
+    - name: Compile
+      shell: bash
+      run: |
+        SRC='unvivtool.c'
+        DEST='unvivtool'
+        GCCDEBUGFLAGS='-pedantic-errors -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables'
+
+        gcc -std=c89 $DEFS $SRC -o $DEST $GCCDEBUGFLAGS
+
+    - name: Smoke test
+      shell: bash
+      run: |
+        ${{ env.valgrind }} ./unvivtool
+
+    - shell: bash
+      run: mkdir tests
+
+    - name: Test encode with existing
+      shell: bash
+      run: |
+        ${{ env.valgrind }} ./unvivtool e -v tests/car_out.viv LICENSE python/pyproject.toml
+
+        cd tests
+        ls -lg
+
+    - name: Test encode with skip
+      shell: bash
+      run: |
+        ${{ env.valgrind }} ./unvivtool e -v tests/car_out.viv not_a_file LICENSE python/pyproject.toml
+
+        cd tests
+        ls -lg
+
+    - name: Test encode to invalid archive path -v
+      shell: bash
+      run: |
+        cd tests
+        {
+          ${{ env.valgrind }} ../unvivtool e -v not_a_dir/car.viv LICENSE python/pyproject.toml && true
+        } || {
+          RESULT="$?"
+          echo "Exit Code = $RESULT"
+        }
+
+    - name: Test decode all
+      shell: bash
+      run: |
+        cd tests
+        mkdir foo
+        ${{ env.valgrind }} ../unvivtool d -strict ../python/tests/car.viv foo
+
+        cd foo
+        ls -lg
+
+        cd ..; rm -rf foo  # clean-up
+
+    - name: Test decode existing file -v, to default outdir
+      shell: bash
+      run: |
+        cd tests
+        mkdir foo
+        ${{ env.valgrind }} ../unvivtool d -v -fn pyproject.toml ../python/tests/car.viv foo
+
+        ls -lg
+        cd foo
+        ls -lg
+
+    - name: Test decode not existing file -v, to default outdir
+      shell: bash
+      run: |
+        cd tests
+
+        # https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
+        {
+          ${{ env.valgrind }} ../unvivtool d -v -fn not_in_archive ../python/tests/car.viv foo  && true
+        } || {
+          RESULT="$?"
+          echo "Exit Code = $RESULT"
+
+          ls -lg
+          cd foo
+          ls -lg
+        }
