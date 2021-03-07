@@ -1,7 +1,7 @@
 # This file is distributed under: CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0/>
 
 """
-  example.py - demonstrate module usage
+  example.py
 
   Run decoder:
   python example.py d
@@ -29,17 +29,13 @@ os.chdir(script_path)
 if args.cmd[0] == "d":
     vivfile = "tests/car.viv"
     outdir = "tests"
-
-    unvivtool.unviv(vivfile, outdir, strict=True)    # extract all, return 1
-    os.chdir(script_path)
+    unvivtool.unviv(vivfile, outdir)            # extract all files in archive 'vivfile'
 
 # Encode
 elif args.cmd[0] == "e":
     vivfile = "tests/car_out.viv"
     infiles = ["LICENSE", "pyproject.toml"]
-
-    infiles = infiles
-    unvivtool.viv(vivfile, infiles)                  # encode all, return 1
+    unvivtool.viv(vivfile, infiles)             # encode all files in 'infiles'
 
 #
 else:

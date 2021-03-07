@@ -1,5 +1,5 @@
 """
-setup_tests.py - builds/installs Python extension module, with -DBINDINGS_DEBUG
+setup_tests.py - builds/installs Python module, with -DBINDINGS_DEBUG
 
 python setup_tests.py build
 python setup_tests.py install
@@ -14,7 +14,7 @@ script_path = pathlib.Path(__file__).parent.resolve()
 os.chdir(script_path)
 
 module_name = "unvivtool"
-module_version = "1.4"
+module_version = "1.6"
 long_description = (script_path / "../README.md").read_text(encoding="utf-8")
 extra_compile_args = [
     "-DUVT_MODULE_DEBUG",
@@ -28,7 +28,6 @@ if platform.system() != "Windows":
         "-Wno-newline-eof",  # clang
         "-Wstack-protector",
         "-fasynchronous-unwind-tables",
-        "-fstrict-aliasing",
 
         #"-fanalyzer",  # GCC 10
     ])

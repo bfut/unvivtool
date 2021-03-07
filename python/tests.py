@@ -73,15 +73,6 @@ except ModuleNotFoundError:
     tracemalloc.stop()
 
 
-# tracemalloc -- BEGIN ---------------------------------------------------------
-first_size, first_peak = tracemalloc.get_traced_memory()
-
-if sys.version_info[0:2] >= (3, 9):
-    tracemalloc.reset_peak()
-
-# tracemalloc -- END -----------------------------------------------------------
-
-
 # Parse command: encode or decode (or print module help)
 parser = argparse.ArgumentParser()
 parser.add_argument("cmd", nargs=1, help="e: viv(), d: unviv()")
@@ -102,14 +93,10 @@ print(
 )
 
 
-# # tracemalloc -- BEGIN ---------------------------------------------------------
-# tracemalloc.start()
-# # tracemalloc -- END -----------------------------------------------------------
-
 # tracemalloc -- BEGIN ---------------------------------------------------------
 # tracemalloc.stop()
+first_size, first_peak = tracemalloc.get_traced_memory()
 
-second_size, second_peak = tracemalloc.get_traced_memory()
 if sys.version_info[0:2] >= (3, 9):
     tracemalloc.reset_peak()
 
@@ -135,7 +122,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test1 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test2: unvivtool.unviv(vivfile, outdir, 0, request_filename)")
@@ -146,7 +132,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test2 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test3: unvivtool.unviv(vivfile, outdir, request_fileid)")
@@ -157,7 +142,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test3 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test4: unvivtool.unviv(vivfile, outdir)")
@@ -168,7 +152,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test4 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test5: unvivtool.unviv(vivfile, \"not_a_dir\")")
@@ -183,7 +166,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test5 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test6: unvivtool.unviv(vivfile, outdir, keyword=request_filename)")
@@ -194,7 +176,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test6 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test7: unvivtool.unviv(vivfile, outdir, keyword=request_fileid)")
@@ -205,7 +186,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test7 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     if platform.system() == "Windows":
@@ -226,7 +206,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test8 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     if platform.system() == "Windows":
@@ -241,7 +220,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test9 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test10: unvivtool.unviv(\"öäü\", None)")
@@ -256,7 +234,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test10 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Test11: unvivtool.unviv(\"foo\", None)")
@@ -271,7 +248,6 @@ if args.cmd[0] == "d":
         count_successful_tests += 1
     else:
         print("Test11 failure", "\n")
-    os.chdir(script_path)
     res = -1
 
     print("Successful tests: {:d}/{:d}".format(count_successful_tests, 11), "\n")
@@ -443,7 +419,7 @@ else:
 
 # tracemalloc -- BEGIN ---------------------------------------------------------
 # tracemalloc.stop()
-third_size, third_peak = tracemalloc.get_traced_memory()
+second_size, second_peak = tracemalloc.get_traced_memory()
 # tracemalloc.start()
 
 snapshot = tracemalloc.take_snapshot()
@@ -451,6 +427,5 @@ display_top(snapshot, limit=40)
 
 print("first_size={:d}".format(first_size), "first_peak={:d}".format(first_peak))
 print("second_size={:d}".format(second_size), "second_peak={:d}".format(second_peak))
-print("third_size={:d}".format(third_size), "third_peak={:d}".format(third_peak))
 
 # tracemalloc -- END -----------------------------------------------------------

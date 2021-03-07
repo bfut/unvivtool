@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-20.04, windows-2019, macos-latest ]
+        os: [ ubuntu-20.04, windows-2019 ]
         python-version: [ '3.7', '3.8', '3.9' ]  # 'pypy-3.7' no tracemalloc
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})

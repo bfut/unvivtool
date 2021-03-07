@@ -29,9 +29,6 @@
       cl.exe /utf-8 /O2 unvivtool.c
  **/
 
-#define UNVIVTOOL
-
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -139,7 +136,7 @@ int main(int argc, char **argv)
               return -1;
             }
 
-            if (!sscanf(argv[i], "%255s", request_file_name))
+            if (!sscanf(argv[i], "%1023s", request_file_name))
             {
               Usage();
               return -1;
@@ -193,7 +190,7 @@ int main(int argc, char **argv)
     }
     else
       printf("Decoder successful.\n");
-  }  /* if Decoder */
+  }
 
   /* Encoder */
   else if (!strcmp(argv[1], "e") && (argc > count_options + 3))

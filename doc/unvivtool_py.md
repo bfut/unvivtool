@@ -24,7 +24,6 @@ DESCRIPTION
     unviv() -- decode and extract archive
 
 FUNCTIONS
-
     unviv(...)
         |  unviv(viv, dir, fileidx=None, filename=None, dry=False, verbose=False, strict=False)
         |      Decode and extract files from VIV/BIG archive.
@@ -38,11 +37,11 @@ FUNCTIONS
         |      fileidx : int, optional
         |          Extract file at given 1-based index.
         |      filename : str, optional
-        |          Extract file 'filename' (cAse-sEnsitivE) from archive. Expected
-        |          to be encoded in a subset of ASCII. Overrides 'fileidx'.
+        |          Extract file 'filename' (cAse-sEnsitivE) from archive.
+        |          Overrides 'fileidx'.
         |      dry : bool
-        |          If True, perform dry run: run all format checks and print archive
-        |          contents, do not write to disk.
+        |          If True, perform dry run: run all format checks and print
+        |          archive contents, do not write to disk.
         |      verbose : bool
         |          If True, print archive contents.
         |      strict : bool
@@ -59,29 +58,24 @@ FUNCTIONS
         |      FileNotFoundError
         |          When 'viv' cannot be opened.
         |
-        |      Notes
-        |      -----
-        |      Files contained in VIV/BIG archives are assumed to have ASCII-encoded
-        |      filenames.
-        |
         |      Examples
         |      --------
-        |      Extract all files in "car.viv" in the current working directory to
-        |      existing subdirectory "car_viv".
+        |      Extract all files in "car.viv" in the current working directory
+        |      to existing subdirectory "car_viv".
         |
         |      >>> unvivtool.unviv("car.viv", "car_viv")
         |      ...
         |      1
         |
-        |      Before extracting, check the archive contents and whether it passes
-        |      format checks.
+        |      Before extracting, check the archive contents and whether it
+        |      passes format checks.
         |
         |      >>> unvivtool.unviv("car.viv", "car_viv", dry=True)
         |      Begin dry run
         |      ...
         |
-        |      Now that archive contents have been printed, extract file at 1-based
-        |      index 2. Again print archive contents while extracting.
+        |      Now that archive contents have been printed, extract file at
+        |      1-based index 2. Again print archive contents while extracting.
         |
         |      >>> unvivtool.unviv("car.viv", "car_viv", fileidx=2, verbose=True)
         |      ...
@@ -98,11 +92,11 @@ FUNCTIONS
         |      Decoder successful.
         |      1
         |
-        |      Some archives may have broken headers. When detected, unvivtool will
-        |      print warnings. Up to a certain point, such archives may still be
-        |      extracted. Warnings can be turned into errors, forcing stricter
-        |      adherence to format specifications. Note, such 'errors' do not raise
-        |      Python errors. Instead, unviv() returns 0.
+        |      Some archives may have broken headers. When detected, unvivtool
+        |      will print warnings. Up to a certain point, such archives may
+        |      still be extracted. Warnings can be turned into errors, forcing
+        |      stricter adherence to format specifications. Note, such 'errors'
+        |      do not raise Python errors. Instead, unviv() returns 0.
         |
         |      >>> unvivtool.unviv("foo/bar.viv", ".", filename="car00.tga", strict=True)
         |      ...
@@ -111,20 +105,19 @@ FUNCTIONS
         |      0
 
     viv(...)
-        |  viv(viv, infiles_paths, dry=False, verbose=False)
-        |      Encode files in new VIV/BIG archive. Skips any given input file that
-        |      cannot be opened.
+        |  viv(viv, infiles, dry=False, verbose=False)
+        |      Encode files in new VIV/BIG archive. Skips given input paths
+        |      that cannot be opened.
         |
         |      Parameters
         |      ----------
         |      viv : str, os.PathLike object
         |          Absolute or relative, path/to/output.viv
-        |      infiles_paths : list of str, list of os.PathLike objects
+        |      infiles : list of str, list of os.PathLike objects
         |          List of absolute or relative, paths/to/input/files.ext
-        |          Filenames are expected to be encoded in a subset of ASCII.
         |      dry : bool
-        |          If True, perform dry run: run all format checks and print archive
-        |          contents, do not write to disk.
+        |          If True, perform dry run: run all format checks and print
+        |          archive contents, do not write to disk.
         |      verbose : bool
         |          If True, print archive contents.
         |
@@ -138,19 +131,14 @@ FUNCTIONS
         |      FileNotFoundError
         |          When 'viv' cannot be created.
         |
-        |      Notes
-        |      -----
-        |      Files contained in VIV/BIG archives are assumed to have ASCII-encoded
-        |      filenames.
-        |
         |      Examples
         |      --------
         |      Encode all files in the list 'infiles_paths' in a new archive
         |      "out.viv". The archive is to be created in a subdirectory
-        |      "foobar", relative to the current working directory. Both input
-        |      files are in the parent directory to the current working directory.
+        |      "foo", relative to the current working directory. Both input
+        |      files are in the current parent directory.
         |
-        |      >>> viv = "foobar/out.viv"
+        |      >>> viv = "foo/out.viv"
         |      >>> infiles_paths = ["../LICENSE", "../README.md"]
         |      >>> unvivtool.viv(viv, infiles_paths)
         |      ...
@@ -164,8 +152,8 @@ FUNCTIONS
         |      Begin dry run
         |      ...
         |
-        |      Supposing, the dry run has been successful. Encode the listed files,
-        |      again printing archive contents.
+        |      Supposing, the dry run has been successful. Encode the listed
+        |      files, again printing archive contents.
         |
         |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)
         |      ...

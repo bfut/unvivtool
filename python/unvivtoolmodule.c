@@ -31,6 +31,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <direct.h>
+#define chdir _chdir
+#define getcwd _getcwd
+static const int kUnvivtoolMaxPathLen = 256;
+#else
+#include <unistd.h>  /* chdir, getcwd */
+static const int kUnvivtoolMaxPathLen = 4096;
+#endif
+
 #include <fcntl.h>  /* open() */
 
 #ifdef _WIN32
@@ -112,6 +122,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_verbose = 0;
   int opt_strictchecks = 0;
   int fd;
+  char *buf_cwd = NULL;
   static char *keywords[] = { "viv", "dir", "fileidx", "filename",
                               "dry", "verbose", "strict", NULL };
 
@@ -185,9 +196,30 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     close(fd);
 
+    buf_cwd = /* (char *) */malloc((size_t)(kUnvivtoolMaxPathLen * 4 + 64));
+    if (!buf_cwd)
+    {
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+      retv_obj = NULL;
+      break;
+    }
+    if (!getcwd(buf_cwd, (size_t)(kUnvivtoolMaxPathLen * 4 + 64)))
+    {
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
+      retv_obj = NULL;
+      break;
+    }
+
     retv = LIBNFSVIV_Unviv(viv_name, outpath,
                            request_file_idx, request_file_name,
                            opt_dryrun, opt_strictchecks, opt_verbose);
+
+    if (chdir(buf_cwd) != 0)
+    {
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot restore working directory");
+      retv_obj = NULL;
+      break;
+    }
 
     if (retv == 1)
       printf("Decoder successful.\n");
@@ -198,6 +230,8 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
+  if (buf_cwd)
+    free(buf_cwd);
   Py_DECREF(viv_name_obj);
   Py_XDECREF(outpath_obj);
   Py_XDECREF(request_file_name_obj);
@@ -309,7 +343,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     if (!retv_obj)
       break;  /* for (;;) */
 
-    infiles_paths = (char **)malloc((size_t)(count_infiles + 1) * (size_t)sizeof(*infiles_paths));
+    infiles_paths = /* (char **) */malloc((size_t)(count_infiles + 1) * (size_t)sizeof(*infiles_paths));
     if (!infiles_paths)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -317,7 +351,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
-    ptr = (char *)malloc((size_t)length_str * (size_t)sizeof(**infiles_paths));
+    ptr = /* (char *) */malloc((size_t)length_str * (size_t)sizeof(**infiles_paths));
     if (!ptr)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -428,12 +462,7 @@ PyDoc_STRVAR(
   "viv() -- encode files in new VIV/BIG archive\n"
   "unviv() -- decode and extract VIV/BIG archive\n"
   "\n"
-  "Notes\n"
-  "-----\n"
-  "You may not redistribute this program without its source code.\n"
-  "README.md may not be removed or altered from any unvivtool redistribution.\n"
-  "\n"
-  "Copyright (C) 2020 Benjamin Futasz (GPLv3+) <https://github.com/bfut/unvivtool>\n"
+  "unvivtool "LIBVERS" Copyright (C) 2020 Benjamin Futasz (GPLv3+)\n"
 );
 
 PyDoc_STRVAR(
@@ -450,11 +479,11 @@ PyDoc_STRVAR(
   " |      fileidx : int, optional\n"
   " |          Extract file at given 1-based index.\n"
   " |      filename : str, optional\n"
-  " |          Extract file 'filename' (cAse-sEnsitivE) from archive. Expected\n"
-  " |          to be encoded in a subset of ASCII. Overrides 'fileidx'.\n"
+  " |          Extract file 'filename' (cAse-sEnsitivE) from archive.\n"
+  " |          Overrides 'fileidx'.\n"
   " |      dry : bool\n"
-  " |          If True, perform dry run: run all format checks and print archive\n"
-  " |          contents, do not write to disk.\n"
+  " |          If True, perform dry run: run all format checks and print\n"
+  " |          archive contents, do not write to disk.\n"
   " |      verbose : bool\n"
   " |          If True, print archive contents.\n"
   " |      strict : bool\n"
@@ -471,29 +500,24 @@ PyDoc_STRVAR(
   " |      FileNotFoundError\n"
   " |          When 'viv' cannot be opened.\n"
   " |\n"
-  " |      Notes\n"
-  " |      -----\n"
-  " |      Files contained in VIV/BIG archives are assumed to have ASCII-encoded\n"
-  " |      filenames.\n"
-  " |\n"
   " |      Examples\n"
   " |      --------\n"
-  " |      Extract all files in \"car.viv\" in the current working directory to\n"
-  " |      existing subdirectory \"car_viv\".\n"
+  " |      Extract all files in \"car.viv\" in the current working directory\n"
+  " |      to existing subdirectory \"car_viv\".\n"
   " |\n"
   " |      >>> unvivtool.unviv(\"car.viv\", \"car_viv\")\n"
   " |      ...\n"
   " |      1\n"
   " |\n"
-  " |      Before extracting, check the archive contents and whether it passes\n"
-  " |      format checks.\n"
+  " |      Before extracting, check the archive contents and whether it\n"
+  " |      passes format checks.\n"
   " |\n"
   " |      >>> unvivtool.unviv(\"car.viv\", \"car_viv\", dry=True)\n"
   " |      Begin dry run\n"
   " |      ...\n"
   " |\n"
-  " |      Now that archive contents have been printed, extract file at 1-based\n"
-  " |      index 2. Again print archive contents while extracting.\n"
+  " |      Now that archive contents have been printed, extract file at\n"
+  " |      1-based index 2. Again print archive contents while extracting.\n"
   " |\n"
   " |      >>> unvivtool.unviv(\"car.viv\", \"car_viv\", fileidx=2, verbose=True)\n"
   " |      ...\n"
@@ -510,11 +534,11 @@ PyDoc_STRVAR(
   " |      Decoder successful.\n"
   " |      1\n"
   " |\n"
-  " |      Some archives may have broken headers. When detected, unvivtool will\n"
-  " |      print warnings. Up to a certain point, such archives may still be\n"
-  " |      extracted. Warnings can be turned into errors, forcing stricter\n"
-  " |      adherence to format specifications. Note, such 'errors' do not raise\n"
-  " |      Python errors. Instead, unviv() returns 0.\n"
+  " |      Some archives may have broken headers. When detected, unvivtool\n"
+  " |      will print warnings. Up to a certain point, such archives may\n"
+  " |      still be extracted. Warnings can be turned into errors, forcing\n"
+  " |      stricter adherence to format specifications. Note, such 'errors'\n"
+  " |      do not raise Python errors. Instead, unviv() returns 0.\n"
   " |\n"
   " |      >>> unvivtool.unviv(\"foo/bar.viv\", \".\", filename=\"car00.tga\", strict=True)\n"
   " |      ...\n"
@@ -525,20 +549,19 @@ PyDoc_STRVAR(
 
 PyDoc_STRVAR(
   viv__doc__,
-  " |  viv(viv, infiles_paths, dry=False, verbose=False)\n"
-  " |      Encode files in new VIV/BIG archive. Skips any given input file that\n"
-  " |      cannot be opened.\n"
+  " |  viv(viv, infiles, dry=False, verbose=False)\n"
+  " |      Encode files in new VIV/BIG archive. Skips given input paths\n"
+  " |      that cannot be opened.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
   " |      viv : str, os.PathLike object\n"
   " |          Absolute or relative, path/to/output.viv\n"
-  " |      infiles_paths : list of str, list of os.PathLike objects\n"
+  " |      infiles : list of str, list of os.PathLike objects\n"
   " |          List of absolute or relative, paths/to/input/files.ext\n"
-  " |          Filenames are expected to be encoded in a subset of ASCII.\n"
   " |      dry : bool\n"
-  " |          If True, perform dry run: run all format checks and print archive\n"
-  " |          contents, do not write to disk.\n"
+  " |          If True, perform dry run: run all format checks and print\n"
+  " |          archive contents, do not write to disk.\n"
   " |      verbose : bool\n"
   " |          If True, print archive contents.\n"
   " |\n"
@@ -552,19 +575,14 @@ PyDoc_STRVAR(
   " |      FileNotFoundError\n"
   " |          When 'viv' cannot be created.\n"
   " |\n"
-  " |      Notes\n"
-  " |      -----\n"
-  " |      Files contained in VIV/BIG archives are assumed to have ASCII-encoded\n"
-  " |      filenames.\n"
-  " |\n"
   " |      Examples\n"
   " |      --------\n"
   " |      Encode all files in the list 'infiles_paths' in a new archive\n"
   " |      \"out.viv\". The archive is to be created in a subdirectory\n"
-  " |      \"foobar\", relative to the current working directory. Both input\n"
-  " |      files are in the parent directory to the current working directory.\n"
+  " |      \"foo\", relative to the current working directory. Both input\n"
+  " |      files are in the current parent directory.\n"
   " |\n"
-  " |      >>> viv = \"foobar/out.viv\"\n"
+  " |      >>> viv = \"foo/out.viv\"\n"
   " |      >>> infiles_paths = [\"../LICENSE\", \"../README.md\"]\n"
   " |      >>> unvivtool.viv(viv, infiles_paths)\n"
   " |      ...\n"
@@ -578,8 +596,8 @@ PyDoc_STRVAR(
   " |      Begin dry run\n"
   " |      ...\n"
   " |\n"
-  " |      Supposing, the dry run has been successful. Encode the listed files,\n"
-  " |      again printing archive contents.\n"
+  " |      Supposing, the dry run has been successful. Encode the listed\n"
+  " |      files, again printing archive contents.\n"
   " |\n"
   " |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)\n"
   " |      ...\n"
