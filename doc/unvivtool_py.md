@@ -11,6 +11,10 @@ Requires Python 3.7+
        cd unvivtool/python
        python setup.py install
 
+To uninstall, delete the module. Its path can be printed with
+
+       python -c "import unvivtool; print(unvivtool)"
+
 ## Usage
 
 ```

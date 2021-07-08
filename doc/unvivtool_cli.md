@@ -32,7 +32,7 @@ Compiling with MSVC:
 
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       cl.exe /utf-8 unvivtool.c
+       cl.exe /utf-8 /O2 unvivtool.c
 
 ## Usage
 
@@ -56,14 +56,13 @@ Options:
 
 ```
 EXAMPLE 1
-   unvivtool d car.viv
+   unvivtool d car.viv car_viv
 
-      decodes and extracts all files from archive 'car.viv' to folder
-      CAR_VIV. when folder CAR_VIV already exists, increments
-      foldername to CAR_VIV_1
+      decodes and extracts all files from archive 'car.viv' to directory
+      'car_viv'. the output directory must be a valid path.
 
 EXAMPLE 2
-      unvivtool d -p car.viv
+      unvivtool d -p car.viv car_viv
 
       -p    prints contents of archive 'car.viv', does not write to disk
 
