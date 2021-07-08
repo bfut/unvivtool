@@ -22,7 +22,7 @@
 #ifndef LIBNFSVIV_H
 #define LIBNFSVIV_H
 
-#include <ctype.h>  /* isalpha, toupper */
+#include <ctype.h>  /* isprint */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +34,7 @@
 #include <unistd.h>  /* chdir */
 #endif
 
-#define LIBVERS "1.5"
+#define LIBVERS "1.5+dev"
 
 #ifndef __cplusplus
 enum { kLibnfsvivBufferSize = 4096 };
@@ -46,7 +46,7 @@ static const int kLibnfsvivFilenameMaxLen = 256;
 
 /* BIGF, filesize, count_dir_entries, header_size */
 typedef struct {
-  unsigned char BIGF[4];
+  char BIGF[4];
   int filesize;
   int count_dir_entries;
   int header_size;  /* includes VIV directory. filename lengths include nul */
@@ -276,10 +276,7 @@ int LIBNFSVIV_INTERNAL_CheckVivHeader(const VivHeader viv_header,
                                       const int viv_filesize,
                                       const int opt_strictchecks)
 {
-    char BIGF[4];
-
-    memcpy(BIGF, viv_header.BIGF, (size_t)(4 * sizeof(BIGF[0])));
-    if (strncmp(BIGF, "BIGF", (size_t)4) != 0)
+    if (strncmp(viv_header.BIGF, "BIGF", (size_t)4) != 0)
     {
       fprintf(stderr, "Format error (header missing BIGF)\n");
       return 0;
@@ -513,7 +510,7 @@ int LIBNFSVIV_INTERNAL_GetVivDir(VivDirEntr *viv_dir, int *count_dir_entries,
       ptr = buffer + curr_offset_buffer - 1;
 
       memcpy(&tmp, ptr + 1, (size_t)1);
-      if (!isalpha(tmp))
+      if (!isprint(tmp))
       {
         *count_dir_entries = i;  /* breaks while loop */
         break;

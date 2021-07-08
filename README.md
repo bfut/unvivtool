@@ -9,7 +9,6 @@ Linux.
 * decodes an entire archive at once or retrieves a single file either by index
   or by filename
 * optionally lists archive contents without writing to disk
-* low peak memory usage
 
 ## Documentation
 
@@ -39,6 +38,10 @@ Requires Python 3.7+
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool/python
        python setup.py install
+
+To uninstall, delete the module. Its path can be printed with
+
+       python -c "import unvivtool; print(unvivtool)"
 
 ## References
 
