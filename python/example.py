@@ -11,7 +11,6 @@
 """
 
 import argparse
-import os
 import pathlib
 
 import unvivtool
@@ -21,13 +20,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("cmd", nargs=1, help="e: viv(), d: unviv()")
 args = parser.parse_args()
 
-# Change cwd to script path
-script_path = pathlib.Path(__file__).parent.resolve()
-os.chdir(script_path)
-
 # Decode
 if args.cmd[0] == "d":
-    vivfile = "tests/car.viv"
+    vivfile = "tests/car.viv"                   # all paths can be absolute or relative
     outdir = "tests"
     unvivtool.unviv(vivfile, outdir)            # extract all files in archive 'vivfile'
 
