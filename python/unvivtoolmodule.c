@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -18,13 +18,13 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 /**
   BUILD:
   - to cwd
       python setup.py build
   - install
-      python setup.py install
+      python -m pip install --upgrade pip wheel setuptools
+      python -m pip install -e .
  **/
 
 #include <stdio.h>
@@ -58,48 +58,11 @@ static const int kUnvivtoolMaxPathLen = 4096;
 
 #include <Python.h>
 
-/* UVT_MODULE_DEBUG --------------------------------------------------------- */
-#ifdef UVT_MODULE_DEBUG
-static const unsigned int BINDINGS_DOMAIN = 0x2038;
-
-void *malloc_track(size_t size)
-{
-  void *ptr = malloc(size);
-  PyTraceMalloc_Track(BINDINGS_DOMAIN, (uintptr_t)ptr, size);
-  return ptr;
-}
-
-void *realloc_track(void *in_ptr, size_t size)
-{
-  void *ptr = realloc(in_ptr, size);
-  if (ptr)
-  {
-    if (ptr != in_ptr)
-    {
-      PyTraceMalloc_Untrack(BINDINGS_DOMAIN, (uintptr_t)in_ptr);
-    }
-    PyTraceMalloc_Track(BINDINGS_DOMAIN, (uintptr_t)ptr, size);
-  }
-  return ptr;
-}
-
-void free_track(void *ptr)
-{
-  PyTraceMalloc_Untrack(BINDINGS_DOMAIN, (uintptr_t)ptr);
-  free(ptr);
-}
-
-#define malloc malloc_track
-#define realloc realloc_track
-#define free free_track
-#endif  /* def UVT_MODULE_DEBUG */
-
-#if 0
+#ifdef PYMEM_MALLOC
 #define malloc PyMem_Malloc
 #define realloc PyMem_Realloc
 #define free PyMem_Free
-#endif
-/* UVT_MODULE_DEBUG --------------------------------------------------------- */
+#endif  /* PYMEM_MALLOC */
 
 #include "../libnfsviv.h"
 
@@ -123,19 +86,11 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_strictchecks = 0;
   int fd;
   char *buf_cwd = NULL;
-  static char *keywords[] = { "viv", "dir", "fileidx", "filename",
-                              "dry", "verbose", "strict", NULL };
+  static const char *keywords[] = { "viv", "dir", "fileidx", "filename",
+                                    "dry", "verbose", "strict", NULL };
 
-#ifdef UVT_MODULE_DEBUG
-  setbuf(stdout, NULL);
-  if (!LIBNFSVIV_SanityTest())
-  {
-    PyErr_SetString(PyExc_RuntimeError, "failed sanity test");
-    return NULL;
-  }
-#endif
-
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|iO&iii:unviv", keywords,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|iO&iii:unviv",
+                                   (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
                                    PyUnicode_FSConverter, &outpath_obj,
                                    &request_file_idx,
@@ -258,18 +213,10 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *item = NULL;
   PyObject *bytes = NULL;
   char *ptr = NULL;
-  static char *keywords[] = { "viv", "infiles", "dry", "verbose", NULL };
+  static const char *keywords[] = { "viv", "infiles", "dry", "verbose", NULL };
 
-#ifdef UVT_MODULE_DEBUG
-  setbuf(stdout, NULL);
-  if (!LIBNFSVIV_SanityTest())
-  {
-    PyErr_SetString(PyExc_RuntimeError, "failed sanity test");
-    return NULL;
-  }
-#endif
-
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|ii:viv", keywords,
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|ii:viv",
+                                   (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
                                    &infiles_paths_obj, &opt_dryrun, &opt_verbose))
   {
@@ -343,7 +290,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     if (!retv_obj)
       break;  /* for (;;) */
 
-    infiles_paths = /* (char **) */malloc((size_t)(count_infiles + 1) * (size_t)sizeof(*infiles_paths));
+    infiles_paths = /* (char **) */malloc((size_t)(count_infiles + 1) * sizeof(*infiles_paths));
     if (!infiles_paths)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -351,7 +298,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
-    ptr = /* (char *) */malloc((size_t)length_str * (size_t)sizeof(**infiles_paths));
+    ptr = /* (char *) */malloc((size_t)length_str * sizeof(**infiles_paths));
     if (!ptr)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -613,20 +560,18 @@ PyMethodDef m_methods[] = {
   {NULL,     NULL}
 };
 
-
-/* -------------------------------------------------------------------------- */
-
 static
 PyModuleDef unvivtoolmodule = {
   PyModuleDef_HEAD_INIT,  /* m_base */
   "unvivtool",  /* m_name */
-  m_doc,
+  m_doc,  /* m_doc */
   -1,  /* m_size */
-  m_methods
+  m_methods,  /* m_methods */
+  NULL,  /* m_slots */
+  NULL,  /* m_traverse */
+  NULL,  /* m_clear */
+  NULL  /* m_free */
 };
-
-
-/* -------------------------------------------------------------------------- */
 
 PyMODINIT_FUNC PyInit_unvivtool(void)
 {
