@@ -1,6 +1,6 @@
 /*
   libnfsviv.h - implements VIV/BIG decoding/encoding
-  unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -18,11 +18,10 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-
 #ifndef LIBNFSVIV_H
 #define LIBNFSVIV_H
 
-#include <ctype.h>  /* isalpha, toupper */
+#include <ctype.h>  /* isprint */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +33,7 @@
 #include <unistd.h>  /* chdir */
 #endif
 
-#define LIBVERS "1.5"
+#define LIBVERS "1.7"
 
 #ifndef __cplusplus
 enum { kLibnfsvivBufferSize = 4096 };
@@ -46,7 +45,7 @@ static const int kLibnfsvivFilenameMaxLen = 256;
 
 /* BIGF, filesize, count_dir_entries, header_size */
 typedef struct {
-  unsigned char BIGF[4];
+  char BIGF[4];
   int filesize;
   int count_dir_entries;
   int header_size;  /* includes VIV directory. filename lengths include nul */
@@ -178,7 +177,7 @@ void LIBNFSVIV_INTERNAL_PrintStatsDec(
 
   if (count_dir_entries > 0)
   {
-    buffer = (unsigned char *)malloc((size_t)chunk_size * (size_t)sizeof(*buffer));
+    buffer = (unsigned char *)malloc((size_t)chunk_size * sizeof(*buffer));
     if (!buffer)
     {
       fprintf(stderr, "Cannot allocate memory\n");
@@ -276,10 +275,7 @@ int LIBNFSVIV_INTERNAL_CheckVivHeader(const VivHeader viv_header,
                                       const int viv_filesize,
                                       const int opt_strictchecks)
 {
-    char BIGF[4];
-
-    memcpy(BIGF, viv_header.BIGF, (size_t)(4 * sizeof(BIGF[0])));
-    if (strncmp(BIGF, "BIGF", (size_t)4) != 0)
+    if (strncmp(viv_header.BIGF, "BIGF", (size_t)4) != 0)
     {
       fprintf(stderr, "Format error (header missing BIGF)\n");
       return 0;
@@ -513,7 +509,7 @@ int LIBNFSVIV_INTERNAL_GetVivDir(VivDirEntr *viv_dir, int *count_dir_entries,
       ptr = buffer + curr_offset_buffer - 1;
 
       memcpy(&tmp, ptr + 1, (size_t)1);
-      if (!isalpha(tmp))
+      if (!isprint(tmp))  /* had isalpha() which fails in respective cases */
       {
         *count_dir_entries = i;  /* breaks while loop */
         break;
@@ -829,7 +825,8 @@ int LIBNFSVIV_INTERNAL_VivWriteFile(FILE *outfile, const char *infile_path,
 
 /* api ---------------------------------------------------------------------- */
 
-int LIBNFSVIV_SanityTest(void)
+#if 0
+int LIBNFSVIV_SanityTest(void)  /* src: D. Auroux fshtool.c [2002]*/
 {
   int retv = 1;
   int x = 0;
@@ -873,6 +870,7 @@ int LIBNFSVIV_SanityTest(void)
 
   return retv;
 }
+#endif
 
 /* Assumes (viv_name). Assumes (outpath). Overwrites directory 'outpath'.
    Changes working directory to 'outpath'.
@@ -932,7 +930,7 @@ int LIBNFSVIV_Unviv(const char *viv_name, const char *outpath,
       break;
     }
 
-    viv_directory = (VivDirEntr *)malloc((size_t)(count_dir_entries + 1) * (size_t)sizeof(*viv_directory));
+    viv_directory = (VivDirEntr *)malloc((size_t)(count_dir_entries + 1) * sizeof(*viv_directory));
     if (!viv_directory)
     {
       fprintf(stderr, "Cannot allocate memory\n");
@@ -1060,7 +1058,7 @@ int LIBNFSVIV_Viv(const char *viv_name,
   for (;;)
   {
     /* Set VIV directory */
-    viv_directory = (VivDirEntr *)malloc((size_t)count_infiles * (size_t)sizeof(*viv_directory));
+    viv_directory = (VivDirEntr *)malloc((size_t)count_infiles * sizeof(*viv_directory));
     if (!viv_directory)
     {
       fprintf(stderr, "Cannot allocate enough memory\n");
