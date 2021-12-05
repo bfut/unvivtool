@@ -1,18 +1,18 @@
 # unvivtool - Python extension module
-
 This file describes installation, and usage of unvivtool as Python extension
-module. An example Python script is linked to.
+module.
+
+## Usage
+A ready to use decoder/encoder script can be found here: [/python/unvivtool_script.py](/python/unvivtool_script.py)
 
 ## Installation
-
 Requires Python 3.7+
 
        git clone https://github.com/bfut/unvivtool.git
-       cd unvivtool/python
-       python setup.py install
+       python -m pip install --upgrade pip wheel setuptools
+       python -m pip install -e unvivtool/python
 
-## Usage
-
+## Documentation
 ```
 NAME
     unvivtool - VIV/BIG decoding/encoding
@@ -157,18 +157,4 @@ FUNCTIONS
         |
         |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)
         |      ...
-```
-
-## Examples
-
-An example script can be found here: [/python/example.py](/python/example.py)
-
-## File Listing
-
-```
-doc/unvivtool_py.md - this file
-python/unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-python/setup.py - installs Python module
-libnfsviv.h - implements VIV/BIG decoding/encoding
-README.md
 ```
