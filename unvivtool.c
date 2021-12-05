@@ -1,6 +1,6 @@
 /*
   unvivtool.c - VIV/BIG decoder/encoder CLI
-  unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -80,10 +80,12 @@ int main(int argc, char **argv)
   char *ptr;
   int i;
 
-  printf("unvivtool %s - Copyright (C) 2020 Benjamin Futasz (GPLv3+)\n\n", LIBVERS);
+  printf("unvivtool %s - Copyright (C) 2020-2021 Benjamin Futasz (GPLv3+)\n\n", LIBVERS);
 
+  #if 0
   if (!LIBNFSVIV_SanityTest())
     return -1;
+  #endif
 
   if (argc < 2)
   {
@@ -182,8 +184,8 @@ int main(int argc, char **argv)
   if (!strcmp(argv[1], "d") && (argc > count_options + 3))
   {
     if (!LIBNFSVIV_Unviv(argv[count_options + 2], argv[count_options + 3],
-                          request_file_idx, request_file_name,
-                          opt_dryrun, opt_strictchecks, opt_verbose))
+                         request_file_idx, request_file_name,
+                         opt_dryrun, opt_strictchecks, opt_verbose))
     {
       printf("Decoder failed.\n");
       retv = -1;
