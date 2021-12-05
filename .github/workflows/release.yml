@@ -3,8 +3,8 @@ name: release
 on: workflow_dispatch
 
 env:
-  version: 15
-  dotversion: 1.5
+  version: 17
+  dotversion: 1.7
 
 jobs:
   win32:
