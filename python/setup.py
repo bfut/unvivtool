@@ -1,7 +1,5 @@
 """
     setup.py - adapted from https://github.com/pybind/python_example/blob/master/setup.py
-
-    libnfsviv.h - implements VIV/BIG decoding/encoding
     unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
 
     You may not redistribute this program without its source code.
@@ -96,7 +94,7 @@ ext_modules = [
 ]
 
 setuptools.setup(
-    name=module_name + "-" + str(__version__),
+    name=module_name,
     version=__version__,
     author="Benjamin Futasz",
     url="https://github.com/bfut/unvivtool",

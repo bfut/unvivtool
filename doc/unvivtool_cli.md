@@ -64,6 +64,6 @@ Options:
   -i #          decode file at 1-based index #
   -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
   -p            print archive contents, do not write to disk (dry run)
-  -s            decoder strict mode, extra format checks, fail at first unsuccesful extraction
+  -s            decoder strict mode, extra format checks, fail at first unsuccessful extraction
   -v            verbose
 ```

@@ -22,7 +22,7 @@
 /**
   BUILD:
   - Linux:
-      gcc -std=c89 -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2 unvivtool.c -o unvivtool
+      gcc -std=c89 -fPIE -s -O2 unvivtool.c -o unvivtool
   - Windows (x86): cross-compile on Linux
       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
   - Windows:
@@ -62,7 +62,7 @@ void Usage(void)
          "  -i #          decode file at 1-based index #\n"
          "  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -p            print archive contents, do not write to disk (dry run)\n"
-         "  -s            decoder strict mode, extra format checks, fail at first unsuccesful extraction\n"
+         "  -s            decoder strict mode, extra format checks, fail at first unsuccessful extraction\n"
          "  -v            verbose\n");
 }
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   char *ptr;
   int i;
 
-  printf("unvivtool %s - Copyright (C) 2020-2021 Benjamin Futasz (GPLv3+)\n\n", LIBVERS);
+  printf("unvivtool %s - Copyright (C) 2020-2021 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
 
   #if 0
   if (!LIBNFSVIV_SanityTest())

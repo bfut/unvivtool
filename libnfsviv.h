@@ -33,7 +33,7 @@
 #include <unistd.h>  /* chdir */
 #endif
 
-#define LIBVERS "1.7"
+#define UVTVERS "1.7"
 
 #ifndef __cplusplus
 enum { kLibnfsvivBufferSize = 4096 };
