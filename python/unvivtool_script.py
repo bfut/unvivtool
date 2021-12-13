@@ -1,7 +1,7 @@
 """
     unvivtool_script.py - decode or encode VIV/BIG archives with unvivtool
 
-USAGE
+HOW TO USE
     Run decoder:
     python example.py d [</path/to/archive.viv>|</path/to/archive.big>]
 
@@ -29,11 +29,15 @@ args = parser.parse_args()
 if args.cmd[0] == "d":
     if len(args.cmd) > 1:
         if os.name == "nt":
-            vivfile = pathlib.Path(' '.join(args.cmd)[1:])  # ugh
+            vivfile = ' '.join(args.cmd)[1:]
+            vivfile = pathlib.Path(vivfile)
         else:
             vivfile = pathlib.Path(args.cmd[1])
     else:
         vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
+    with open(vivfile, 'r') as f:
+        pass
+
     outdir = pathlib.Path(pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:]))
     try:
         os.mkdir(outdir)
@@ -46,7 +50,8 @@ if args.cmd[0] == "d":
 elif args.cmd[0] == "e":
     if len(args.cmd) > 1:
         if os.name == "nt":
-            infolder = pathlib.Path(' '.join(args.cmd)[1:])  # ugh
+            infolder = ' '.join(args.cmd)[1:]
+            infolder = pathlib.Path(infolder)
         else:
             infolder = pathlib.Path(args.cmd[1])
     else:
