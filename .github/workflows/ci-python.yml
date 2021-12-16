@@ -35,16 +35,16 @@ jobs:
     - name: Python version
       run: python -c "import sys; print(sys.version)"
 
-    - name: "build: setup.py"
+    - name: "setup.py build"
       run: |
         cd python
         python setup.py build
 
-    - name: "install: setup.py"
+    - name: "pip install"
       run: |
-        python -m pip install -e python
+        python -m pip install ./python
 
-    - name: "install: print help"
+    - name: "import, print help"
       shell: bash
       run: |
         python -c "import unvivtool; help(unvivtool)"
