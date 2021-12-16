@@ -28,8 +28,6 @@ EXAMPLE 3
 Download the latest release and extract ```unvivtool.exe``` to the directory of
 your choice.
 
-To uninstall, delete any extracted files.
-
 #### Linux
 
        cd ~

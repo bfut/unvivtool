@@ -8,9 +8,10 @@ A ready to use decoder/encoder script can be found here: [/python/unvivtool_scri
 ## Installation
 Requires Python 3.7+
 
+       cd ~
        git clone https://github.com/bfut/unvivtool.git
        python -m pip install --upgrade pip wheel setuptools
-       python -m pip install -e unvivtool/python
+       python -m pip install unvivtool/python
 
 ## Documentation
 ```
