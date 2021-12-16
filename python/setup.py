@@ -1,6 +1,6 @@
 """
     setup.py - adapted from https://github.com/pybind/python_example/blob/master/setup.py
-    unvivtool Copyright (C) 2020 Benjamin Futasz <https://github.com/bfut>
+    unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
 
     You may not redistribute this program without its source code.
     README.md may not be removed or altered from any unvivtool redistribution.
@@ -53,6 +53,9 @@ else:
 
     if "gcc" in platform.python_compiler().lower():
         extra_compile_args += [
+            ("-Wno-unused-parameter"),  # self in PyObject *unviv(PyObject *self, ...)
+            ("-Wno-missing-field-initializers"),  # {NULL, NULL} in struct PyMethodDef{}
+
             ("-fasynchronous-unwind-tables"),
             ("-Wall"),
             ("-Wextra"),

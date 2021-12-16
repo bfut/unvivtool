@@ -1,5 +1,3 @@
-# This file is distributed under: CC BY-SA 4.0 <https://creativecommons.org/licenses/by-sa/4.0/>
-
 """
   tests.py - unit testing unvivtool module with tracemalloc
 
