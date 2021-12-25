@@ -28,11 +28,7 @@ args = parser.parse_args()
 # Decode
 if args.cmd[0] == "d":
     if len(args.cmd) > 1:
-        if os.name == "nt":
-            vivfile = ' '.join(args.cmd)[1:]
-            vivfile = pathlib.Path(vivfile)
-        else:
-            vivfile = pathlib.Path(args.cmd[1])
+        vivfile = pathlib.Path(args.cmd[1])
     else:
         vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
     with open(vivfile, 'r') as f:
@@ -49,11 +45,7 @@ if args.cmd[0] == "d":
 # Encode
 elif args.cmd[0] == "e":
     if len(args.cmd) > 1:
-        if os.name == "nt":
-            infolder = ' '.join(args.cmd)[1:]
-            infolder = pathlib.Path(infolder)
-        else:
-            infolder = pathlib.Path(args.cmd[1])
+        infolder = pathlib.Path(args.cmd[1])
     else:
         infolder = pathlib.Path(pathlib.Path(__file__).parent / "car_viv/")
 
