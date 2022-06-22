@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  version: 18
-  dotversion: 1.8
+  version: 19
+  dotversion: 1.
 
 jobs:
   win32:
