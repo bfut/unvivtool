@@ -25,7 +25,7 @@ import linecache
 import os
 import tracemalloc
 
-def display_top(snapshot, key_type='lineno', limit=10):
+def display_top(snapshot, key_type="lineno", limit=10):
     snapshot = snapshot.filter_traces((
         tracemalloc.Filter(False, "<frozen importlib._bootstrap>"),
         tracemalloc.Filter(False, "<unknown>"),
@@ -40,7 +40,7 @@ def display_top(snapshot, key_type='lineno', limit=10):
               "({:d})".format(stat.size))
         line = linecache.getline(frame.filename, frame.lineno).strip()
         if line:
-            print('    %s' % line)
+            print("    %s" % line)
 
     other = top_stats[limit:]
     if other:
@@ -248,7 +248,8 @@ if args.cmd[0] == "d":
         print("Test11 failure", "\n")
     res = -1
 
-    print("Successful tests: {:d}/{:d}".format(count_successful_tests, 11), "\n")
+    print(f"Successful tests: {count_successful_tests}/{11}")
+    print()
 
 # Encode
 elif args.cmd[0] == "e":
@@ -393,7 +394,7 @@ elif args.cmd[0] == "e":
 
     print("Test10: vivfile = None, infiles = [\"../LICENSE\", \"pyproject.toml\"]")
     print("Expected result: TypeError, return NULL", flush=True)
-    infiles = ["../LICENSE", "pyproject.toml"]  # (7+1) + (14+1) = 23
+    infiles = [ "../LICENSE", "pyproject.toml" ]  # (7+1) + (14+1) = 23
     try:
         res = unvivtool.viv(None, infiles)
     except TypeError as e:
@@ -407,7 +408,8 @@ elif args.cmd[0] == "e":
     infiles = None
     res = -1
 
-    print("Successful tests: {:d}/{:d}".format(count_successful_tests, 10), "\n")
+    print(f"Successful tests: {count_successful_tests}/{10}")
+    print()
 
 #
 else:

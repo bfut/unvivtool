@@ -8,6 +8,9 @@ HOW TO USE
     Run encoder:
     python example.py e [</path/to/folder>]
 
+    Print info:
+    python example.py i [</path/to/archive.viv>|</path/to/archive.big>]
+
 LICENSE
     Copyright (C) 2021 Benjamin Futasz <https://github.com/bfut>
     This file is distributed under: CC BY-NC-SA 4.0
@@ -20,53 +23,65 @@ import re
 
 import unvivtool
 
-# Parse command (or print module help)
-parser = argparse.ArgumentParser()
-parser.add_argument("cmd", nargs='+', help="e: viv(), d: unviv()")
-args = parser.parse_args()
+def main():
+    # Parse command (or print module help)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("cmd", nargs="+", help="d: unviv(), e: viv(), i: print viv info")
+    args = parser.parse_args()
 
-# Decode
-if args.cmd[0] == "d":
-    if len(args.cmd) > 1:
-        vivfile = pathlib.Path(args.cmd[1])
+    # Decode
+    if args.cmd[0] == "d":
+        if len(args.cmd) > 1:
+            vivfile = pathlib.Path(args.cmd[1])
+        else:
+            vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
+        with open(vivfile, mode="rb") as f:
+            pass
+
+        outdir = pathlib.Path(pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:]))
+        try:
+            os.mkdir(outdir)
+        except FileExistsError:
+            print(f"os.mkdir() not necessary, directory exists: {outdir}")
+        unvivtool.unviv(str(vivfile), str(outdir))  # extract all files in archive "vivfile"
+
+    # Encode
+    elif args.cmd[0] == "e":
+        if len(args.cmd) > 1:
+            infolder = pathlib.Path(args.cmd[1])
+        else:
+            infolder = pathlib.Path(pathlib.Path(__file__).parent / "car_viv/")
+
+        suffix1 = re.compile(r"(\w+)_[vV][iI][vV]$", re.IGNORECASE)
+        suffix2 = re.compile(r"(\w+)_[bB][iI][gG]$", re.IGNORECASE)
+        if suffix1.match(infolder.stem):
+            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".viv")
+        elif suffix2.match(infolder.stem):
+            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".big")
+        else:
+            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem).with_suffix(".viv")
+
+        infiles = os.listdir(infolder)
+        for i in range(len(infiles)):
+            infiles[i] = str(pathlib.Path(infolder / infiles[i]))
+        infiles = sorted(infiles)
+        print(infiles)
+        unvivtool.viv(str(vivfile), infiles)  # encode all files in path/to/infiles
+
+    # Print info
+    if args.cmd[0] == "i":
+        if len(args.cmd) > 1:
+            vivfile = pathlib.Path(args.cmd[1])
+        else:
+            vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
+        with open(vivfile, mode="rb") as f:
+            pass
+        unvivtool.unviv(str(vivfile), dir="", dry=True, verbose=True)  # dry run
+
+    #
     else:
-        vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
-    with open(vivfile, 'r') as f:
-        pass
+        print("Invalid command (expects {d, e, i}):", args.cmd[0])
+        help(unvivtool)
 
-    outdir = pathlib.Path(pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:]))
-    try:
-        os.mkdir(outdir)
-    except FileExistsError:
-        print("os.mkdir() not necessary, directory exists:", outdir)
-
-    unvivtool.unviv(str(vivfile), str(outdir))  # extract all files in archive 'vivfile'
-
-# Encode
-elif args.cmd[0] == "e":
-    if len(args.cmd) > 1:
-        infolder = pathlib.Path(args.cmd[1])
-    else:
-        infolder = pathlib.Path(pathlib.Path(__file__).parent / "car_viv/")
-
-    r1 = re.compile("(\w+)_[vV][iI][vV]$", re.IGNORECASE)
-    r2 = re.compile("(\w+)_[bB][iI][gG]$", re.IGNORECASE)
-    if r1.match(infolder.stem):
-        vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".viv")
-    elif r2.match(infolder.stem):
-        vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".big")
-    else:
-        vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem).with_suffix(".viv")
-
-    infiles = os.listdir(infolder)
-    for i in range(len(infiles)):
-        infiles[i] = str(pathlib.Path(infolder / infiles[i]))
-    infiles = sorted(infiles)
-    print(infiles)
-
-    unvivtool.viv(str(vivfile), infiles)  # encode all files in 'infiles'
-
-#
-else:
-    print("Invalid command (expects {d, e}):", args.cmd[0])
-    help(unvivtool)
+if __name__ == "__main__":
+    main()

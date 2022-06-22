@@ -6,7 +6,7 @@ module.
 A ready to use decoder/encoder script can be found here: [/python/unvivtool_script.py](/python/unvivtool_script.py)
 
 ## Installation
-Requires Python 3.7+
+Requires Python 3.8+
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git

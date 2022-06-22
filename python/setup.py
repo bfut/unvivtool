@@ -1,22 +1,22 @@
 """
-    setup.py - adapted from https://github.com/pybind/python_example/blob/master/setup.py
-    unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
+setup.py - adapted from https://github.com/pybind/python_example/blob/master/setup.py
+unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 
-    You may not redistribute this program without its source code.
-    README.md may not be removed or altered from any unvivtool redistribution.
+You may not redistribute this program without its source code.
+README.md may not be removed or altered from any unvivtool redistribution.
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
 import platform
@@ -30,11 +30,11 @@ script_path = pathlib.Path(__file__).parent.resolve()
 os.chdir(script_path)
 
 module_name = "unvivtool"
-with open(script_path / "../libnfsviv.h", 'r') as f:
+with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
     for i in range(35):
         next(f)
-    __version__ = f.readline().rstrip().split('\"')[-2]
-    print("unvivtool version:", __version__)
+    __version__ = f.readline().rstrip().split("\"")[-2]
+    print(f"unvivtool version: {__version__}")
 long_description = (script_path / "../README.md").read_text(encoding="utf-8")
 
 extra_compile_args = [
@@ -106,7 +106,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=ext_modules,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     classifiers=[
         "Intended Audience :: Developers",
         "Intended Audience :: End Users/Desktop",
@@ -114,10 +114,9 @@ setuptools.setup(
         "Operating System :: Microsoft :: Windows",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python :: 3",
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Artistic Software",
         "Topic :: Games/Entertainment",
         "Topic :: Multimedia",
@@ -128,10 +127,3 @@ setuptools.setup(
     # cmdclass={"build_ext": build_ext},
     zip_safe=False,
 )
-
-# Linux / Anaconda:
-#     https://github.com/conda/conda/issues/10757
-#     https://github.com/sherpa/sherpa/issues/1325
-# workaround:
-#     conda install gcc_linux-64 gxx_linux-64 gfortran_linux-64
-# then compile as usual
