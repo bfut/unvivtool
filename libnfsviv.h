@@ -1,6 +1,6 @@
 /*
   libnfsviv.h - implements VIV/BIG decoding/encoding
-  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -18,10 +18,10 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#ifndef LIBNFSVIV_H
-#define LIBNFSVIV_H
+#ifndef LIBNFSVIV_H_
+#define LIBNFSVIV_H_
 
-#include <ctype.h>  /* isprint */
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,7 @@
 #include <direct.h>
 #define chdir _chdir
 #else
-#include <unistd.h>  /* chdir */
+#include <unistd.h>
 #endif
 
 #define UVTVERS "1.8"
@@ -170,7 +170,8 @@ void LIBNFSVIV_INTERNAL_PrintStatsDec(
   if (request_file_name)
   {
     if (request_file_name[0] != '\0')
-      printf("Requested file = %.*s\n", kLibnfsvivFilenameMaxLen * 4 - 1, request_file_name);
+      printf("Requested file = %.*s\n",
+             kLibnfsvivFilenameMaxLen * 4 - 1, request_file_name);
   }
 
   printf("Buffer = %d\n", kLibnfsvivBufferSize);
@@ -585,7 +586,7 @@ int LIBNFSVIV_INTERNAL_VivExtractFile(const VivDirEntr viv_dir,
   curr_offset = viv_dir.offset;
   fseek(infile, (long)curr_offset, SEEK_SET);
 
-  while(curr_offset < viv_dir.offset + viv_dir.filesize)
+  while (curr_offset < viv_dir.offset + viv_dir.filesize)
   {
     curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, viv_dir.offset + viv_dir.filesize - curr_offset);
 
@@ -798,7 +799,7 @@ int LIBNFSVIV_INTERNAL_VivWriteFile(FILE *outfile, const char *infile_path,
     return 0;
   }
 
-  while(curr_chunk_size > 0)
+  while (curr_chunk_size > 0)
   {
     curr_ofs = ftell(infile);
     curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, infile_size - curr_ofs);
@@ -981,7 +982,8 @@ int LIBNFSVIV_Unviv(const char *viv_name, const char *outpath,
     /* Extract archive */
     if (chdir(outpath) != 0)
     {
-      fprintf(stderr, "Cannot change working directory to '%s'\n", outpath);
+      fprintf(stderr, "Cannot change working directory to '%s' "
+                      "(Does the directory exist?)\n", outpath);
       retv = 0;
       break;
     }
@@ -1004,7 +1006,7 @@ int LIBNFSVIV_Unviv(const char *viv_name, const char *outpath,
     }
     else
     {
-      for (i = 0; i < count_dir_entries;++i)
+      for (i = 0; i < count_dir_entries; ++i)
       {
         /* Continue extracting after a failure, unless strictchecks are enabled */
         if (!LIBNFSVIV_INTERNAL_VivExtractFile(viv_directory[i], viv_filesize, file) &&
@@ -1141,4 +1143,4 @@ int LIBNFSVIV_Viv(const char *viv_name,
   return retv;
 }
 
-#endif  /* LIBNFSVIV_H */
+#endif  /* LIBNFSVIV_H_ */

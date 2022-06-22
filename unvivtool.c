@@ -1,6 +1,6 @@
 /*
   unvivtool.c - VIV/BIG decoder/encoder CLI
-  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "libnfsviv.h"
+#include "./libnfsviv.h"
 
 #ifndef __cplusplus
 #ifdef _WIN32
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
   char *ptr;
   int i;
 
-  printf("unvivtool %s - Copyright (C) 2020-2021 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
+  printf("unvivtool %s - Copyright (C) 2020-2022 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
 
   #if 0
   if (!LIBNFSVIV_SanityTest())
@@ -133,8 +133,9 @@ int main(int argc, char **argv)
           {
             if ((int)strlen(argv[i]) + 1 > kLibnfsvivFilenameMaxLen * 4)
             {
-              fprintf(stderr, "Requested filename too long (max %d): len %d\n",
-                              kLibnfsvivFilenameMaxLen, (int)strlen(argv[i]) + 1);
+              fprintf(stderr,
+                      "Requested filename too long (max %d): len %d\n",
+                      kLibnfsvivFilenameMaxLen, (int)strlen(argv[i]) + 1);
               return -1;
             }
 

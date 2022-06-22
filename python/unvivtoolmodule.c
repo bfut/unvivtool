@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020-2021 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -22,10 +22,9 @@
 /**
   BUILD:
   - to cwd
-      python setup.py build
+      python -m pip install -e .
   - install
       python -m pip install --upgrade pip wheel setuptools
-      python -m pip install -e .
  **/
 
 #include <stdio.h>
@@ -133,7 +132,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     else
     {
       fd = open(outpath, O_RDONLY);
-      if( fd == -1 )
+      if (fd == -1)
       {
         printf("Cannot open output directory '%s': no such directory\n", outpath);
         retv_obj = Py_BuildValue("i", 0);
@@ -144,7 +143,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 #endif  /* not _WIN32 */
 
     fd = open(viv_name, O_RDONLY);
-    if( fd == -1 )
+    if (fd == -1)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "cannot open viv: no such file or directory");
       retv_obj = NULL;
@@ -358,12 +357,12 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 
   if (retv_obj)
   {
-    for(;;)
+    for (;;)
     {
       if (!opt_dryrun)
       {
         fd = open(viv_name, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
-        if(fd == -1)
+        if (fd == -1)
         {
           PyErr_SetString(PyExc_FileNotFoundError, "cannot create archive - no such file or directory");
           retv_obj = NULL;

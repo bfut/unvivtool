@@ -21,7 +21,7 @@ jobs:
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
@@ -60,9 +60,3 @@ jobs:
       run: |
         cd python
         python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'e']); print('Exit code', retcode); sys.exit(retcode)"
-
-    - name: "tests.py i"
-      shell: bash
-      run: |
-        cd python
-        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'i']); print('Exit code', retcode); sys.exit(retcode)"

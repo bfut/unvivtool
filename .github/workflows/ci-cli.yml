@@ -2,9 +2,9 @@ name: ci-cli
 
 on:
   push:
-    branches: [ main ]
+    branches:  # [ main ]
   pull_request:
-    branches: [ main ]
+    branches:  # [ main ]
 
 jobs:
 
@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-2019 ]
+        os: [ windows-latest ]
         arch: [ x86, x64 ]
 
     name: Windows (${{ matrix.arch }})
@@ -22,7 +22,7 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
 
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Compile
       run: |
@@ -116,7 +116,7 @@ jobs:
 
 
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     env:
       valgrind: "valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes"
@@ -124,7 +124,7 @@ jobs:
     name: Ubuntu
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Install valgrind
       shell: bash

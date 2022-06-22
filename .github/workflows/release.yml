@@ -1,18 +1,19 @@
 name: release
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 env:
-  version: 17
-  dotversion: 1.7
+  version: 18
+  dotversion: 1.8
 
 jobs:
   win32:
-    runs-on: ubuntu-20.04  # required for -fstack-clash-protection
+    runs-on: ubuntu-latest  # required for -fstack-clash-protection
 
     name: Compile (Windows x86)
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install compiler
         run: |
@@ -36,7 +37,7 @@ jobs:
         run: |
           mkdir release
 
-          7z a -tzip "release/unvivtool${{ env.version }}_cli_win32.zip" \
+          7z a -tzip "unvivtool${{ env.version }}_cli_win32.zip" \
           batch \
           doc/unvivtool_cli.md \
           references \
@@ -47,41 +48,33 @@ jobs:
           unvivtool.c
 
       - name: Store archive
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: release
-          path: release/*
+          name: "unvivtool${{ env.version }}_cli_win32.zip"
+          path: "unvivtool${{ env.version }}_cli_win32.zip"
           retention-days: 1
 
-  upload-win32:
-    runs-on: ubuntu-20.04
-    needs: win32
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.dotversion }}
+          release_name: "unvivtool${{ env.version }}_cli_win32.zip"
+          draft: false
+          prerelease: false
 
-    name: Release (Windows x86)
-    steps:
-    - name: Download release archive
-      uses: actions/download-artifact@v2
-      with:
-        name: release
+      - name: Test
+        run: cat "unvivtool${{ env.version }}_cli_win32.zip"
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.dotversion }}
-        release_name: "unvivtool${{ env.version }}_cli_win32.zip"
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./unvivtool${{ env.version }}_cli_win32.zip
-        asset_name: unvivtool${{ env.version }}_cli_win32.zip
-        asset_content_type: application/zip
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: unvivtool${{ env.version }}_cli_win32.zip
+          asset_name: unvivtool${{ env.version }}_cli_win32.zip
+          asset_content_type: application/zip

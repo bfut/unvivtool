@@ -1,15 +1,16 @@
 # unvivtool
-unvivtool is a VIV/BIG decoder/encoder. It is available as a command-line
-interface, and as a Python module. VIV/BIG is an uncompressed archive format.
+unvivtool is a VIV/BIG decoder/encoder. It is available as command-line
+interface, and as Python extension module.
+VIV/BIG is an uncompressed archive format.
 
-unvivtool is based on a header-only library written in C. Python bindings are
-written in CPython.
+unvivtool is based on a header-only library written in C89. Python bindings are
+written in CPython. Supported on Windows and Linux.
 
 ## Features
-* numerous format checks
-* decodes an entire archive at once or retrieves a single file either by index
-  or by filename
-* optionally lists archive contents without writing to disk
+* validates VIV/BIG archive
+* decodes entire archive at once
+* retrieves a single file from archive (by index or by filename)
+* lists archive contents without writing to disk
 
 ## Installation / Documentation
 Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>
