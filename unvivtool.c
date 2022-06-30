@@ -17,7 +17,7 @@
 
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+*/
 
 /**
   BUILD:
@@ -27,7 +27,7 @@
       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
   - Windows:
       cl.exe /utf-8 /O2 unvivtool.c
- **/
+**/
 
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +51,7 @@ static const int kUnvivtoolMaxPathLen = 4096;
 static
 void Usage(void)
 {
-  printf("Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/output_directory>\n"
+  printf("Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
          "\n"
          "Commands:\n"

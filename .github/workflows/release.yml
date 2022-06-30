@@ -5,7 +5,7 @@ on:
 
 env:
   version: 19
-  dotversion: 1.
+  dotversion: 1.9
 
 jobs:
   win32:

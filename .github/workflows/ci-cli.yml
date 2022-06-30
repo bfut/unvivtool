@@ -1,10 +1,11 @@
 name: ci-cli
 
 on:
-  push:
-    branches:  # [ main ]
-  pull_request:
-    branches:  # [ main ]
+  workflow_dispatch:
+  # push:
+  #   branches:  # [ main ]
+  # pull_request:
+  #   branches:  # [ main ]
 
 jobs:
 
@@ -39,7 +40,7 @@ jobs:
     - name: Test encode -v with existing
       shell: bash
       run: |
-        ./unvivtool e -v tests/car_out.viv LICENSE python/pyproject.toml
+        ./unvivtool e -v python/tests/car_out.viv LICENSE python/pyproject.toml
 
         cd tests
         ls -lg
@@ -47,7 +48,7 @@ jobs:
     - name: Test encode -v with skip
       shell: bash
       run: |
-        ./unvivtool e -v tests/car_out.viv not_a_file LICENSE python/pyproject.toml
+        ./unvivtool e -v python/tests/car_out.viv not_a_file LICENSE python/pyproject.toml
 
         cd tests
         ls -lg
@@ -66,7 +67,7 @@ jobs:
     - name: Test decode all -v, to existing folder
       shell: bash
       run: |
-        cd tests
+        cd python/tests
         rm -rf ../python/tests/car_viv
         mkdir -p ../python/tests/car_viv
         ../unvivtool d -v ../python/tests/car.viv ../python/tests/car_viv
@@ -179,9 +180,9 @@ jobs:
     - name: Test decode all
       shell: bash
       run: |
-        cd tests
+        cd python/tests
         mkdir foo
-        ${{ env.valgrind }} ../unvivtool d -strict ../python/tests/car.viv foo
+        ${{ env.valgrind }} ../unvivtool d -strict ../python/tests/in/car.viv foo
 
         cd foo
         ls -lg

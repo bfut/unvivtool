@@ -1,8 +1,6 @@
 name: ci-python
 
 on:
-  workflow_dispatch:
-
   push:
     branches:
   pull_request:
@@ -15,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
-        python-version: [ '3.8', '3.9', '3.10' ]  # 'pypy-3.8' no tracemalloc
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+        python-version: [ '3.8', '3.9', '3.10' ] # 'pypy-3.8'
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
@@ -24,39 +22,32 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Add requirements
-      run: |
-        python -m pip install --upgrade pip wheel setuptools
 
     - name: Python version
       run: python -c "import sys; print(sys.version)"
 
-    - name: "setup.py build"
-      run: |
-        cd python
-        python setup.py build
+    # - name: Add requirements
+    #   run: |
+    #     python -m pip install --upgrade pip setuptools wheel
 
     - name: "pip install"
       run: |
         python -m pip install --verbose ./python
 
-    - name: "import, print help"
+    - name: "Print unvivtool.__version__, help"
       shell: bash
       run: |
+        echo "import unvivtool; print(f'unvivtool.__version__={unvivtool.__version__}')" > _version.py; cat _version.py
+        python -c "import subprocess; import sys; retcode = subprocess.call([ sys.executable, '_version.py' ]); print('Exit code', retcode); sys.exit(0)"
         python -c "import unvivtool; help(unvivtool)"
 
-    - name: "tests.py d"
+    - name: "pytest"
       shell: bash
       run: |
-        cd python
-        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'd']); print('Exit code', retcode); sys.exit(retcode)"
-
-    - name: "tests.py e"
-      shell: bash
-      run: |
-        cd python
-        python -c "import subprocess; import sys; retcode = subprocess.call([sys.executable, 'tests.py', 'e']); print('Exit code', retcode); sys.exit(retcode)"
+        python -m pip install -q pytest
+        cmp --help
+        cksum
+        pytest -s -vv

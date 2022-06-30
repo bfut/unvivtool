@@ -1,3 +1,20 @@
+# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+#
+# You may not redistribute this program without its source code.
+# README.md may not be removed or altered from any unvivtool redistribution.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
     unvivtool_script.py - decode or encode VIV/BIG archives with unvivtool
 
@@ -10,11 +27,6 @@ HOW TO USE
 
     Print info:
     python example.py i [</path/to/archive.viv>|</path/to/archive.big>]
-
-LICENSE
-    Copyright (C) 2021 Benjamin Futasz <https://github.com/bfut>
-    This file is distributed under: CC BY-NC-SA 4.0
-        <https://creativecommons.org/licenses/by-nc-sa/4.0/>
 """
 import argparse
 import os
@@ -34,11 +46,11 @@ def main():
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(args.cmd[1])
         else:
-            vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
-        with open(vivfile, mode="rb") as f:
-            pass
+            vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
+        if not vivfile.is_file():
+            raise FileExistsError(f"{vivfile}")
 
-        outdir = pathlib.Path(pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:]))
+        outdir = pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:])
         try:
             os.mkdir(outdir)
         except FileExistsError:
@@ -50,33 +62,33 @@ def main():
         if len(args.cmd) > 1:
             infolder = pathlib.Path(args.cmd[1])
         else:
-            infolder = pathlib.Path(pathlib.Path(__file__).parent / "car_viv/")
+            infolder = pathlib.Path(__file__).parent / "car_viv/"
 
         suffix1 = re.compile(r"(\w+)_[vV][iI][vV]$", re.IGNORECASE)
         suffix2 = re.compile(r"(\w+)_[bB][iI][gG]$", re.IGNORECASE)
         if suffix1.match(infolder.stem):
-            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".viv")
+            vivfile = (infolder.parent / infolder.stem[:-4]).with_suffix(".viv")
         elif suffix2.match(infolder.stem):
-            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem[:-4]).with_suffix(".big")
+            vivfile = (infolder.parent / infolder.stem[:-4]).with_suffix(".big")
         else:
-            vivfile = pathlib.Path(pathlib.Path(infolder).parent, infolder.stem).with_suffix(".viv")
+            vivfile = (infolder.parent / infolder.stem).with_suffix(".viv")
 
         infiles = os.listdir(infolder)
         for i in range(len(infiles)):
-            infiles[i] = str(pathlib.Path(infolder / infiles[i]))
+            infiles[i] = str(infolder / infiles[i])
         infiles = sorted(infiles)
         print(infiles)
         unvivtool.viv(str(vivfile), infiles)  # encode all files in path/to/infiles
 
-    # Print info
+    # Print info (dry run)
     if args.cmd[0] == "i":
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(args.cmd[1])
         else:
-            vivfile = pathlib.Path(pathlib.Path(__file__).parent / "car.viv")  # all paths can be absolute or relative
-        with open(vivfile, mode="rb") as f:
-            pass
-        unvivtool.unviv(str(vivfile), dir="", dry=True, verbose=True)  # dry run
+            vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
+        if not vivfile.is_file():
+            raise FileExistsError(f"{vivfile}")
+        unvivtool.unviv(str(vivfile), dir="", dry=True, verbose=True)
 
     #
     else:

@@ -17,15 +17,16 @@
 
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
+*/
 
 /**
   BUILD:
+  python -m pip install --upgrade pip setuptools wheel
   - to cwd
       python -m pip install -e .
   - install
-      python -m pip install --upgrade pip wheel setuptools
- **/
+      python -m pip install .
+**/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,14 +48,12 @@ static const int kUnvivtoolMaxPathLen = 4096;
 #include <io.h>
 #define close _close
 #define open _open
-
 #define O_RDONLdY _O_RDONLY
 #define O_WRONLY _O_WRONLY
-
 #define O_CREAT _O_CREAT
 #define S_IRUSR _S_IREAD
 #define S_IWUSR _S_IWRITE
-#endif  /* _WIN32 */
+#endif
 
 #include <Python.h>
 
@@ -62,9 +61,13 @@ static const int kUnvivtoolMaxPathLen = 4096;
 #define malloc PyMem_Malloc
 #define realloc PyMem_Realloc
 #define free PyMem_Free
-#endif  /* PYMEM_MALLOC */
+#endif
 
 #include "../libnfsviv.h"
+
+/* https://github.com/pybind/python_example/blob/master/src/main.cpp */
+#define STRINGIFY(x) #x
+#define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 
 /* wrappers ----------------------------------------------------------------- */
@@ -140,7 +143,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       }
       close(fd);
     }
-#endif  /* not _WIN32 */
+#endif
 
     fd = open(viv_name, O_RDONLY);
     if (fd == -1)
@@ -561,13 +564,29 @@ PyMethodDef m_methods[] = {
 };
 
 static
+int unvivtool_exec(PyObject *mod)
+{
+  if (PyModule_AddStringConstant(mod, "__version__", MACRO_STRINGIFY(VERSION_INFO)) < 0)
+  {
+    return -1;
+  }
+  return 0;
+}
+
+static
+PyModuleDef_Slot m_slots[] = {
+  {Py_mod_exec, unvivtool_exec},
+  {0, NULL}
+};
+
+static
 PyModuleDef unvivtoolmodule = {
   PyModuleDef_HEAD_INIT,  /* m_base */
   "unvivtool",  /* m_name */
   m_doc,  /* m_doc */
-  -1,  /* m_size */
+  0,  /* m_size */
   m_methods,  /* m_methods */
-  NULL,  /* m_slots */
+  m_slots,  /* m_slots */
   NULL,  /* m_traverse */
   NULL,  /* m_clear */
   NULL  /* m_free */
@@ -575,5 +594,5 @@ PyModuleDef unvivtoolmodule = {
 
 PyMODINIT_FUNC PyInit_unvivtool(void)
 {
-  return PyModule_Create(&unvivtoolmodule);
+  return PyModuleDef_Init(&unvivtoolmodule);
 }
