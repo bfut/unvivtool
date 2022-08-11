@@ -3,26 +3,30 @@ This file describes installation, and usage of unvivtool as Python extension
 module.
 
 ## Usage
-A ready to use decoder/encoder script can be found here: [/python/unvivtool_script.py](/python/unvivtool_script.py)
+A ready to use decoder/encoder script can be found here: [/scripts/unvivtool_script.py](/scripts/unvivtool_script.py)
 
 ## Installation
 Requires Python 3.8+
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git
-       python -m pip install --upgrade pip wheel setuptools
+       python -m pip install --upgrade pip setuptools wheel
        python -m pip install unvivtool/python
 
 ## Documentation
 ```
+Help on module unvivtool:
+
 NAME
     unvivtool - VIV/BIG decoding/encoding
 
 DESCRIPTION
     Functions
     ---------
-    viv() -- encode files in new archive
-    unviv() -- decode and extract archive
+    viv() -- encode files in new VIV/BIG archive
+    unviv() -- decode and extract VIV/BIG archive
+    
+    unvivtool 1.9 Copyright (C) 2020-2022 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     unviv(...)
@@ -104,7 +108,7 @@ FUNCTIONS
         |      Strict Format error (Viv directory filesizes do not match archive size)
         |      Decoder failed.
         |      0
-
+    
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False)
         |      Encode files in new VIV/BIG archive. Skips given input paths
@@ -158,4 +162,7 @@ FUNCTIONS
         |
         |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)
         |      ...
+
+VERSION
+    1.9
 ```
