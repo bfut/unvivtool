@@ -3,7 +3,7 @@ This file describes installation, and usage of unvivtool as command-line
 interface.
 
 ## Usage
-Ready to use scripts can be found in [/batch](/batch)
+Ready to use scripts can be found in [/scripts](/scripts)
 
 ```
 EXAMPLE 1
@@ -51,7 +51,7 @@ Compiling with MSVC:
 
 ## Documentation
 ```
-Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/output_directory>
+Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
 
 Commands:
