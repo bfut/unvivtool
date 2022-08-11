@@ -81,14 +81,17 @@ def main():
         unvivtool.viv(str(vivfile), infiles)  # encode all files in path/to/infiles
 
     # Print info (dry run)
-    if args.cmd[0] == "i":
+    elif args.cmd[0] == "i":
+        print(f"#{args.cmd[1:]}#")
+        print( " ".join(args.cmd[1:]) ,  pathlib.Path(" ".join(args.cmd[1:]))  )
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(args.cmd[1])
+            vivfile = pathlib.Path(" ".join(args.cmd[1:]))
         else:
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
-        unvivtool.unviv(str(vivfile), dir="", dry=True, verbose=True)
+        unvivtool.unviv(str(vivfile), dir=".", dry=True, verbose=True)
 
     #
     else:

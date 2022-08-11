@@ -23,9 +23,6 @@ import platform
 import pathlib
 import setuptools
 
-
-# ------------------------------------------------------------------------------
-
 if os.environ.get("UVTVERBOSE") is not None:
     print(f'UVTVERBOSE={os.environ["UVTVERBOSE"]}')
 
@@ -34,9 +31,11 @@ os.chdir(script_path)
 
 module_name = "unvivtool"
 with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(36):
+    for _ in range(40 - 1):
         next(f)
-    __version__ = f.readline().rstrip().split("\"")[-2]
+    __version__ = f.readline()
+    print(f"readline() yields '{__version__}'")
+    __version__ = __version__.rstrip().split("\"")[-2]
     print(f"VERSION_INFO={__version__}")
 long_description = (script_path / "../README.md").read_text(encoding="utf-8")
 
