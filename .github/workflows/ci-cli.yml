@@ -1,13 +1,77 @@
 name: ci-cli
 
+env:
+  SRC: unvivtool.c
+  DEST: unvivtool
+  CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
+  CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
+  GCCDEBUGFLAGS: -pedantic-errors -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
+  CPPDEBUGFLAGS: -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
+  MINGWFLAGS: -std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp
+
 on:
-  workflow_dispatch:
-  # push:
-  #   branches:  # [ main ]
-  # pull_request:
-  #   branches:  # [ main ]
+  push:
+    branches:
+  pull_request:
+    branches:
 
 jobs:
+  linux:
+    runs-on: ubuntu-latest
+    name: Ubuntu C89/C++ (Linux/Win32)
+    steps:
+    - uses: actions/checkout@v3
+    - name: Compile
+      shell: bash
+      run: |
+        gcc -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}" ${{ env.GCCDEBUGFLAGS }} -Werror
+        g++ -std=c++17 ${{ env.CPPFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_c++" ${{ env.CPPDEBUGFLAGS }} -Werror
+        ls -lg
+    - name: Store executables
+      uses: actions/upload-artifact@v3
+      with:
+        name: unvivtool
+        path: |
+          ${{ env.DEST }}
+          ${{ env.DEST }}_c++
+    - name: Cross-compile for Windows
+      run: |
+        sudo apt install gcc-mingw-w64-i686
+        i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "${{ env.DEST }}_mingw_x86.exe" ${{ env.GCCDEBUGFLAGS }} -Werror
+        ls -lg
+    - name: Store executables
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.DEST }}_mingw
+        path: |
+          ${{ env.DEST }}_mingw_x86.exe
+          # ${{ env.DEST }}_c++
+
+
+
+  macos:
+    runs-on: macos-latest
+    name: macOS C89/C++
+    steps:
+    - uses: actions/checkout@v3
+    - name: Compile
+      shell: bash
+      run: |
+        clang -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}" ${{ env.GCCDEBUGFLAGS }} -Werror
+        clang++ -std=c++17 ${{ env.CPPFLAGS_MACOS }} "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}_c++" ${{ env.CPPDEBUGFLAGS }}
+        ls -lg
+    - name: Store executables
+      uses: actions/upload-artifact@v3
+      with:
+        name: unvivtool_${{ runner.os }}
+        path: |
+          ${{ env.DEST }}_${{ runner.os }}
+          ${{ env.DEST }}_${{ runner.os }}_c++
+    # - run: |
+    #       brew tap LouisBrunner/valgrind
+    #       brew install --HEAD LouisBrunner/valgrind/valgrind
+    #       valgrind ${{ env.DEST }}_${{ runner.os }}
+    #       valgrind ${{ env.DEST }}_${{ runner.os }}_c++
 
   windows:
     runs-on: ${{ matrix.os }}
@@ -21,198 +85,128 @@ jobs:
     steps:
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
-
-    - name: Checkout
-      uses: actions/checkout@v3
-
+    - uses: actions/checkout@v3
     - name: Compile
       run: |
-        cl.exe /W3 /utf-8 /O2 unvivtool.c
-
-    - name: Smoke test
-      shell: bash
-      run: |
-        ./unvivtool
-
-    - shell: bash
-      run: mkdir tests
-
-    - name: Test encode -v with existing
-      shell: bash
-      run: |
-        ./unvivtool e -v python/tests/car_out.viv LICENSE python/pyproject.toml
-
-        cd tests
-        ls -lg
-
-    - name: Test encode -v with skip
-      shell: bash
-      run: |
-        ./unvivtool e -v python/tests/car_out.viv not_a_file LICENSE python/pyproject.toml
-
-        cd tests
-        ls -lg
-
-    - name: Test encode to invalid archive path -v
-      shell: bash
-      run: |
-        cd tests
-        {
-          ../unvivtool e -v not_a_dir/car.viv LICENSE python/pyproject.toml && true
-        } || {
-          RESULT="$?"
-          echo "Exit Code = $RESULT"
-        }
-
-    - name: Test decode all -v, to existing folder
-      shell: bash
-      run: |
-        cd python/tests
-        rm -rf ../python/tests/car_viv
-        mkdir -p ../python/tests/car_viv
-        ../unvivtool d -v ../python/tests/car.viv ../python/tests/car_viv
-
-        ls -lg
-        cd ../python/tests/car_viv
-        ls -lg
-
-    - name: Test decode all -v, to existing folder, -strict
-      shell: bash
-      run: |
-        cd tests
-        rm -rf ../python/tests/car_viv
-        mkdir -p ../python/tests/car_viv
-        ../unvivtool d -strict ../python/tests/car.viv ../python/tests/car_viv
-
-        ls -lg
-
-    - name: Test decode existing file -v
-      shell: bash
-      run: |
-        cd tests
-        rm -rf ../python/tests/car_viv
-        mkdir -p ../python/tests/car_viv
-        ../unvivtool d -v -fn pyproject.toml ../python/tests/car.viv ../python/tests/car_viv
-
-        ls -lg
-        cd ../python/tests/car_viv
-        ls -lg
-
-    - name: Test decode not existing file -v
-      shell: bash
-      run: |
-        cd tests
-
-        # https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
-        {
-          ../unvivtool d -v -fn not_in_archive ../python/tests/car.viv ../python/tests/car_viv  && true
-        } || {
-          RESULT="$?"
-          echo "Exit Code = $RESULT"
-
-          ls -lg
-          cd ../python/tests/car_viv
-          ls -lg
-        }
+        cl.exe /W3 /utf-8 /O2 unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
+        dir
+    - name: Store executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: unvivtool_${{ matrix.arch }}.exe
+        path: unvivtool_${{ matrix.arch }}.exe
 
 
-  linux:
-    runs-on: ubuntu-latest
-
+  test-linux:
+    runs-on: ${{ matrix.os }}
     env:
       valgrind: "valgrind -v --leak-check=full --show-leak-kinds=all --track-origins=yes"
+    needs:
+      - linux
+      - macos
+      - windows
 
-    name: Ubuntu
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ "3.10" ]
+        std: [ "", "_c++" ]
+
+    name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
+    - uses: actions/checkout@v3
+    - name: Download executable
+      uses: actions/download-artifact@v3
+      with:
+        name: unvivtool
+    - run: ls -lg
+    - run: chmod +x unvivtool${{ matrix.std }}
     - name: Install valgrind
       shell: bash
       run: |
         sudo apt install valgrind
-        # valgrind --help
-
-    - name: Compile
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: "pytest"
       shell: bash
       run: |
-        SRC='unvivtool.c'
-        DEST='unvivtool'
-        GCCDEBUGFLAGS='-pedantic-errors -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables'
+        python -m pip install -q pytest
+        cmp --help
+        cksum
+        grep -V
+        pytest ./tests/test_cli_decodeencode${{ matrix.std }}.py -vvs
 
-        gcc -std=c89 $DEFS $SRC -o $DEST $GCCDEBUGFLAGS
 
-    - name: Smoke test
+  test-macos:
+    runs-on: ${{ matrix.os }}
+    needs:
+      - linux
+      - macos
+      - windows
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest ]
+        python-version: [ "3.10" ]
+        std: [ "", "_c++" ]
+
+    name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download executable
+      uses: actions/download-artifact@v3
+      with:
+        name: unvivtool_${{ runner.os }}
+    - run: ls -lg
+    - run: chmod +x unvivtool_${{ runner.os }}${{ matrix.std }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: "pytest"
       shell: bash
       run: |
-        ${{ env.valgrind }} ./unvivtool
-
-    - shell: bash
-      run: mkdir tests
-
-    - name: Test encode with existing
-      shell: bash
-      run: |
-        ${{ env.valgrind }} ./unvivtool e -v tests/car_out.viv LICENSE python/pyproject.toml
-
-        cd tests
         ls -lg
+        python -m pip install -q pytest
+        cmp --help
+        cksum
+        pytest ./tests/test_cli_decodeencode${{ matrix.std }}.py -vvs
 
-    - name: Test encode with skip
+
+  test-windows:
+    runs-on: ${{ matrix.os }}
+    needs:
+      - linux
+      - macos
+      - windows
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest ]
+        arch: [ x86, x64 ]
+        python-version: [ "3.10" ]
+
+    name: Test ${{ matrix.arch }}-${{ matrix.os }} (python-${{ matrix.python-version }})
+    steps:
+    - uses: actions/checkout@v3
+    - name: Download executable
+      uses: actions/download-artifact@v3
+      with:
+        name: unvivtool_${{ matrix.arch }}.exe
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.arch }}
+    - name: "pytest"
       shell: bash
       run: |
-        ${{ env.valgrind }} ./unvivtool e -v tests/car_out.viv not_a_file LICENSE python/pyproject.toml
-
-        cd tests
-        ls -lg
-
-    - name: Test encode to invalid archive path -v
-      shell: bash
-      run: |
-        cd tests
-        {
-          ${{ env.valgrind }} ../unvivtool e -v not_a_dir/car.viv LICENSE python/pyproject.toml && true
-        } || {
-          RESULT="$?"
-          echo "Exit Code = $RESULT"
-        }
-
-    - name: Test decode all
-      shell: bash
-      run: |
-        cd python/tests
-        mkdir foo
-        ${{ env.valgrind }} ../unvivtool d -strict ../python/tests/in/car.viv foo
-
-        cd foo
-        ls -lg
-
-        cd ..; rm -rf foo  # clean-up
-
-    - name: Test decode existing file -v, to default outdir
-      shell: bash
-      run: |
-        cd tests
-        mkdir foo
-        ${{ env.valgrind }} ../unvivtool d -v -fn pyproject.toml ../python/tests/car.viv foo
-
-        ls -lg
-        cd foo
-        ls -lg
-
-    - name: Test decode not existing file -v, to default outdir
-      shell: bash
-      run: |
-        cd tests
-
-        # https://stackoverflow.com/questions/22009364/is-there-a-try-catch-command-in-bash
-        {
-          ${{ env.valgrind }} ../unvivtool d -v -fn not_in_archive ../python/tests/car.viv foo  && true
-        } || {
-          RESULT="$?"
-          echo "Exit Code = $RESULT"
-
-          ls -lg
-          cd foo
-          ls -lg
-        }
+        python -m pip install -q pytest
+        cmp --help
+        cksum
+        pytest ./tests/test_cli_decodeencode.py -vvs

@@ -1,4 +1,4 @@
-# fcecodec Copyright (C) 2021-2022 Benjamin Futasz <https://github.com/bfut>
+# fcecodec Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-  test_decodeencode.py - testing unvivtool Python extension module
+  test_decodeencode.py
 """
 import os
 import pathlib

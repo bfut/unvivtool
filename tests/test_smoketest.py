@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2021-2022 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-  test_smoketest.py - smoke-testing unvivtool Python extension module
+  test_smoketest.py
 """
 import os
 import pathlib
@@ -38,16 +38,9 @@ except ModuleNotFoundError:
 
 @pytest.mark.xfail(not hasattr(unvivtool, "__version__"),
                    reason="missing attribute __version__")
-def test_version():
-    script_path = pathlib.Path(__file__).parent.parent.resolve()
-    os.chdir(script_path)
-    with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
-        for _ in range(36):
-            next(f)
-        __version__ = f.readline().rstrip().split("\"")[-2]
-        print(f"VERSION_INFO={__version__}")
+def test_has_attribute_version():
     if hasattr(unvivtool, "__version__"):
         print(f"unvivtool.__version__={unvivtool.__version__}")
     else:
         print(f'hasattr(unvivtool, "__version__")={hasattr(unvivtool, "__version__")}')
-    assert hasattr(unvivtool, "__version__") and unvivtool.__version__ == __version__
+    assert hasattr(unvivtool, "__version__")

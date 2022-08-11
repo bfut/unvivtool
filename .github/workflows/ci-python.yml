@@ -1,4 +1,4 @@
-name: ci-python
+name: python
 
 on:
   push:
@@ -41,7 +41,7 @@ jobs:
       shell: bash
       run: |
         echo "import unvivtool; print(f'unvivtool.__version__={unvivtool.__version__}')" > _version.py; cat _version.py
-        python -c "import subprocess; import sys; retcode = subprocess.call([ sys.executable, '_version.py' ]); print('Exit code', retcode); sys.exit(0)"
+        python -c "import subprocess; import sys; ret = subprocess.run([ sys.executable, '_version.py' ]); print('Exit code', ret.returncode); sys.exit(0)"
         python -c "import unvivtool; help(unvivtool)"
 
     - name: "pytest"
@@ -50,4 +50,5 @@ jobs:
         python -m pip install -q pytest
         cmp --help
         cksum
-        pytest -s -vv
+        pytest -s -vv ./tests/test_smoketest.py
+        pytest -s -vv ./tests/test_decodeencode.py

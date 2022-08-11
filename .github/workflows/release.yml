@@ -35,10 +35,10 @@ jobs:
 
       - name: Create archive
         run: |
-          mkdir release
-
           7z a -tzip "unvivtool${{ env.version }}_cli_win32.zip" \
-          batch \
+          scripts/batch-decode_archives_to_folders.sh \
+          scripts/batch-encode_folders_to_archives.sh \
+          scripts/batch-encode_folder_to_archive.sh \
           doc/unvivtool_cli.md \
           references \
           libnfsviv.h \
