@@ -1,31 +1,28 @@
-/*
-  unvivtool.c - VIV/BIG decoder/encoder CLI
-  unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+/* unvivtool.c - VIV/BIG decoder/encoder CLI
+   unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
 
-  You may not redistribute this program without its source code.
-  README.md may not be removed or altered from any unvivtool redistribution.
+   You may not redistribute this program without its source code.
+   README.md may not be removed or altered from any unvivtool redistribution.
 
-  This program is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
 
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-  You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/**
-  BUILD:
-  - Linux:
+/** Linux:
       gcc -std=c89 -fPIE -s -O2 unvivtool.c -o unvivtool
-  - Windows (x86): cross-compile on Linux
+    Windows (x86): cross-compile on Linux
       i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
-  - Windows:
+    Windows:
       cl.exe /utf-8 /O2 unvivtool.c
 **/
 
@@ -33,20 +30,6 @@
 #include <string.h>
 
 #include "./libnfsviv.h"
-
-#ifndef __cplusplus
-#ifdef _WIN32
-enum { kUnvivtoolMaxPathLen = 256 };
-#else
-enum { kUnvivtoolMaxPathLen = 4096 };
-#endif
-#else
-#ifdef _WIN32
-static const int kUnvivtoolMaxPathLen = 256;
-#else
-static const int kUnvivtoolMaxPathLen = 4096;
-#endif
-#endif
 
 static
 void Usage(void)
@@ -71,12 +54,10 @@ int main(int argc, char **argv)
   int retv = 0;
   char request_file_name[kLibnfsvivFilenameMaxLen * 4];
   int request_file_idx = 0;
-
   int opt_dryrun = 0;
   int opt_strictchecks = 0;
   int opt_verbose = 0;
   int count_options = 0;
-
   char *ptr;
   int i;
 
