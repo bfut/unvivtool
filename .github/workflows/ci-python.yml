@@ -1,4 +1,4 @@
-name: python
+name: ci-python
 
 on:
   push:
@@ -10,6 +10,8 @@ jobs:
 
   python:
     runs-on: ${{ matrix.os }}
+#    needs:
+#      - ubuntu-latest
     strategy:
       fail-fast: false
       matrix:

@@ -9,10 +9,10 @@ written in CPython. Supported on Windows and Linux.
 Tested on macOS.
 
 ## Features
-* validates VIV/BIG archive
-* decodes entire archive at once
-* retrieves a single file from archive (by index or by filename)
-* lists archive contents without writing to disk
+* validate VIV/BIG archive
+* decode entire archive at once
+* retrieve a single file from archive (by index or by filename)
+* list archive contents without writing to disk (dry run)
 
 ## Installation / Documentation
 Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>

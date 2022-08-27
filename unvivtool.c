@@ -45,6 +45,7 @@ void Usage(void)
          "  -i #          decode file at 1-based index #\n"
          "  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -p            print archive contents, do not write to disk (dry run)\n"
+/*         "  -q            quiet mode\n" */
          "  -s            decoder strict mode, extra format checks, fail at first unsuccessful extraction\n"
          "  -v            verbose\n");
 }
@@ -56,17 +57,19 @@ int main(int argc, char **argv)
   int request_file_idx = 0;
   int opt_dryrun = 0;
   int opt_strictchecks = 0;
-  int opt_verbose = 0;
+  int opt_printlvl = 0;
   int count_options = 0;
   char *ptr;
   int i;
 
   printf("unvivtool %s - Copyright (C) 2020-2022 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
 
-  #if 0
+#ifdef UVTDEBUG
   if (!LIBNFSVIV_SanityTest())
+  {
     return -1;
-  #endif
+  }
+#endif
 
   if (argc < 2)
   {
@@ -139,7 +142,7 @@ int main(int argc, char **argv)
 
         case 'p':  /* dry run */
           opt_dryrun = 1;
-          opt_verbose = 1;
+          opt_printlvl = 1;
           ++count_options;
           break;
 
@@ -149,7 +152,7 @@ int main(int argc, char **argv)
           break;
 
         case 'v':  /* verbose */
-          opt_verbose = 1;
+          opt_printlvl = 1;
           ++count_options;
           break;
 
@@ -167,7 +170,7 @@ int main(int argc, char **argv)
   {
     if (!LIBNFSVIV_Unviv(argv[count_options + 2], argv[count_options + 3],
                          request_file_idx, request_file_name,
-                         opt_dryrun, opt_strictchecks, opt_verbose))
+                         opt_dryrun, opt_strictchecks, opt_printlvl))
     {
       printf("Decoder failed.\n");
       retv = -1;
@@ -181,7 +184,7 @@ int main(int argc, char **argv)
   {
     if (!LIBNFSVIV_Viv(argv[count_options + 2],
                        &argv[count_options + 3], argc - count_options - 3,
-                       opt_dryrun, opt_verbose))
+                       opt_dryrun, opt_printlvl))
     {
       printf("Encoder failed.\n");
       retv = -1;

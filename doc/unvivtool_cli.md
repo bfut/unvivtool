@@ -13,14 +13,25 @@ EXAMPLE 1
       'car_viv'. the output directory must be a valid path.
 
 EXAMPLE 2
+   unvivtool d car.viv .
+
+      decodes and extracts all files from archive 'car.viv' to current working
+      directory
+
+EXAMPLE 3
       unvivtool d -p car.viv car_viv
 
       -p    prints contents of archive 'car.viv', does not write to disk
 
-EXAMPLE 3
+EXAMPLE 4
       unvivtool e car.viv car.fce car00.tga carp.txt fedata.fsh fedata.eng
 
       encodes minimum needed files for an :HP car in a new archive file 'car.viv'
+
+EXAMPLE 5
+      unvivtool e -p car.viv car.fce car00.tga carp.txt fedata.fsh fedata.eng
+
+      Dry run of EXAMPLE 4, does not write to disk
 ```
 
 ## Installation

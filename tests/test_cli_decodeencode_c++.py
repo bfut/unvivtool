@@ -138,10 +138,10 @@ Decoder successful.
     outv = \
 """Archive Size (parsed) = 35307
 Directory Entries (header) = 2
+Buffer = 4096
 Archive Size (header) = 35307
 Header Size (header) = 55
 Directory Entries (parsed) = 2
-Buffer = 4096
 Header Size (parsed) = 55
 
 Printing VIV directory:
@@ -152,15 +152,16 @@ Printing VIV directory:
     2        35204   0          103  15  pyproject.toml
  ---- ------------ --- ------------ ---  -----------------------
              35307            35252      2 files
+Number extracted: 2
 Decoder successful.
 """
     poutv = \
 """Archive Size (parsed) = 35307
 Directory Entries (header) = 2
+Buffer = 4096
 Archive Size (header) = 35307
 Header Size (header) = 55
 Directory Entries (parsed) = 2
-Buffer = 4096
 Header Size (parsed) = 55
 
 Printing VIV directory:
@@ -172,6 +173,7 @@ Printing VIV directory:
  ---- ------------ --- ------------ ---  -----------------------
              35307            35252      2 files
 End dry run
+Number extracted: 0
 Decoder successful.
 """
     ret = get_subprocess_ret(" ".join([
