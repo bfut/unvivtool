@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
 
 env:
-  version: 110
-  dotversion: 1.10
+  version: 111
+  dotversion: 1.11
+  SRC: unvivtool.c
+  DEST: unvivtool
+  BRANCHES: -DUVTVUTF8
 
 jobs:
   win32:
@@ -21,37 +24,35 @@ jobs:
 
       - name: Build
         run: |
-          SRC='unvivtool.c'
-          DEST='unvivtool'
-
           MINGWFLAGS='-std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp'
           # MINGWFLAGS='-std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
 
           echo "mingw-win32"
-          i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "$DEST.exe"
+          i686-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}.exe" ${{ env.BRANCHES }}
 
-          sha256sum "$DEST.exe"
-          md5sum "$DEST.exe"
+          sha256sum "${{ env.DEST }}.exe"
+          md5sum "${{ env.DEST }}.exe"
 
       - name: Create archive
         run: |
-          7z a -tzip "unvivtool${{ env.version }}_cli_win32.zip" \
+          7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_win32.zip" \
           scripts/batch-decode_archives_to_folders.sh \
           scripts/batch-encode_folders_to_archives.sh \
           scripts/batch-encode_folder_to_archive.sh \
           doc/unvivtool_cli.md \
+          include/dfa.h \
           references \
           libnfsviv.h \
           LICENSE \
           README.md \
-          unvivtool.exe \
+          ${{ env.DEST }}.exe \
           unvivtool.c
 
       - name: Store archive
         uses: actions/upload-artifact@v3
         with:
-          name: "unvivtool${{ env.version }}_cli_win32.zip"
-          path: "unvivtool${{ env.version }}_cli_win32.zip"
+          name: "${{ env.DEST }}${{ env.version }}_cli_win32.zip"
+          path: "${{ env.DEST }}${{ env.version }}_cli_win32.zip"
           retention-days: 1
 
       - name: Create Release
@@ -61,12 +62,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.dotversion }}
-          release_name: "unvivtool${{ env.version }}_cli_win32.zip"
+          release_name: "${{ env.DEST }}${{ env.version }}_cli_win32.zip"
           draft: false
           prerelease: false
 
       - name: Test
-        run: cat "unvivtool${{ env.version }}_cli_win32.zip"
+        run: cat "${{ env.DEST }}${{ env.version }}_cli_win32.zip"
 
       - name: Upload Release Asset
         id: upload-release-asset
@@ -75,6 +76,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: unvivtool${{ env.version }}_cli_win32.zip
-          asset_name: unvivtool${{ env.version }}_cli_win32.zip
+          asset_path: ${{ env.DEST }}${{ env.version }}_cli_win32.zip
+          asset_name: ${{ env.DEST }}${{ env.version }}_cli_win32.zip
           asset_content_type: application/zip

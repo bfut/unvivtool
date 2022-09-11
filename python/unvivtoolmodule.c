@@ -36,7 +36,7 @@
 #include <direct.h>
 #define chdir _chdir
 #define getcwd _getcwd
-static const int kUnvivtoolMaxPathLen = 256;
+static const int kUnvivtoolMaxPathLen = 255;
 #else
 #include <unistd.h>  /* chdir, getcwd */
 static const int kUnvivtoolMaxPathLen = 4096;

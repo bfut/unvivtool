@@ -123,7 +123,7 @@ int main(int argc, char **argv)
               return -1;
             }
 
-            if (!sscanf(argv[i], "%1023s", request_file_name))
+            if (!sscanf(argv[i], "%1019s", request_file_name))
             {
               Usage();
               return -1;
@@ -143,6 +143,11 @@ int main(int argc, char **argv)
         case 'p':  /* dry run */
           opt_dryrun = 1;
           opt_printlvl = 1;
+          ++count_options;
+          break;
+
+        case 'q':  /* quiet mode */
+          opt_printlvl = 0;
           ++count_options;
           break;
 
@@ -191,6 +196,61 @@ int main(int argc, char **argv)
     }
     else
       printf("Encoder successful.\n");
+  }
+
+  /* Try Decoder for argv[1], decode to cwd */
+  else if(LIBNFSVIV_Exists(argv[1]))
+  {
+    for (;;)
+    {
+      int fsize;
+      char BIGF[4];
+      FILE *file = fopen(argv[1], "rb");
+
+      if (!file)
+      {
+        fclose(file);
+        retv = -1;
+        break;
+      }
+
+      fsize = LIBNFSVIV_GetFilesize(file);
+      if ((fsize > 0) && (fsize < 0x4))
+      {
+        fclose(file);
+        break;
+      }
+
+      if (fread(BIGF, (size_t)1, (size_t)4, file) != (size_t)4)
+      {
+        fclose(file);
+        fprintf(stderr, "cli: File read error (cli)\n");
+        retv = -1;
+        break;
+      }
+
+      if (strncmp(BIGF, "BIGF", (size_t)4) != 0)
+      {
+        fclose(file);
+        printf("cli: Format error (header missing BIGF)\n");
+        retv = -1;
+        break;
+      }
+
+      fclose(file);
+
+      if (!LIBNFSVIV_Unviv(argv[1], ".",
+                           request_file_idx, request_file_name,
+                           opt_dryrun, opt_strictchecks, opt_printlvl))
+      {
+        printf("Decoder failed.\n");
+        retv = -1;
+      }
+      else
+        printf("Decoder successful.\n");
+
+      break;
+    }
   }
 
   /* Print usage */

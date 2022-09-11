@@ -1,5 +1,4 @@
 [![ci-cli](https://github.com/bfut/unvivtool/actions/workflows/ci-cli.yml/badge.svg)](https://github.com/bfut/unvivtool/actions/workflows/ci-cli.yml)
-[![python](https://github.com/bfut/unvivtool/actions/workflows/ci-python.yml/badge.svg)](https://github.com/bfut/unvivtool/actions/workflows/ci-python.yml)
 
 # unvivtool
 unvivtool is a VIV/BIG decoder/encoder. VIV/BIG is an uncompressed archive format.
