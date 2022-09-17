@@ -37,7 +37,7 @@
 #include <unistd.h>
 #endif
 
-#define UVTVERS "1.11"
+#define UVTVERS "1.12"
 #ifndef UVTVERBOSE
 #define UVTVERBOSE 0  /* >=1 for debug console output */
 #endif

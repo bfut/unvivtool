@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  version: 111
-  dotversion: 1.11
+  version: 112
+  dotversion: 1.12
   SRC: unvivtool.c
   DEST: unvivtool
   BRANCHES: -DUVTVUTF8
