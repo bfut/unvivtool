@@ -64,6 +64,7 @@ Compiling with MSVC:
 ```
 Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
+       unvivtool <path/to/input.viv>
 
 Commands:
   d             decode and extract files from VIV/BIG archive

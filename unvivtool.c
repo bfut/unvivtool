@@ -17,15 +17,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
-/** Linux:
-      gcc -std=c89 -fPIE -s -O2 unvivtool.c -o unvivtool
-    Windows (x86): cross-compile on Linux
-      i686-w64-mingw32-gcc -std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
-    Windows:
-      cl.exe /utf-8 /O2 unvivtool.c
-**/
-
 #include <stdio.h>
 #include <string.h>
 
@@ -36,6 +27,7 @@ void Usage(void)
 {
   printf("Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
+         "       unvivtool <path/to/input.viv>\n"
          "\n"
          "Commands:\n"
          "  d             decode and extract files from VIV/BIG archive\n"

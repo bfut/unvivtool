@@ -11,6 +11,9 @@ Tested on macOS.
 * retrieve a single file from archive (by index or by filename)
 * list archive contents without writing to disk (dry run)
 
+## File format
+The format is called ``BIGF``. Typical file extensions are ``.VIV`` and ``.BIG``.
+
 ## Installation / Documentation
 Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>
 Python extension module: [/python/README.md](/python/README.md)
