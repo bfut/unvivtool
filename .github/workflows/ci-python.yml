@@ -1,5 +1,8 @@
 name: ci-python
 
+env:
+  UVTVERBOSE: 1
+
 on:
   push:
     branches:
@@ -10,13 +13,11 @@ jobs:
 
   python:
     runs-on: ${{ matrix.os }}
-#    needs:
-#      - ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
-        python-version: [ '3.8', '3.9', '3.10' ] # 'pypy-3.8'
+        python-version: [ "3.8", "3.9", "3.10" ] # 'pypy-3.8'
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
@@ -29,6 +30,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Python version
+      shell: bash
       run: python -c "import sys; print(sys.version)"
 
     # - name: Add requirements
@@ -36,7 +38,10 @@ jobs:
     #     python -m pip install --upgrade pip setuptools wheel
 
     - name: "pip install"
+      shell: bash
       run: |
+        export UVTVERBOSE=${{ env.UVTVERBOSE }}
+        export PYMEM_MALLOC=""
         python -m pip install --verbose ./python
 
     - name: "Print unvivtool.__version__, help"

@@ -89,6 +89,7 @@ def test_cli_smoketest():
     out = \
 """Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
+       unvivtool <path/to/input.viv>
 
 Commands:
   d             decode and extract files from VIV/BIG archive
@@ -131,20 +132,14 @@ Options:
 def test_cli_decode_all_existing_dir(verbose, strict, dry):
     err = ""
     out = \
-"""Archive Size (parsed) = 35307
-Directory Entries (header) = 2
+"""Directory Entries (header) = 2
+Header Size (header) = 55
+Directory Entries (parsed) = 2
+Number extracted: 2
 Decoder successful.
 """
     outv = \
-"""Archive Size (parsed) = 35307
-Directory Entries (header) = 2
-Buffer = 4096
-Archive Size (header) = 35307
-Header Size (header) = 55
-Directory Entries (parsed) = 2
-Header Size (parsed) = 55
-
-Printing VIV directory:
+"""Printing VIV directory:
 
    id       Offset Gap         Size Len  Name
  ---- ------------ --- ------------ ---  -----------------------
@@ -156,15 +151,7 @@ Number extracted: 2
 Decoder successful.
 """
     poutv = \
-"""Archive Size (parsed) = 35307
-Directory Entries (header) = 2
-Buffer = 4096
-Archive Size (header) = 35307
-Header Size (header) = 55
-Directory Entries (parsed) = 2
-Header Size (parsed) = 55
-
-Printing VIV directory:
+"""Printing VIV directory:
 
    id       Offset Gap         Size Len  Name
  ---- ------------ --- ------------ ---  -----------------------
@@ -173,7 +160,6 @@ Printing VIV directory:
  ---- ------------ --- ------------ ---  -----------------------
              35307            35252      2 files
 End dry run
-Number extracted: 0
 Decoder successful.
 """
     ret = get_subprocess_ret(" ".join([
@@ -196,11 +182,11 @@ Decoder successful.
         # print(log)
     if dry != "-p":
         if verbose != "-v":
-            assert re.sub(r"^.*?Archive", "Archive", stdout) == delete_whitespace(out)
+            assert re.sub(r"^.*?Directory", "Directory", stdout) == delete_whitespace(out)
         else:
-            assert re.sub(r"^.*?Archive", "Archive", stdout) == delete_whitespace(outv)
+            assert re.sub(r"^.*?Printing", "Printing", stdout) == delete_whitespace(outv)
     else:
-        assert re.sub(r"^.*?Archive", "Archive", stdout) == delete_whitespace(poutv)
+        assert re.sub(r"^.*?Printing", "Printing", stdout) == delete_whitespace(poutv)
 
 # @pytest.mark.skipif(0, reason="")
 # @pytest.mark.parametrize("verbose, strict, dry",
