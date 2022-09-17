@@ -3,16 +3,6 @@
 #ifndef _DFA_H_
 #define _DFA_H_
 
-#if defined(__STD_VERSION__) || defined(__cplusplus)
-#include <stdint.h>
-#else
-#ifndef __uint32_t_defined
-#define __uint32_t_defined
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-#endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +10,7 @@ extern "C" {
 #define UTF8_ACCEPT 0
 #define UTF8_REJECT 12
 
-static const uint8_t utf8d[] = {
+static const unsigned char utf8d[] = {
   /* The first part of the table maps bytes to character classes that
      to reduce the size of the transition table and create bitmasks. */
    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -41,9 +31,9 @@ static const uint8_t utf8d[] = {
   12,36,12,12,12,12,12,12,12,12,12,12,
 };
 
-uint32_t
-DFA_decode(uint32_t* state, uint32_t* codep, uint32_t byte) {
-  uint32_t type = utf8d[byte];
+unsigned int
+DFA_decode(unsigned int* state, unsigned int* codep, unsigned int byte) {
+  unsigned int type = utf8d[byte];
 
   *codep = (*state != UTF8_ACCEPT) ?
     (byte & 0x3fu) | (*codep << 6) :

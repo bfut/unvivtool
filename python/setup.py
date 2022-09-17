@@ -23,7 +23,7 @@ import platform
 import pathlib
 import setuptools
 
-if os.environ.get("UVTVERBOSE") is not None:
+if "UVTVERBOSE" in os.environ:
     print(f'UVTVERBOSE={os.environ["UVTVERBOSE"]}')
 
 script_path = pathlib.Path(__file__).parent.resolve()
@@ -31,7 +31,7 @@ os.chdir(script_path)
 
 module_name = "unvivtool"
 with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(40 - 1):
+    for _ in range(47 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")
@@ -39,9 +39,10 @@ with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
     print(f"VERSION_INFO={__version__}")
 long_description = (script_path / "../README.md").read_text(encoding="utf-8")
 
-extra_compile_args = [
-    "-DPYMEM_MALLOC",
-]
+extra_compile_args = []
+if "PYMEM_MALLOC" in os.environ:
+    print(f'PYMEM_MALLOC={os.environ["PYMEM_MALLOC"]}')
+    extra_compile_args += [ "-DPYMEM_MALLOC" ]
 if platform.system() == "Windows":
     extra_compile_args += [
         ("/wd4267")  # prevents warnings on conversion from size_t to int
