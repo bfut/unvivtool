@@ -67,13 +67,16 @@ Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_d
        unvivtool <path/to/input.viv>
 
 Commands:
-  d             decode and extract files from VIV/BIG archive
-  e             encode files in new VIV/BIG archive
+  d             Decode and extract files from VIV/BIG archive
+  e             Encode files in new VIV/BIG archive
 
 Options:
-  -i #          decode file at 1-based index #
-  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
-  -p            print archive contents, do not write to disk (dry run)
-  -s            decoder strict mode, extra format checks, fail at first unsuccessful extraction
-  -v            verbose
+  -dnl #        set fixed Directory eNtry Length (>= 10)
+  -i #          decode file at 1-based Index #
+  -f <name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
+  -fh           decode/encode to/from Filenames in Hexadecimal
+  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
+  -p            Print archive contents, do not write to disk (dry run)
+  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            Verbose
 ```

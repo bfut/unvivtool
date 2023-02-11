@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -44,3 +44,10 @@ def test_has_attribute_version():
     else:
         print(f'hasattr(unvivtool, "__version__")={hasattr(unvivtool, "__version__")}')
     assert hasattr(unvivtool, "__version__")
+
+if __name__ == "__main__":
+    print(unvivtool.__version__)
+    test_has_attribute_version()
+    help(unvivtool.unviv)
+    print(unvivtool.unviv)
+    print(flush=True)

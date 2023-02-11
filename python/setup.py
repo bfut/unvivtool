@@ -31,7 +31,7 @@ os.chdir(script_path)
 
 module_name = "unvivtool"
 with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(47 - 1):
+    for _ in range(51 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")

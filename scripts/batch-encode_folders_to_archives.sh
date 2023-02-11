@@ -31,7 +31,7 @@ clear
 SCRIPT_PATH="${0%/*}"
 
 EXE="unvivtool"
-OPTIONS="e -p"
+OPTIONS="e -v"
 
 
 INPATH='*/*/*/'

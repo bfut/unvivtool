@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -74,21 +74,23 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int request_file_idx = 0;
   char *request_file_name = NULL;
   PyObject *request_file_name_obj = NULL;
+  int opt_direnlenfixed = 0;
+  int opt_filenameshex = 0;
   int opt_dryrun = 0;
   int opt_verbose = 0;
-  int opt_strictchecks = 0;
   int fd;
   char *buf_cwd = NULL;
-  static const char *keywords[] = { "viv", "dir", "fileidx", "filename",
-                                    "dry", "verbose", "strict", NULL };
+  static const char *keywords[] = { "viv", "dir", "direnlen", "fileidx",
+                                    "filename", "fnhex", "dry", "verbose",
+                                    NULL };
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|iO&iii:unviv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|iiO&ppp:unviv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
                                    PyUnicode_FSConverter, &outpath_obj,
-                                   &request_file_idx,
+                                   &opt_direnlenfixed, &request_file_idx,
                                    PyUnicode_FSConverter, &request_file_name_obj,
-                                   &opt_dryrun, &opt_verbose, &opt_strictchecks))
+                                   &opt_dryrun, &opt_verbose, &opt_filenameshex))
   {
     return NULL;
   }
@@ -158,9 +160,21 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
+    opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, 0);
+    if (opt_direnlenfixed > 0)
+    {
+      opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, -10);
+      opt_direnlenfixed = LIBNFSVIV_Min(opt_direnlenfixed, INT_MAX / 2);
+      printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+    }
+
+    if (opt_dryrun)
+      opt_verbose = 1;
+
     retv = LIBNFSVIV_Unviv(viv_name, outpath,
                            request_file_idx, request_file_name,
-                           opt_dryrun, opt_strictchecks, opt_verbose);
+                           opt_dryrun, opt_verbose, opt_direnlenfixed,
+                           opt_filenameshex, 0);
 
     if (chdir(buf_cwd) != 0)
     {
@@ -196,6 +210,11 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *viv_name_obj;
   char **infiles_paths = NULL;
   PyObject *infiles_paths_obj;
+  char opt_requestfmt[5] = "BIGF";
+  // PyObject *opt_requestfmt_obj = NULL;
+  char *opt_requestfmt_ptr = NULL;
+  int opt_direnlenfixed = 0;
+  int opt_filenameshex = 0;
   int opt_dryrun = 0;
   int opt_verbose = 0;
   int count_infiles = 1;
@@ -206,12 +225,17 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *item = NULL;
   PyObject *bytes = NULL;
   char *ptr = NULL;
-  static const char *keywords[] = { "viv", "infiles", "dry", "verbose", NULL };
+  static const char *keywords[] = { "viv", "infiles", "dry", "verbose",
+                                    "format", "direnlen", "fnhex", NULL };
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|ii:viv",
+  // if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|piO&ip:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|pisip:viv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
-                                   &infiles_paths_obj, &opt_dryrun, &opt_verbose))
+                                   &infiles_paths_obj, &opt_dryrun, &opt_verbose,
+                                  //  PyUnicode_FSConverter, &opt_requestfmt_obj,
+                                   &opt_requestfmt_ptr,
+                                   &opt_direnlenfixed, &opt_filenameshex))
   {
     return NULL;
   }
@@ -222,6 +246,44 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     PyErr_SetString(PyExc_RuntimeError, "cannot convert str");
     return NULL;
   }
+
+#if 0
+if (opt_requestfmt_obj)
+{
+  char *str_ = NULL;
+  Py_ssize_t sz_;
+  if (PyBytes_AsStringAndSize(opt_requestfmt_obj, &str_, &sz_))
+  {
+    PyErr_SetString(PyExc_RuntimeError, "cannot convert str (format)");
+    return NULL;
+  }
+  memcpy(opt_requestfmt, str_, (size_t)LIBNFSVIV_Min(4, (int)sz_) + 1);
+  if (strncmp(opt_requestfmt, "BIGF", 5) &&
+      strncmp(opt_requestfmt, "BIGH", 5) &&
+      strncmp(opt_requestfmt, "BIG4", 5))
+  {
+    PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
+    return NULL;
+  }
+  printf("Requested format: %.4s\n", opt_requestfmt);
+  fflush(0);
+}
+#endif
+#if 1
+if (opt_requestfmt_ptr)
+{
+  memcpy(opt_requestfmt, opt_requestfmt_ptr, (size_t)LIBNFSVIV_Min(4, strlen(opt_requestfmt_ptr)) + 1);
+  if (strncmp(opt_requestfmt, "BIGF", 5) &&
+      strncmp(opt_requestfmt, "BIGH", 5) &&
+      strncmp(opt_requestfmt, "BIG4", 5))
+  {
+    PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
+    return NULL;
+  }
+  printf("Requested format: %.4s\n", opt_requestfmt);
+  fflush(0);
+}
+#endif
 
   retv_obj = Py_BuildValue("i", retv);
 
@@ -348,6 +410,14 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
+  opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, 0);
+  if (opt_direnlenfixed > 0)
+  {
+    opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, -10);
+    opt_direnlenfixed = LIBNFSVIV_Min(opt_direnlenfixed, INT_MAX / 2);
+    printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+  }
+
   if (retv_obj)
   {
     for (;;)
@@ -365,7 +435,8 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       }
 
       retv = LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles,
-                           opt_dryrun, opt_verbose);
+                           opt_dryrun, opt_verbose, opt_direnlenfixed,
+                           opt_filenameshex, opt_requestfmt);
 
       if (retv == 1)
         printf("Encoder successful.\n");
@@ -402,13 +473,13 @@ PyDoc_STRVAR(
   "viv() -- encode files in new VIV/BIG archive\n"
   "unviv() -- decode and extract VIV/BIG archive\n"
   "\n"
-  "unvivtool "UVTVERS" Copyright (C) 2020-2022 Benjamin Futasz (GPLv3+)\n"
+  "unvivtool "UVTVERS" Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)\n"
 );
 
 PyDoc_STRVAR(
   unviv__doc__,
-  " |  unviv(viv, dir, fileidx=None, filename=None, dry=False, verbose=False, strict=False)\n"
-  " |      Decode and extract files from VIV/BIG archive.\n"
+  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False)\n"
+  " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
@@ -416,19 +487,22 @@ PyDoc_STRVAR(
   " |          Absolute or relative, path/to/archive.viv\n"
   " |      dir : str, os.PathLike object\n"
   " |          Absolute or relative, path/to/existing/output/directory\n"
+  " |      direnlen : int, optional\n"
+  " |          If >= 10, set as fixed archive directory entry length.\n"
   " |      fileidx : int, optional\n"
   " |          Extract file at given 1-based index.\n"
   " |      filename : str, optional\n"
   " |          Extract file 'filename' (cAse-sEnsitivE) from archive.\n"
-  " |          Overrides 'fileidx'.\n"
-  " |      dry : bool\n"
+  " |          Overrides the fileidx parameter.\n"
+  " |      fnhex : bool, optional\n"
+  " |          If True, encode filenames to Base16/hexadecimal.\n"
+  " |          Use for non-printable filenames in archive. Keeps\n"
+  " |          leading/embedding null bytes.\n"
+  " |      dry : bool, optional\n"
   " |          If True, perform dry run: run all format checks and print\n"
   " |          archive contents, do not write to disk.\n"
-  " |      verbose : bool\n"
-  " |          If True, print archive contents.\n"
-  " |      strict : bool\n"
-  " |          If True, run extra format checks and fail on the first\n"
-  " |          unsuccessful file extraction.\n"
+  " |      verbose : bool, optional\n"
+  " |          Verbose output.\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"
@@ -475,23 +549,15 @@ PyDoc_STRVAR(
   " |      1\n"
   " |\n"
   " |      Some archives may have broken headers. When detected, unvivtool\n"
-  " |      will print warnings. Up to a certain point, such archives may\n"
-  " |      still be extracted. Warnings can be turned into errors, forcing\n"
-  " |      stricter adherence to format specifications. Note, such 'errors'\n"
-  " |      do not raise Python errors. Instead, unviv() returns 0.\n"
-  " |\n"
-  " |      >>> unvivtool.unviv(\"foo/bar.viv\", \".\", filename=\"car00.tga\", strict=True)\n"
-  " |      ...\n"
-  " |      Strict Format error (Viv directory filesizes do not match archive size)\n"
-  " |      Decoder failed.\n"
-  " |      0\n"
+  " |      will print warnings. Up to a certain point, such archives can\n"
+  " |      still be extracted.\n"
 );
 
 PyDoc_STRVAR(
   viv__doc__,
-  " |  viv(viv, infiles, dry=False, verbose=False)\n"
-  " |      Encode files in new VIV/BIG archive. Skips given input paths\n"
-  " |      that cannot be opened.\n"
+  " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", direnlen=0, fnhex=False)\n"
+  " |      Encode files to new archive in BIGF, BIGH or BIG4 format.\n"
+  " |      Skips given input paths that cannot be opened.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
@@ -504,6 +570,14 @@ PyDoc_STRVAR(
   " |          archive contents, do not write to disk.\n"
   " |      verbose : bool\n"
   " |          If True, print archive contents.\n"
+  " |      format : str, optional\n"
+  " |          Expects \"BIGF\", \"BIGH\" or \"BIG4\".\n"
+  " |      direnlen : int, optional\n"
+  " |          If >= 10, set as fixed archive directory entry length.\n"
+  " |      fnhex : bool, optional\n"
+  " |          If True, decode input filenames from Base16/hexadecimal.\n"
+  " |          Use for non-printable filenames in archive. Keeps\n"
+  " |          leading/embedding null bytes.\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"

@@ -9,7 +9,7 @@ clear
 SCRIPT_PATH="${0%/*}"
 
 EXE="unvivtool"
-OPTIONS="d -p"
+OPTIONS="d -v"
 
 
 INPATH='*/*'    # '*/*' looks for archives in subdirectories of current working directory

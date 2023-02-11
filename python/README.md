@@ -1,6 +1,5 @@
 # unvivtool - Python extension module
-This file describes installation, and usage of unvivtool as Python extension
-module.
+This file describes installation and usage of unvivtool as Python extension module.
 
 ## Usage
 A ready to use decoder/encoder script can be found here: [/scripts/unvivtool_script.py](/scripts/unvivtool_script.py)
@@ -10,7 +9,6 @@ Requires Python 3.8+
 
        cd ~
        git clone https://github.com/bfut/unvivtool.git
-       python -m pip install --upgrade pip setuptools wheel
        python -m pip install unvivtool/python
 
 ## Documentation
@@ -26,12 +24,12 @@ DESCRIPTION
     viv() -- encode files in new VIV/BIG archive
     unviv() -- decode and extract VIV/BIG archive
     
-    unvivtool 1.12 Copyright (C) 2020-2022 Benjamin Futasz (GPLv3+)
+    unvivtool 1.16 Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     unviv(...)
-        |  unviv(viv, dir, fileidx=None, filename=None, dry=False, verbose=False, strict=False)
-        |      Decode and extract files from VIV/BIG archive.
+        |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False)
+        |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
         |
         |      Parameters
         |      ----------
@@ -39,19 +37,22 @@ FUNCTIONS
         |          Absolute or relative, path/to/archive.viv
         |      dir : str, os.PathLike object
         |          Absolute or relative, path/to/existing/output/directory
+        |      direnlen : int, optional
+        |          If >= 10, set as fixed archive directory entry length.
         |      fileidx : int, optional
         |          Extract file at given 1-based index.
         |      filename : str, optional
         |          Extract file 'filename' (cAse-sEnsitivE) from archive.
-        |          Overrides 'fileidx'.
-        |      dry : bool
+        |          Overrides the fileidx parameter.
+        |      fnhex : bool, optional
+        |          If True, encode filenames to Base16/hexadecimal.
+        |          Use for non-printable filenames in archive. Keeps
+        |          leading/embedding null bytes.
+        |      dry : bool, optional
         |          If True, perform dry run: run all format checks and print
         |          archive contents, do not write to disk.
-        |      verbose : bool
-        |          If True, print archive contents.
-        |      strict : bool
-        |          If True, run extra format checks and fail on the first
-        |          unsuccessful file extraction.
+        |      verbose : bool, optional
+        |          Verbose output.
         |
         |      Returns
         |      -------
@@ -98,21 +99,13 @@ FUNCTIONS
         |      1
         |
         |      Some archives may have broken headers. When detected, unvivtool
-        |      will print warnings. Up to a certain point, such archives may
-        |      still be extracted. Warnings can be turned into errors, forcing
-        |      stricter adherence to format specifications. Note, such 'errors'
-        |      do not raise Python errors. Instead, unviv() returns 0.
-        |
-        |      >>> unvivtool.unviv("foo/bar.viv", ".", filename="car00.tga", strict=True)
-        |      ...
-        |      Strict Format error (Viv directory filesizes do not match archive size)
-        |      Decoder failed.
-        |      0
+        |      will print warnings. Up to a certain point, such archives can
+        |      still be extracted.
     
     viv(...)
-        |  viv(viv, infiles, dry=False, verbose=False)
-        |      Encode files in new VIV/BIG archive. Skips given input paths
-        |      that cannot be opened.
+        |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", direnlen=0, fnhex=False)
+        |      Encode files to new archive in BIGF, BIGH or BIG4 format.
+        |      Skips given input paths that cannot be opened.
         |
         |      Parameters
         |      ----------
@@ -125,6 +118,14 @@ FUNCTIONS
         |          archive contents, do not write to disk.
         |      verbose : bool
         |          If True, print archive contents.
+        |      format : str, optional
+        |          Expects "BIGF", "BIGH" or "BIG4".
+        |      direnlen : int, optional
+        |          If >= 10, set as fixed archive directory entry length.
+        |      fnhex : bool, optional
+        |          If True, decode input filenames from Base16/hexadecimal.
+        |          Use for non-printable filenames in archive. Keeps
+        |          leading/embedding null bytes.
         |
         |      Returns
         |      -------
@@ -164,5 +165,5 @@ FUNCTIONS
         |      ...
 
 VERSION
-    1.12
+    1.16
 ```

@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
@@ -20,13 +20,13 @@
 
 HOW TO USE
     Run decoder:
-    python example.py d [</path/to/archive.viv>|</path/to/archive.big>]
+    python unvivtool_script.py d [</path/to/archive.viv>|</path/to/archive.big>]
 
     Run encoder:
-    python example.py e [</path/to/folder>]
+    python unvivtool_script.py e [</path/to/folder>]
 
-    Print info:
-    python example.py i [</path/to/archive.viv>|</path/to/archive.big>]
+    Print info only:
+    python unvivtool_script.py i [</path/to/archive.viv>|</path/to/archive.big>]
 """
 import argparse
 import os
@@ -38,8 +38,12 @@ import unvivtool
 def main():
     # Parse command (or print module help)
     parser = argparse.ArgumentParser()
-    parser.add_argument("cmd", nargs="+", help="d: unviv(), e: viv(), i: print viv info")
+    parser.add_argument("cmd", nargs="+", help="d: unviv(), e: viv(), i: print archive info")
     args = parser.parse_args()
+
+    # Parameters
+    opt_requestfmt = "BIGF"  # viv() only
+    opt_direnlenfixed = 0
 
     # Decode
     if args.cmd[0] == "d":
@@ -55,7 +59,7 @@ def main():
             os.mkdir(outdir)
         except FileExistsError:
             print(f"os.mkdir() not necessary, directory exists: {outdir}")
-        unvivtool.unviv(str(vivfile), str(outdir))  # extract all files in archive "vivfile"
+        unvivtool.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed)  # extract all files in archive "vivfile"
 
     # Encode
     elif args.cmd[0] == "e":
@@ -78,7 +82,7 @@ def main():
             infiles[i] = str(infolder / infiles[i])
         infiles = sorted(infiles)
         print(infiles)
-        unvivtool.viv(str(vivfile), infiles)  # encode all files in path/to/infiles
+        unvivtool.viv(str(vivfile), infiles, format=opt_requestfmt, direnlen=opt_direnlenfixed)  # encode all files in path/to/infiles
 
     # Print info (dry run)
     elif args.cmd[0] == "i":
@@ -91,7 +95,7 @@ def main():
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
-        unvivtool.unviv(str(vivfile), dir=".", dry=True, verbose=True)
+        unvivtool.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True)
 
     #
     else:

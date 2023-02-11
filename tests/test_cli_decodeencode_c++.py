@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -92,15 +92,18 @@ def test_cli_smoketest():
        unvivtool <path/to/input.viv>
 
 Commands:
-  d             decode and extract files from VIV/BIG archive
-  e             encode files in new VIV/BIG archive
+  d             Decode and extract files from VIV/BIG archive
+  e             Encode files in new VIV/BIG archive
 
 Options:
-  -i #          decode file at 1-based index #
-  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
-  -p            print archive contents, do not write to disk (dry run)
-  -s            decoder strict mode, extra format checks, fail at first unsuccessful extraction
-  -v            verbose
+  -dnl #        set fixed Directory eNtry Length (>= 10)
+  -i #          decode file at 1-based Index #
+  -f <name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
+  -fh           decode/encode to/from Filenames in Hexadecimal
+  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
+  -p            Print archive contents, do not write to disk (dry run)
+  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            Verbose
 """
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
@@ -120,54 +123,55 @@ Options:
 
 
 @pytest.mark.skipif(0, reason="")
-@pytest.mark.parametrize("verbose, strict, dry",
-    [ ("", "", ""),
-      ("-v", "", ""),
-      ("", "-strict", ""),
-      ("-v", "-strict", ""),
-      ("", "", "-p"),
-      ("-v", "", "-p"),
-      ("", "-strict", "-p"),
-      ("-v", "-strict", "-p"), ])
-def test_cli_decode_all_existing_dir(verbose, strict, dry):
+@pytest.mark.parametrize("verbose, dry",
+    [ ("", ""),
+      ("-v", ""),
+      ("", "-p"),
+      ("-v", "-p"), ])
+def test_cli_decode_all_existing_dir(verbose, dry):
     err = ""
     out = \
 """Directory Entries (header) = 2
-Header Size (header) = 55
+Header Size (header) = 55 (0x37)
+File format (parsed) = BIGF
 Directory Entries (parsed) = 2
 Number extracted: 2
 Decoder successful.
 """
     outv = \
-"""Printing VIV directory:
+"""Printing archive directory:
 
-   id       Offset Gap         Size Len  Name
- ---- ------------ --- ------------ ---  -----------------------
-    1           55   0        35149   8  LICENSE
-    2        35204   0          103  15  pyproject.toml
- ---- ------------ --- ------------ ---  -----------------------
-             35307            35252      2 files
+   id Vld       Offset  Gap         Size Len  Name
+ ---- --- ------------ ---- ------------ ---  -----------------------
+                     0                55      header
+ ---- --- ------------ ---- ------------ ---  -----------------------
+    1   1           55    0        35149   8  LICENSE
+    2   1        35204    0          103  15  pyproject.toml
+ ---- --- ------------ ---- ------------ ---  -----------------------
+                 35307             35252      2 files
 Number extracted: 2
 Decoder successful.
 """
     poutv = \
-"""Printing VIV directory:
+"""Printing archive directory:
 
-   id       Offset Gap         Size Len  Name
- ---- ------------ --- ------------ ---  -----------------------
-    1           55   0        35149   8  LICENSE
-    2        35204   0          103  15  pyproject.toml
- ---- ------------ --- ------------ ---  -----------------------
-             35307            35252      2 files
+   id Vld       Offset  Gap         Size Len  Name
+ ---- --- ------------ ---- ------------ ---  -----------------------
+                     0                55      header
+ ---- --- ------------ ---- ------------ ---  -----------------------
+    1   1           55    0        35149   8  LICENSE
+    2   1        35204    0          103  15  pyproject.toml
+ ---- --- ------------ ---- ------------ ---  -----------------------
+                 35307             35252      2 files
 End dry run
 Decoder successful.
 """
     ret = get_subprocess_ret(" ".join([
       f"{EXECUTABLE_PATH}",
       "d",
-      verbose, strict, dry,
+      verbose, dry,
       f"{SCRIPT_PATH / 'in/car.viv'}",
-      f"{OUTDIR}",  # _{verbose}_{strict}
+      f"{OUTDIR}",  # _{verbose}
     ]), True)
     stdout = delete_whitespace(ret.stdout.decode("utf-8"))
     assert ret.returncode == 0
@@ -189,32 +193,29 @@ Decoder successful.
         assert re.sub(r"^.*?Printing", "Printing", stdout) == delete_whitespace(poutv)
 
 # @pytest.mark.skipif(0, reason="")
-# @pytest.mark.parametrize("verbose, strict, dry",
+# @pytest.mark.parametrize("verbose, dry",
 #     [ ("", "", ""),
 #       ("-v", "", ""),
-#       ("", "-strict", ""),
-#       ("-v", "-strict", ""),
 #       ("", "", "-p"),
-#       ("-v", "", "-p"),
-#       ("", "-strict", "-p"),
-#       ("-v", "-strict", "-p"), ])
-# def test_cli_decode_existing_file_existing_dir(verbose, strict, dry):
+#       ("-v", "", "-p"), ])
+# def test_cli_decode_existing_file_existing_dir(verbose, dry):
 #     err = ""
 #     out = \
-# """Archive Size (parsed) = 35307
+# """Archive Size (parsed) = 35307 (0x89eb)
 # Directory Entries (header) = 2
 # Decoder successful.
 # """
 #     outv = \
-# """Archive Size (parsed) = 35307
+# """Archive Size (parsed) = 35307 (0x89eb)
+# Archive Size (header) = 35307 (0x89eb)
+# Header Size (header) = 55 (0x37)
+# File format (parsed) = BIGF
 # Directory Entries (header) = 2
-# Archive Size (header) = 35307
-# Header Size (header) = 55
 # Directory Entries (parsed) = 2
 # Requested file idx = 2
 # Requested file = pyproject.toml
 # Buffer = 4096
-# Header Size (parsed) = 55
+# Header Size (parsed) = 55 (0x37)
 
 # Printing VIV directory:
 
@@ -230,7 +231,8 @@ Decoder successful.
 # """Archive Size (parsed) = 35307
 # Directory Entries (header) = 2
 # Archive Size (header) = 35307
-# Header Size (header) = 55
+# Header Size (header) = 55 (0x37)
+# File format (parsed) = BIGF
 # Directory Entries (parsed) = 2
 # Requested file idx = 2
 # Requested file = pyproject.toml
@@ -251,7 +253,7 @@ Decoder successful.
 #     ret = get_subprocess_ret(" ".join([
 #       f"{EXECUTABLE_PATH}",
 #       "d",
-#       verbose, strict, dry,
+#       verbose, dry,
 #       "-fn pyproject.toml",
 #       f"{SCRIPT_PATH / 'in/car.viv'}",
 #       f"{OUTDIR}",
@@ -269,16 +271,12 @@ Decoder successful.
 
 
 # @pytest.mark.skipif(0, reason="")
-# @pytest.mark.parametrize("verbose, strict, dry",
+# @pytest.mark.parametrize("verbose, dry",
 #     [ ("", "", ""),
 #       ("-v", "", ""),
-#       ("", "-strict", ""),
-#       ("-v", "-strict", ""),
 #       ("", "", "-p"),
-#       ("-v", "", "-p"),
-#       ("", "-strict", "-p"),
-#       ("-v", "-strict", "-p"), ])
-# def test_cli_decode_not_existing_file_existing_dir(verbose, strict, dry):
+#       ("-v", "", "-p"), ])
+# def test_cli_decode_not_existing_file_existing_dir(verbose, dry):
 #     err = \
 # """Cannot find requested file in archive (filename is cAse-sEnsitivE)
 # """
@@ -292,7 +290,7 @@ Decoder successful.
 #     ret = get_subprocess_ret(" ".join([
 #       f"{EXECUTABLE_PATH}",
 #       "d",
-#       verbose, strict, dry,
+#       verbose, dry,
 #       "-fn not_in_archive",
 #       f"{SCRIPT_PATH / 'in/car.viv'}",
 #       f"{OUTDIR}",

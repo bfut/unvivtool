@@ -11,7 +11,7 @@ SCRIPT_PATH="${0%/*}"
 CURRENT_WORKING_DIRECTORY=$PWD
 
 EXE="unvivtool"
-OPTIONS="e -p"
+OPTIONS="e -s"
 
 
 INPATH='*'

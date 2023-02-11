@@ -1,4 +1,4 @@
-# fcecodec Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+# fcecodec Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -123,17 +123,17 @@ def test_decode1():
 
 def test_decode2():
     print("Expected result: extract LICENSE, return 1")
-    retv = unvivtool.unviv(invivfile, outdir, 0, request_filename, verbose=1, dry=False)
+    retv = unvivtool.unviv(invivfile, outdir, fileidx=0, filename=request_filename, verbose=1, dry=False)
     assert retv == 1
 
 def test_decode3():
     print("Expected result: extract file at index 2, return 1")
-    retv = unvivtool.unviv(invivfile, outdir, request_fileid, verbose=True)
+    retv = unvivtool.unviv(invivfile, outdir, fileidx=request_fileid, verbose=True)
     assert retv == 1
 
 def test_decode4():
     print("Expected result: extract LICENSE, return 1")
-    retv = unvivtool.unviv(invivfile, outdir, request_fileid, request_filename, verbose=1)
+    retv = unvivtool.unviv(invivfile, outdir, fileidx=request_fileid, filename=request_filename, verbose=1)
     assert retv == 1
 
 def test_decode5():
