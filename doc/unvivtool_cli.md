@@ -44,7 +44,7 @@ your choice.
        cd ~
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       gcc -std=c89 -fPIE -s -O2 unvivtool.c -o unvivtool
+       gcc -std=c89 -fPIE -pie -s -O2 unvivtool.c -o unvivtool
 
 ## Compiling for Windows
 Releases for Windows are cross-compiled on Linux with MinGW:
@@ -52,7 +52,7 @@ Releases for Windows are cross-compiled on Linux with MinGW:
        cd ~
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       i686-w64-mingw32-gcc -std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
+       i686-w64-mingw32-gcc -std=c89 -fPIE -Wl,-pie -pie -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
 
 Compiling with MSVC:
 
