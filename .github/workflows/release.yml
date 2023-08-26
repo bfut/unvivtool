@@ -24,8 +24,8 @@ jobs:
 
       - name: Build
         run: |
-          MINGWFLAGS='-std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp'
-          # MINGWFLAGS='-std=c89 -fPIE -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
+          MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp'
+          # MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
 
           echo "mingw-win32"
           i686-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}.exe" ${{ env.BRANCHES }}

@@ -59,7 +59,6 @@ static const int kUnvivtoolMaxPathLen = 4096;
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
-
 /* wrappers ----------------------------------------------------------------- */
 
 static
@@ -461,7 +460,6 @@ if (opt_requestfmt_ptr)
   return retv_obj;
 }
 
-
 /* doc ---------------------------------------------------------------------- */
 
 PyDoc_STRVAR(
@@ -616,7 +614,6 @@ PyDoc_STRVAR(
   " |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)\n"
   " |      ...\n"
 );
-
 
 /* -------------------------------------------------------------------------- */
 

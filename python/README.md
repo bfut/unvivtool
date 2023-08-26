@@ -7,9 +7,9 @@ A ready to use decoder/encoder script can be found here: [/scripts/unvivtool_scr
 ## Installation
 Requires Python 3.8+
 
-       cd ~
        git clone https://github.com/bfut/unvivtool.git
-       python -m pip install unvivtool/python
+       cd unvivtool
+       python -m pip install .
 
 ## Documentation
 ```
@@ -24,7 +24,7 @@ DESCRIPTION
     viv() -- encode files in new VIV/BIG archive
     unviv() -- decode and extract VIV/BIG archive
 
-    unvivtool 1.16 Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)
+    unvivtool 1.17 Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     unviv(...)
@@ -166,4 +166,3 @@ FUNCTIONS
 
 VERSION
     1.17
-```

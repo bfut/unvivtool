@@ -33,7 +33,7 @@ import os
 import pathlib
 import re
 
-import unvivtool
+import unvivtool as uvt
 
 def main():
     # Parse command (or print module help)
@@ -59,7 +59,7 @@ def main():
             os.mkdir(outdir)
         except FileExistsError:
             print(f"os.mkdir() not necessary, directory exists: {outdir}")
-        unvivtool.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed)  # extract all files in archive "vivfile"
+        uvt.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed)  # extract all files in archive "vivfile"
 
     # Encode
     elif args.cmd[0] == "e":
@@ -82,7 +82,7 @@ def main():
             infiles[i] = str(infolder / infiles[i])
         infiles = sorted(infiles)
         print(infiles)
-        unvivtool.viv(str(vivfile), infiles, format=opt_requestfmt, direnlen=opt_direnlenfixed)  # encode all files in path/to/infiles
+        uvt.viv(str(vivfile), infiles, format=opt_requestfmt, direnlen=opt_direnlenfixed)  # encode all files in path/to/infiles
 
     # Print info (dry run)
     elif args.cmd[0] == "i":
@@ -95,12 +95,12 @@ def main():
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
-        unvivtool.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True)
+        uvt.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True)
 
     #
     else:
         print("Invalid command (expects {d, e, i}):", args.cmd[0])
-        help(unvivtool)
+        help(uvt)
 
 if __name__ == "__main__":
     main()

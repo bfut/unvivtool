@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2022 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
@@ -30,14 +30,14 @@ script_path = pathlib.Path(__file__).parent.resolve()
 os.chdir(script_path)
 
 module_name = "unvivtool"
-with open(script_path / "../libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(51 - 1):
+with open(script_path / "./libnfsviv.h", mode="r", encoding="utf8") as f:
+    for _ in range(52 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")
     __version__ = __version__.rstrip().split("\"")[-2]
     print(f"VERSION_INFO={__version__}")
-long_description = (script_path / "../README.md").read_text(encoding="utf-8")
+long_description = (script_path / "./README.md").read_text(encoding="utf-8")
 
 extra_compile_args = []
 if "PYMEM_MALLOC" in os.environ:
@@ -56,6 +56,7 @@ else:
 
     if "gcc" in platform.python_compiler().lower():
         extra_compile_args += [
+            # ("-Wno-sign-compare"),  # prevents warnings on conversion from size_t to int
             ("-Wno-unused-parameter"),  # self in PyObject *unviv(PyObject *self, ...)
             ("-Wno-missing-field-initializers"),  # {NULL, NULL} in struct PyMethodDef{}
 
@@ -86,6 +87,7 @@ else:
         ]
     elif "clang" in platform.python_compiler().lower():
         extra_compile_args += [
+            ("-Wno-sign-compare"),  # prevents warnings on conversion from size_t to int
             # ("-Weverything"),
             ("-Wno-braced-scalar-init"),
             # ("-Wno-newline-eof"),
@@ -94,7 +96,7 @@ else:
 ext_modules = [
     setuptools.Extension(
         name=module_name,
-        sources=sorted(["unvivtoolmodule.c"]),
+        sources=sorted(["./python/unvivtoolmodule.c"]),
         define_macros=[
             ("VERSION_INFO", __version__),
             ("UVTVERBOSE", os.environ.get("UVTVERBOSE", 0)),  # 0 if key not set
@@ -114,7 +116,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=ext_modules,
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     # extras_require={"test": "pytest"},
     # Currently, build_ext only provides an optional "highest supported C++
     # level" feature, but in the future it may provide more features.

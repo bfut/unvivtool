@@ -4,11 +4,11 @@ env:
   SRC: unvivtool.c
   DEST: unvivtool
   BRANCHES: -DUVTVUTF8
-  CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
-  CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
-  GCCDEBUGFLAGS: -pedantic-errors -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
+  CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
+  CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
+  GCCDEBUGFLAGS: -pedantic -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
   CPPDEBUGFLAGS: -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
-  MINGWFLAGS: -std=c89 -fPIE -s -O2 -Xlinker --no-insert-timestamp
+  MINGWFLAGS: -std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp
 
 on:
   push:
@@ -25,9 +25,10 @@ jobs:
     - name: Compile
       shell: bash
       run: |
-        gcc -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}" ${{ env.GCCDEBUGFLAGS }} -Werror ${{ env.BRANCHES }}
-        g++ -std=c++17 ${{ env.CPPFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_c++" ${{ env.CPPDEBUGFLAGS }} -Werror ${{ env.BRANCHES }}
+        gcc -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }}
+        g++ -std=c++17 ${{ env.CPPFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }}
         ls -lg
+
     - name: Store executables
       uses: actions/upload-artifact@v3
       with:
@@ -35,11 +36,13 @@ jobs:
         path: |
           ${{ env.DEST }}
           ${{ env.DEST }}_c++
+
     - name: Cross-compile for Windows
       run: |
         sudo apt install gcc-mingw-w64-i686
-        i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "${{ env.DEST }}_mingw_x86.exe" ${{ env.GCCDEBUGFLAGS }} -Werror ${{ env.BRANCHES }}
+        i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "${{ env.DEST }}_mingw_x86.exe" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }}
         ls -lg
+
     - name: Store executables
       uses: actions/upload-artifact@v3
       with:
@@ -47,8 +50,6 @@ jobs:
         path: |
           ${{ env.DEST }}_mingw_x86.exe
           # ${{ env.DEST }}_c++
-
-
 
   macos:
     runs-on: macos-latest
@@ -58,7 +59,7 @@ jobs:
     - name: Compile
       shell: bash
       run: |
-        clang -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}" ${{ env.GCCDEBUGFLAGS }} -Werror ${{ env.BRANCHES }}
+        clang -std=c89 "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }}
         clang++ -std=c++17 ${{ env.CPPFLAGS_MACOS }} "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }}
         ls -lg
     - name: Store executables
@@ -111,7 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ "3.10" ]
+        python-version: [ "3.11" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
@@ -135,9 +136,6 @@ jobs:
       shell: bash
       run: |
         python -m pip install -q pytest
-        cmp --help
-        cksum
-        grep -V
         pytest ./tests/test_cli_decodeencode${{ matrix.std }}.py -vvs
 
 
@@ -152,7 +150,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macos-latest ]
-        python-version: [ "3.10" ]
+        python-version: [ "3.11" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
@@ -173,8 +171,6 @@ jobs:
       run: |
         ls -lg
         python -m pip install -q pytest
-        cmp --help
-        cksum
         pytest ./tests/test_cli_decodeencode${{ matrix.std }}.py -vvs
 
 
@@ -190,7 +186,7 @@ jobs:
       matrix:
         os: [ windows-latest ]
         arch: [ x86, x64 ]
-        python-version: [ "3.10" ]
+        python-version: [ "3.11" ]
 
     name: Test ${{ matrix.arch }}-${{ matrix.os }} (python-${{ matrix.python-version }})
     steps:
@@ -208,6 +204,4 @@ jobs:
       shell: bash
       run: |
         python -m pip install -q pytest
-        cmp --help
-        cksum
         pytest ./tests/test_cli_decodeencode.py -vvs

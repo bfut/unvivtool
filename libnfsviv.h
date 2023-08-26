@@ -36,6 +36,7 @@ Special cases:
 #define LIBNFSVIV_H_
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,9 +50,6 @@ Special cases:
 #endif
 
 #define UVTVERS "1.17"
-#ifndef INT_MAX
-#define INT_MAX 2147483647
-#endif
 
 /* branches */
 #ifndef UVTVERBOSE
@@ -155,7 +153,7 @@ static
 int LIBNFSVIV_GetFilesize(FILE *file)
 {
   int filesize;
-  fseek(file, (long)0, SEEK_END);
+  fseek(file, 0, SEEK_END);
   filesize = (int)ftell(file);
   rewind(file);
   return filesize;
@@ -237,7 +235,7 @@ int LIBNFSVIV_DecBase16(char *str)
   const char *ptr = str;
   int i = 0;
   char buf[kLibnfsvivFilenameMaxLen * 4] = {0};
-  while(*ptr && *ptr + 1 && i < kLibnfsvivFilenameMaxLen * 4 - 2)
+  while (*ptr && *ptr + 1 && i < kLibnfsvivFilenameMaxLen * 4 - 2)
   {
     buf[i] = LIBNFSVIV_hextoint(*ptr) << 4;
     buf[i] += LIBNFSVIV_hextoint(*(ptr + 1));
@@ -257,7 +255,7 @@ void LIBNFSVIV_EncBase16(char *str, const int min_len)
   const char *ptr = str;
   int i = 0;
   char buf[kLibnfsvivFilenameMaxLen * 4] = {0};
-  while((*ptr || i < 2*min_len) && i < kLibnfsvivFilenameMaxLen * 4 - 2)
+  while ((*ptr || i < 2*min_len) && i < kLibnfsvivFilenameMaxLen * 4 - 2)
   {
     buf[i] = LIBNFSVIV_inttohex((*ptr & 0xF0) >> 4);
     buf[i + 1] = LIBNFSVIV_inttohex(*ptr & 0xF);
@@ -308,7 +306,6 @@ void LIBNFSVIV_PrintVivDirEntr(const VivDirEntr *viv_dir, const int size)
   }
 }
 #endif
-
 
 /* internal: verbose option ------------------------------------------------- */
 
@@ -366,7 +363,7 @@ void LIBNFSVIV_PrintStatsDec(const VivDirEntr *viv_dir, const VivHeader viv_hdr,
 
   if (count_dir_entries > 0)
   {
-    buf = (unsigned char *)malloc((size_t)chunk_size * sizeof(*buf));
+    buf = (unsigned char *)malloc(chunk_size * sizeof(*buf));
     if (!buf)
     {
       fprintf(stderr, "Cannot allocate memory\n");
@@ -378,7 +375,7 @@ void LIBNFSVIV_PrintStatsDec(const VivDirEntr *viv_dir, const VivHeader viv_hdr,
 
     /* Parse entire header */
     rewind(file);
-    if (fread(buf, (size_t)1, (size_t)chunk_size, file) != (size_t)chunk_size)
+    if (fread(buf, 1, chunk_size, file) != chunk_size)
     {
       fprintf(stderr, "File read error (print stats)\n");
       free(buf);
@@ -403,8 +400,8 @@ void LIBNFSVIV_PrintStatsDec(const VivDirEntr *viv_dir, const VivHeader viv_hdr,
 
     LIBNFSVIV_UcharToNulChar(buf + viv_dir[0].ofs_begin_filename,
                              filename,
-                             (size_t)LIBNFSVIV_Min(kLibnfsvivFilenameMaxLen * 4, chunk_size - viv_dir[0].ofs_begin_filename),
-                             (size_t)(kLibnfsvivFilenameMaxLen * 4));
+                             LIBNFSVIV_Min(kLibnfsvivFilenameMaxLen * 4, chunk_size - viv_dir[0].ofs_begin_filename),
+                             kLibnfsvivFilenameMaxLen * 4);
     if (opt_filenameshex)
       LIBNFSVIV_EncBase16(filename, viv_dir[0].filename_len_);
     printf(" %4d   %d   %10d %4d   %10d %3d  %s\n", 1, viv_dir[0].valid_entr_, viv_dir[0].offset, viv_dir[0].offset - hdr_size, viv_dir[0].filesize, viv_dir[0].filename_len_, filename);
@@ -415,8 +412,8 @@ void LIBNFSVIV_PrintStatsDec(const VivDirEntr *viv_dir, const VivHeader viv_hdr,
 
       LIBNFSVIV_UcharToNulChar(buf + viv_dir[i].ofs_begin_filename,
                                filename,
-                               (size_t)LIBNFSVIV_Min(kLibnfsvivFilenameMaxLen * 4, chunk_size - viv_dir[i].ofs_begin_filename),
-                               (size_t)(kLibnfsvivFilenameMaxLen * 4));
+                               LIBNFSVIV_Min(kLibnfsvivFilenameMaxLen * 4, chunk_size - viv_dir[i].ofs_begin_filename),
+                               kLibnfsvivFilenameMaxLen * 4);
       if (opt_filenameshex)
         LIBNFSVIV_EncBase16(filename, viv_dir[i].filename_len_);
       printf(" %4d   %d   %10d %4d   %10d %3d  %s\n", i + 1, viv_dir[i].valid_entr_, viv_dir[i].offset, curr_chunk_size, viv_dir[i].filesize, viv_dir[i].filename_len_, filename);
@@ -460,7 +457,6 @@ void LIBNFSVIV_PrintStatsEnc(VivDirEntr *viv_dir, const VivHeader viv_hdr,
   }
 }
 
-
 /* internal: validate ------------------------------------------------------- */
 
 static
@@ -482,9 +478,9 @@ int LIBNFSVIV_CheckVivHdr(const VivHeader viv_hdr, const int viv_filesize)
   int retv = 0;
   for (;;)
   {
-    if (strncmp(viv_hdr.format, "BIGF", (size_t)4) &&
-        strncmp(viv_hdr.format, "BIGH", (size_t)4) &&
-        strncmp(viv_hdr.format, "BIG4", (size_t)4))
+    if (strncmp(viv_hdr.format, "BIGF", 4) &&
+        strncmp(viv_hdr.format, "BIGH", 4) &&
+        strncmp(viv_hdr.format, "BIG4", 4))
     {
       fprintf(stderr, "CheckVivHeader: Format error (expects BIGF, BIGH, BIG4)\n");
       break;
@@ -612,7 +608,6 @@ int LIBNFSVIV_CheckVivDir(const VivHeader viv_header, const VivDirEntr *viv_dir,
   return retv;
 }
 
-
 /* internal: decode --------------------------------------------------------- */
 
 /* Clamp number of viv directory entries to be parsed to 0,max */
@@ -649,16 +644,16 @@ int LIBNFSVIV_GetVivHdr(VivHeader *viv_hdr, FILE *file)
 
   for (;;)
   {
-    if (fread(buf, (size_t)1, (size_t)16, file) != (size_t)16)
+    if (fread(buf, 1, 16, file) != 16)
     {
       fprintf(stderr, "GetVivHeader: File read error\n");
       break;
     }
 
-    memcpy(viv_hdr->format,             buf,      (size_t)4);
-    memcpy(&viv_hdr->filesize,          buf + 4,  (size_t)4);
-    memcpy(&viv_hdr->count_dir_entries, buf + 8,  (size_t)4);
-    memcpy(&viv_hdr->header_size,       buf + 12, (size_t)4);
+    memcpy(viv_hdr->format,             buf,      4);
+    memcpy(&viv_hdr->filesize,          buf + 4,  4);
+    memcpy(&viv_hdr->count_dir_entries, buf + 8,  4);
+    memcpy(&viv_hdr->header_size,       buf + 12, 4);
 
     if (strncmp(viv_hdr->format, "BIG4", 4))  /* BIG4 encodes filesize in little endian */
       viv_hdr->filesize = LIBNFSVIV_SwapEndian(viv_hdr->filesize);
@@ -704,9 +699,9 @@ int LIBNFSVIV_GetVivDir(VivDirEntr *viv_dir, int *count_dir_entries,
   {
     /* Read next chunk */
     curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, viv_filesize - curr_offset_file);
-    fseek(file, (long)curr_offset_file, SEEK_SET);
+    fseek(file, curr_offset_file, SEEK_SET);
 
-    if (fread(buf, (size_t)1, (size_t)curr_chunk_size, file) != (size_t)curr_chunk_size)
+    if (fread(buf, 1, curr_chunk_size, file) != curr_chunk_size)
     {
       fprintf(stderr, "GetVivDir: File read error at %d\n", curr_offset_file);
       return 0;
@@ -727,8 +722,8 @@ printf("read entry i%d at curr_offset_buffer 0x%x at 0x%x\n",
        curr_offset_file);
 #endif
 
-      memcpy(&viv_dir[i].offset, buf + curr_offset_buffer + 0x0, (size_t)4);
-      memcpy(&viv_dir[i].filesize, buf + curr_offset_buffer + 0x4, (size_t)4);
+      memcpy(&viv_dir[i].offset, buf + curr_offset_buffer + 0x0, 4);
+      memcpy(&viv_dir[i].filesize, buf + curr_offset_buffer + 0x4, 4);
 
       viv_dir[i].offset   = LIBNFSVIV_SwapEndian(viv_dir[i].offset);
       viv_dir[i].filesize = LIBNFSVIV_SwapEndian(viv_dir[i].filesize);
@@ -765,7 +760,7 @@ printf("i%d 0x%x offset0x%x\n",
         /* End if filename is not UTF8-string */
         len = LIBNFSVIV_IsUTF8String(ptr_tmp, kLibnfsvivBufferSize - curr_offset_buffer) + 1;
         viv_dir[i].filename_len_ = len;
-        memcpy(&tmp_UTF8, ptr + 1, (size_t)1);
+        memcpy(&tmp_UTF8, ptr + 1, 1);
         if (!isprint(tmp_UTF8) && (len < 2))
 #else
         /* End if filename is not printable string
@@ -950,15 +945,15 @@ int LIBNFSVIV_VivExtractFile(const VivDirEntr viv_dir, const int viv_filesize,
                              FILE *wenc_file, const char *wenc_outpath)
 {
   unsigned char buf[kLibnfsvivBufferSize] = {0};
-  int curr_chunk_size;
+  size_t curr_chunk_size;
   int curr_offset;
   FILE *outfile = NULL;
 
   /* Read outfilename from file into buf */
   curr_offset = viv_dir.ofs_begin_filename;
   curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, viv_filesize - curr_offset);
-  fseek(infile, (long)curr_offset, SEEK_SET);
-  if (fread(buf, (size_t)1, (size_t)curr_chunk_size, infile) != (size_t)curr_chunk_size)
+  fseek(infile, curr_offset, SEEK_SET);
+  if (fread(buf, 1, curr_chunk_size, infile) != curr_chunk_size)
   {
     fprintf(stderr, "VivExtractFile: File read error at %d (extract outfilename)\n", curr_offset);
     return 0;
@@ -983,20 +978,20 @@ int LIBNFSVIV_VivExtractFile(const VivDirEntr viv_dir, const int viv_filesize,
 
   memset(buf, 0, kLibnfsvivBufferSize);
   curr_offset = viv_dir.offset;
-  fseek(infile, (long)curr_offset, SEEK_SET);
+  fseek(infile, curr_offset, SEEK_SET);
 
   while (curr_offset < viv_dir.offset + viv_dir.filesize)
   {
     curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, viv_dir.offset + viv_dir.filesize - curr_offset);
 
-    if (fread(buf, (size_t)1, (size_t)curr_chunk_size, infile) != (size_t)curr_chunk_size)
+    if (fread(buf, 1, curr_chunk_size, infile) != curr_chunk_size)
     {
       fprintf(stderr, "VivExtractFile: File read error (archive)\n");
       fclose(outfile);
       return 0;
     }
 
-    if (fwrite(buf, (size_t)1, (size_t)curr_chunk_size, outfile) != (size_t)curr_chunk_size)
+    if (fwrite(buf, 1, curr_chunk_size, outfile) != curr_chunk_size)
     {
       fprintf(stderr, "VivExtractFile: File write error (output)\n");
       fclose(outfile);
@@ -1032,10 +1027,10 @@ int LIBNFSVIV_GetIdxFromFname(const VivDirEntr *viv_dir,
 
   for (i = 0; i < count_dir_entries; ++i)
   {
-    fseek(infile, (long)viv_dir[i].ofs_begin_filename, SEEK_SET);
+    fseek(infile, viv_dir[i].ofs_begin_filename, SEEK_SET);
     chunk_size = LIBNFSVIV_Min(infilesize - viv_dir[i].ofs_begin_filename, kLibnfsvivFilenameMaxLen * 4);
 
-    if (fread(buf, (size_t)1, (size_t)chunk_size, infile) != (size_t)chunk_size)
+    if (fread(buf, 1, chunk_size, infile) != chunk_size)
     {
       fprintf(stderr, "GetIdxFromFname: File read error (find index)\n");
       retv = 0;
@@ -1049,7 +1044,6 @@ int LIBNFSVIV_GetIdxFromFname(const VivDirEntr *viv_dir,
   fprintf(stderr, "GetIdxFromFname: Cannot find requested file in archive (cAse-sEnsitivE filename)\n");
   return retv;
 }
-
 
 /* internal: encode --------------------------------------------------------- */
 
@@ -1076,7 +1070,7 @@ int LIBNFSVIV_SetVivDirHeader(VivHeader *viv_hdr, VivDirEntr *viv_dir,
   {
     if ((*infile_exists)[i] < 1)
       continue;
-    len = (int)strlen(LIBNFSVIV_GetBasename(infiles_paths[i])) + 1;
+    len = strlen(LIBNFSVIV_GetBasename(infiles_paths[i])) + 1;
     if (opt_filenameshex)
       len = len / 2 + len % 2;
 
@@ -1111,7 +1105,7 @@ int LIBNFSVIV_SetVivDirHeader(VivHeader *viv_hdr, VivDirEntr *viv_dir,
   for (j = 1; j < count_infiles_exist; ++j)
     viv_dir[j].offset = viv_dir[j - 1].offset + viv_dir[j - 1].filesize;
 
-  memcpy(viv_hdr->format, opt_requestfmt, (size_t)4);
+  memcpy(viv_hdr->format, opt_requestfmt, 4);
   viv_hdr->filesize += curr_offset;
   viv_hdr->count_dir_entries = count_infiles_exist;
   viv_hdr->header_size = curr_offset;
@@ -1130,10 +1124,10 @@ int LIBNFSVIV_WriteVivHeader(VivHeader viv_hdr, FILE *file)
   viv_hdr.count_dir_entries = LIBNFSVIV_SwapEndian(viv_hdr.count_dir_entries);
   viv_hdr.header_size = LIBNFSVIV_SwapEndian(viv_hdr.header_size);
 
-  err += fwrite(viv_hdr.format, (size_t)1, (size_t)4, file);
-  err += fwrite(&viv_hdr.filesize, (size_t)1, (size_t)4, file);
-  err += fwrite(&viv_hdr.count_dir_entries, (size_t)1, (size_t)4, file);
-  err += fwrite(&viv_hdr.header_size, (size_t)1, (size_t)4, file);
+  err += fwrite(viv_hdr.format, 1, 4, file);
+  err += fwrite(&viv_hdr.filesize, 1, 4, file);
+  err += fwrite(&viv_hdr.count_dir_entries, 1, 4, file);
+  err += fwrite(&viv_hdr.header_size, 1, 4, file);
 
   if (err != 16)
   {
@@ -1156,7 +1150,7 @@ int LIBNFSVIV_WriteVivDirectory(VivDirEntr *viv_directory,
   size_t size;
   int i;
   int j;
-  int err = 0;
+  size_t err = 0;
 
   for (i = 0, j = 0; i < count_infiles; ++i, ++j)
   {
@@ -1164,13 +1158,13 @@ int LIBNFSVIV_WriteVivDirectory(VivDirEntr *viv_directory,
       continue;
 
     val = LIBNFSVIV_SwapEndian(viv_directory[j].offset);
-    err += (int)fwrite(&val, (size_t)1, (size_t)4, file);
+    err += fwrite(&val, 1, 4, file);
 
     val = LIBNFSVIV_SwapEndian(viv_directory[j].filesize);
-    err += (int)fwrite(&val, (size_t)1, (size_t)4, file);
+    err += fwrite(&val, 1, 4, file);
 
     size = strlen(LIBNFSVIV_GetBasename(infiles_paths[i])) + 1;
-    if (size < 2 || size > (size_t)kLibnfsvivFilenameMaxLen * 4 - 1)
+    if (size < 2 || size > kLibnfsvivFilenameMaxLen * 4 - 1)
     {
       fprintf(stderr, "WriteVivDirectory: infile basename length incompatible (%d)\n", (int)size);
       return 0;
@@ -1179,22 +1173,22 @@ int LIBNFSVIV_WriteVivDirectory(VivDirEntr *viv_directory,
 
     if (opt_filenameshex)
     {
-      size = (size_t)LIBNFSVIV_DecBase16(buf) + 1;
-      if (size != (size_t)viv_directory[j].filename_len_ + 1)
+      size = LIBNFSVIV_DecBase16(buf) + 1;
+      if (size != viv_directory[j].filename_len_ + 1)
         fprintf(stderr, "Warning:WriteVivDirectory: viv_dir mishap (%d != %d)\n", (int)size, viv_directory[j].filename_len_ + 1);
     }
 
-    err *= LIBNFSVIV_Sign((int)fwrite(buf, (size_t)1, size, file));
+    err *= LIBNFSVIV_Sign((int)fwrite(buf, 1, size, file));
 
     if (opt_direnlenfixed > 10)
     {
-      if (size > (size_t)opt_direnlenfixed)
+      if (size > opt_direnlenfixed)
       {
         fprintf(stderr, "WriteVivDirectory: Filename too long for fixed directory entry length (%d > %d)\n", (int)size, opt_direnlenfixed);
         return 0;
       }
       size += 0x08;
-      while (err > 0 && size++ < (size_t)opt_direnlenfixed)
+      while (err > 0 && size++ < opt_direnlenfixed)
         err += fputc('\0', file);
     }
   }  /* for i, j */
@@ -1229,14 +1223,14 @@ int LIBNFSVIV_VivWriteFile(FILE *outfile, const char *infile_path,
     curr_ofs = ftell(infile);
     curr_chunk_size = LIBNFSVIV_Min(kLibnfsvivBufferSize, infile_size - curr_ofs);
 
-    if (fread(buf, (size_t)1, (size_t)curr_chunk_size, infile) != (size_t)curr_chunk_size)
+    if (fread(buf, 1, curr_chunk_size, infile) != curr_chunk_size)
     {
       fprintf(stderr, "VivWriteFile: File read error at %d in '%s' (infile)\n", curr_ofs, infile_path);
       retv = 0;
       break;
     }
 
-    if (fwrite(buf, (size_t)1, (size_t)curr_chunk_size, outfile) != (size_t)curr_chunk_size)
+    if (fwrite(buf, 1, curr_chunk_size, outfile) != curr_chunk_size)
     {
       fprintf(stderr, "VivWriteFile: File write error at %d (outfile)\n", curr_chunk_size);
       retv = 0;
@@ -1248,55 +1242,7 @@ int LIBNFSVIV_VivWriteFile(FILE *outfile, const char *infile_path,
   return retv;
 }
 
-
 /* api ---------------------------------------------------------------------- */
-
-#ifdef UVTDEBUG
-int LIBNFSVIV_SanityTest(void)  /* src: D. Auroux fshtool.c */
-{
-  int retv = 1;
-  int x = 0;
-
-  *((char *)(&x)) = 1;
-  if (x != 1)
-  {
-    fprintf(stderr, "expects little-endian architecture\n");
-    retv = 0;
-  }
-
-  if (sizeof(int) != 4)
-  {
-    fprintf(stderr, "expects 32-bit int\n");
-    retv = 0;
-  }
-
-  if (sizeof(short) != 2)
-  {
-    fprintf(stderr, "expects 16-bit short\n");
-    retv = 0;
-  }
-
-  if ((sizeof(VivHeader) != 16) || (sizeof(VivDirEntr) != 12))
-  {
-    fprintf(stderr, "structs are not correctly packed\n");
-    retv = 0;
-  }
-
-  if (kLibnfsvivFilenameMaxLen * 4 + 8 > kLibnfsvivBufferSize)
-  {
-    fprintf(stderr, "'kLibnfsvivBufferSize' is too small\n");
-    retv = 0;
-  }
-
-  if (kLibnfsvivFilenameMaxLen > 256)
-  {
-    fprintf(stderr, "'kLibnfsvivFilenameMaxLen' exceeds 256 bytes\n");
-    retv = 0;
-  }
-
-  return retv;
-}
-#endif  /* UVTDEBUG */
 
 /* Assumes (viv_name). Assumes (outpath). Overwrites directory 'outpath'.
    Changes working directory to 'outpath'.
@@ -1375,7 +1321,7 @@ int LIBNFSVIV_Unviv(const char *viv_name, const char *outpath,
       break;
     count_dir_entries = viv_hdr.count_dir_entries;  /* is non-negative here */
 
-    viv_directory = (VivDirEntr *)malloc((size_t)(count_dir_entries + 1) * sizeof(*viv_directory));
+    viv_directory = (VivDirEntr *)malloc((count_dir_entries + 1) * sizeof(*viv_directory));
     if (!viv_directory)
     {
       fprintf(stderr, "Unviv: Cannot allocate memory\n");
@@ -1537,7 +1483,7 @@ int LIBNFSVIV_Viv(const char *viv_name,
 
   for (;;)
   {
-    infile_exists = (int *)calloc((size_t)(count_infiles + 1), sizeof(int));
+    infile_exists = (int *)calloc(count_infiles + 1, sizeof(*infile_exists));
     if (!infile_exists)
     {
       fprintf(stderr, "Viv: Cannot allocate memory\n");
@@ -1563,7 +1509,7 @@ int LIBNFSVIV_Viv(const char *viv_name,
 #endif
 
     /* Set VIV directory */
-    viv_directory = (VivDirEntr *)malloc((size_t)(count_infiles_exist + 1) * sizeof(*viv_directory));
+    viv_directory = (VivDirEntr *)malloc((count_infiles_exist + 1) * sizeof(*viv_directory));
     if (!viv_directory)
     {
       fprintf(stderr, "Viv: Cannot allocate memory\n");

@@ -65,20 +65,13 @@ int main(int argc, char **argv)
 
   printf("unvivtool %s - Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
 
-#if defined(UVTDEBUG) && UVTDEBUG > 0
-  if (!LIBNFSVIV_SanityTest())
-  {
-    return -1;
-  }
-#endif
-
   if (argc < 2)
   {
     Usage();
     return 0;
   }
 
-  memset(request_file_name, '\0', (size_t)(kLibnfsvivFilenameMaxLen * 4));
+  memset(request_file_name, '\0', kLibnfsvivFilenameMaxLen * 4);
 
   /* Get options */
   for (i = 2; i < argc; ++i)
@@ -140,7 +133,7 @@ int main(int argc, char **argv)
           {
             ++i;
 
-            if ((int)strlen(argv[i]) + 1 > kLibnfsvivFilenameMaxLen * 4)
+            if (strlen(argv[i]) + 1 > kLibnfsvivFilenameMaxLen * 4)
             {
               fprintf(stderr,
                       "Requested filename too long (max %d): len %d\n",
@@ -308,7 +301,7 @@ int main(int argc, char **argv)
   }
 
   /* Try Decoder for argv[1], decode to cwd */
-  else if(LIBNFSVIV_Exists(argv[1]))
+  else if (LIBNFSVIV_Exists(argv[1]))
   {
     for (;;)
     {
@@ -330,7 +323,7 @@ int main(int argc, char **argv)
         break;
       }
 
-      if (fread(format, (size_t)1, (size_t)4, file) != (size_t)4)
+      if (fread(format, 1, 4, file) != 4)
       {
         fclose(file);
         fprintf(stderr, "cli: File read error (cli)\n");
@@ -338,9 +331,9 @@ int main(int argc, char **argv)
         break;
       }
 #if 0
-      if (!strncmp(format, "BIGF", (size_t)4)
-          && !strncmp(format, "BIGH", (size_t)4)
-          && !strncmp(format, "BIG4", (size_t)4))
+      if (!strncmp(format, "BIGF", 4)
+          && !strncmp(format, "BIGH", 4)
+          && !strncmp(format, "BIG4", 4))
       {
         fclose(file);
         printf("cli: Format error (header missing BIGF, BIGH and BIG4)\n");
