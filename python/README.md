@@ -23,7 +23,7 @@ DESCRIPTION
     ---------
     viv() -- encode files in new VIV/BIG archive
     unviv() -- decode and extract VIV/BIG archive
-    
+
     unvivtool 1.16 Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
@@ -101,7 +101,7 @@ FUNCTIONS
         |      Some archives may have broken headers. When detected, unvivtool
         |      will print warnings. Up to a certain point, such archives can
         |      still be extracted.
-    
+
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", direnlen=0, fnhex=False)
         |      Encode files to new archive in BIGF, BIGH or BIG4 format.
@@ -165,5 +165,5 @@ FUNCTIONS
         |      ...
 
 VERSION
-    1.16
+    1.17
 ```
