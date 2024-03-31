@@ -5,7 +5,7 @@ This file describes installation and usage of unvivtool as Python extension modu
 A ready to use decoder/encoder script can be found here: [/scripts/unvivtool_script.py](/scripts/unvivtool_script.py)
 
 ## Installation
-Requires Python 3.8+
+Requires Python 3.9+
 
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool

@@ -47,18 +47,11 @@ your choice.
        gcc -std=c89 -fPIE -pie -s -O2 unvivtool.c -o unvivtool
 
 ## Compiling for Windows
-Releases for Windows are cross-compiled on Linux with MinGW:
-
-       cd ~
-       git clone https://github.com/bfut/unvivtool.git
-       cd unvivtool
-       i686-w64-mingw32-gcc -std=c89 -fPIE -Wl,-pie -pie -s -O2 -Xlinker --no-insert-timestamp unvivtool.c -o unvivtool.exe
-
-Compiling with MSVC:
+Using MSVC
 
        git clone https://github.com/bfut/unvivtool.git
        cd unvivtool
-       cl.exe /utf-8 /O2 unvivtool.c
+       cl.exe /Za /Tc unvivtool.c /W4
 
 ## Documentation
 ```
@@ -71,12 +64,12 @@ Commands:
   e             Encode files in new VIV/BIG archive
 
 Options:
-  -dnl #        set fixed Directory eNtry Length (>= 10)
+  -dnl #        decode/encode, set fixed Directory eNtry Length (>= 10)
   -i #          decode file at 1-based Index #
-  -f <name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
+  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
   -fh           decode/encode to/from Filenames in Hexadecimal
   -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
   -p            Print archive contents, do not write to disk (dry run)
   -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v            Verbose
+  -v            Print archive contents, verbose
 ```

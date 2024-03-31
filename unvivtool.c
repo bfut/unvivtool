@@ -1,5 +1,5 @@
 /* unvivtool.c - VIV/BIG decoder/encoder CLI
-   unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
+   unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 
    You may not redistribute this program without its source code.
    README.md may not be removed or altered from any unvivtool redistribution.
@@ -17,17 +17,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#ifndef UVTVUTF8
 #define UVTVUTF8
-#endif
-#define UVTVERBOSE 0
 #include "./libnfsviv.h"
 
 static
-void Usage(void)
+void Usage()
 {
   printf("Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
@@ -38,20 +38,20 @@ void Usage(void)
          "  e             Encode files in new VIV/BIG archive\n"
          "\n");
   printf("Options:\n"
-         "  -dnl #        set fixed Directory eNtry Length (>= 10)\n"
+         "  -dnl #        decode/encode, set fixed Directory eNtry Length (>= 10)\n"
          "  -i #          decode file at 1-based Index #\n"
-         "  -f <name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
+         "  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -fh           decode/encode to/from Filenames in Hexadecimal\n"
          "  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'\n"
          "  -p            Print archive contents, do not write to disk (dry run)\n");
   printf("  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
-         "  -v            Verbose\n");
+         "  -v            Print archive contents, verbose\n");
 }
 
 int main(int argc, char **argv)
 {
   int retv = 0;
-  char request_file_name[kLibnfsvivFilenameMaxLen * 4];
+  char request_file_name[kLibnfsvivFilenameMaxLen * 4] = {0};
   int request_file_idx = 0;
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
   char *ptr;
   int i;
 
-  printf("unvivtool %s - Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)\n\n", UVTVERS);
+  printf("unvivtool " UVTVERS " - Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)\n\n");
 
   if (argc < 2)
   {
@@ -71,33 +71,25 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  memset(request_file_name, '\0', kLibnfsvivFilenameMaxLen * 4);
-
   /* Get options */
   for (i = 2; i < argc; ++i)
   {
+    const int _sz = strlen(argv[i]);
     ptr = argv[i];
     if (*ptr == '-')
     {
       switch (*(++ptr))
       {
         case 'd':
-          if (!strncmp(argv[i], "-dnl", 5) && i + 1 < argc)  /* fixed directory length (clamped) */
+          if (i + 1 < argc && (_sz == 4) && !strncmp(argv[i], "-dnl", 5))  /* fixed directory length (clamped) */
           {
             ++i;
 
-            if (!sscanf(argv[i], "%d", &opt_direnlenfixed))
-            {
-              Usage();
-              return -1;
-            }
-
-            opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, 0);
+            opt_direnlenfixed = LIBNFSVIV_clamp(strtol(argv[i], NULL, 10), 0, INT_MAX / 100);
             if (opt_direnlenfixed > 0)
             {
-              opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, -10);
-              opt_direnlenfixed = LIBNFSVIV_Min(opt_direnlenfixed, INT_MAX / 2);
-              printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+              opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 10);
+              printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 100);
             }
             count_options += 2;
           }
@@ -108,16 +100,12 @@ int main(int argc, char **argv)
           }
           break;
 
-        case 'i':  /* request at index */
+        case 'i':  /* request at index (clamped) */
           if (i + 1 < argc)
           {
             ++i;
 
-            if (!sscanf(argv[i], "%d", &request_file_idx))
-            {
-              Usage();
-              return -1;
-            }
+            request_file_idx = LIBNFSVIV_clamp(strtol(argv[i], NULL, 10), 0, INT_MAX / 100);
             printf("Requested file at index: %d\n", request_file_idx);
             count_options += 2;
           }
@@ -129,47 +117,39 @@ int main(int argc, char **argv)
           break;
 
         case 'f':
-          if (!strncmp(argv[i], "-f", 3) && i + 1 < argc)  /* request filename */
+          if (i + 1 < argc && (_sz == 2) && !strncmp(argv[i], "-f", 3))  /* request filename */
           {
             ++i;
-
-            if (strlen(argv[i]) + 1 > kLibnfsvivFilenameMaxLen * 4)
+            if (strlen(argv[i]) + 1 > sizeof(request_file_name))
             {
-              fprintf(stderr,
-                      "Requested filename too long (max %d): len %d\n",
-                      kLibnfsvivFilenameMaxLen, (int)strlen(argv[i]) + 1);
+              fprintf(stderr, "Requested filename too long (max %d): len %d\n", kLibnfsvivFilenameMaxLen, (int)strlen(argv[i]) + 1);
               return -1;
             }
-
-            if (!sscanf(argv[i], "%1023s", request_file_name))
-            {
-              Usage();
-              return -1;
-            }
-
+            memcpy(request_file_name, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, sizeof(request_file_name) - 1));
             printf("Requested file: %s\n", request_file_name);
             count_options += 2;
           }
-          else if (!strncmp(argv[i], "-fh", 4))  /* filenames as hex */
+          else if (_sz == 3 && !strncmp(argv[i], "-fh", 4))  /* filenames as hex */
           {
             opt_filenameshex = 1;
             ++count_options;
           }
-          else if (!strncmp(argv[i], "-fmt", 5) && i + 1 < argc)  /* request encoding format */
+          else if (i + 1 < argc && (_sz == 4) && !strncmp(argv[i], "-fmt", 5))  /* encode: request encoding format */
           {
             ++i;
-
-            if (!sscanf(argv[i], "%4s", opt_requestfmt)
-                || (strncmp(opt_requestfmt, "BIGF", 5)
-                    && strncmp(opt_requestfmt, "BIGH", 5)
-                    && strncmp(opt_requestfmt, "BIG4", 5)))
+            if (!strcmp(argv[1], "e"))
             {
-              Usage();
-              return -1;
-            }
-
-            if (!strcmp(argv[1], "d"))
+              memcpy(opt_requestfmt, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, 5));
+              if (strlen(argv[i]) + 1 != 5
+                  && (strncmp(opt_requestfmt, "BIGF", 5)
+                      && strncmp(opt_requestfmt, "BIGH", 5)
+                      && strncmp(opt_requestfmt, "BIG4", 5)))
+              {
+                Usage();
+                return -1;
+              }
               printf("Requested format: %.4s\n", opt_requestfmt);
+            }
             count_options += 2;
           }
           else
@@ -191,7 +171,7 @@ int main(int argc, char **argv)
           break;
 
         case 'w':
-          if (!strncmp(argv[i], "-we", 3))  /* write re-encode command to input.viv.enc */
+          if (_sz == 3 && !strncmp(argv[i], "-we", 4))  /* write re-encode command to input.viv.txt */
           {
             opt_wenccommand = 1;
             ++count_options;
@@ -219,12 +199,12 @@ int main(int argc, char **argv)
     if (opt_wenccommand && !opt_dryrun)  /* Option: Write re-Encode command to file */
     {
       FILE *file_ = NULL;
-      const int size_ = strlen(argv[count_options + 2]);
-      char buf_[kLibnfsvivBufferSize] = {0};
+      const int size_ = strlen(argv[count_options + 2]);  /* does not count null */
+      char buf_[kLibnfsvivFilenameMaxLen * 4] = {0};
 
       for (;;)
       {
-        if (size_ > kLibnfsvivBufferSize - 5)
+        if (size_ > (int)sizeof(buf_) - 5)
         {
           fprintf(stderr, "Cannot use option '-we' (input path too long)\n");
           break;
@@ -239,8 +219,8 @@ int main(int argc, char **argv)
         }
         fclose(file_);
 
-        strcpy(buf_, argv[count_options + 2]);
-        strcpy(buf_ + size_, ".txt");
+        memcpy(buf_, argv[count_options + 2], size_);
+        memcpy(buf_ + size_, ".txt", 4);
 
         file_ = fopen(buf_, "w+");
         if (!file_)
@@ -252,15 +232,19 @@ int main(int argc, char **argv)
 
         for (i = 0; i < 2 + count_options; ++i)
         {
-          if (!strcmp(argv[i], "d"))
+          const int _sz = strlen(argv[i]);
+          if (_sz == 1 && !strcmp(argv[i], "d"))
             fprintf(file_, "e ");
-          else if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "-f"))
+          else if (_sz == 2)
           {
-            ++i;
-            continue;
+            if (!strcmp(argv[i], "-i") || !strcmp(argv[i], "-f"))
+            {
+              ++i;
+              continue;
+            }
+            else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "-we"))
+              continue;
           }
-          else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "-we"))
-            continue;
           else
             fprintf(file_, "%s ", argv[i]);
         }
@@ -330,17 +314,7 @@ int main(int argc, char **argv)
         retv = -1;
         break;
       }
-#if 0
-      if (!strncmp(format, "BIGF", 4)
-          && !strncmp(format, "BIGH", 4)
-          && !strncmp(format, "BIG4", 4))
-      {
-        fclose(file);
-        printf("cli: Format error (header missing BIGF, BIGH and BIG4)\n");
-        retv = -1;
-        break;
-      }
-#endif
+
       fclose(file);
 
       if (retv != 0 ||

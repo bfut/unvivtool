@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 #
@@ -17,15 +17,13 @@
 """
   test_smoketest.py
 """
-import os
 import pathlib
-import sys
 
 import pytest
 
 # Look for local build, if not installed
 try:
-    import unvivtool
+    import unvivtool as uvt
 except ModuleNotFoundError:
     import sys
     PATH = pathlib.Path(pathlib.Path(__file__).parent / "../python/build")
@@ -34,20 +32,20 @@ except ModuleNotFoundError:
         sys.path.append(str(x.resolve()))
     del PATH
 
-    import unvivtool
+    import unvivtool as uvt
 
-@pytest.mark.xfail(not hasattr(unvivtool, "__version__"),
+@pytest.mark.xfail(not hasattr(uvt, "__version__"),
                    reason="missing attribute __version__")
 def test_has_attribute_version():
-    if hasattr(unvivtool, "__version__"):
-        print(f"unvivtool.__version__={unvivtool.__version__}")
+    if hasattr(uvt, "__version__"):
+        print(f"uvt.__version__={uvt.__version__}")
     else:
-        print(f'hasattr(unvivtool, "__version__")={hasattr(unvivtool, "__version__")}')
-    assert hasattr(unvivtool, "__version__")
+        print(f'hasattr(uvt, "__version__")={hasattr(uvt, "__version__")}')
+    assert hasattr(uvt, "__version__")
 
 if __name__ == "__main__":
-    print(unvivtool.__version__)
+    print(uvt.__version__)
     test_has_attribute_version()
-    help(unvivtool.unviv)
-    print(unvivtool.unviv)
+    help(uvt.unviv)
+    print(uvt.unviv)
     print(flush=True)

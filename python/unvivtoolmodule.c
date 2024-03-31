@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
@@ -47,17 +47,23 @@ static const int kUnvivtoolMaxPathLen = 4096;
 
 #include <Python.h>
 
+/* https://github.com/pybind/python_example/blob/master/src/main.cpp */
+#define STRINGIFY(x) #x
+#define MACRO_STRINGIFY(x) STRINGIFY(x)
+
 #ifdef PYMEM_MALLOC
 #define malloc PyMem_Malloc
 #define realloc PyMem_Realloc
 #define free PyMem_Free
 #endif
 
-#include "../libnfsviv.h"
+#define SCL_PY_PRINTF  /* native printf */
+#include "../include/SCL/sclpython.h"
 
-/* https://github.com/pybind/python_example/blob/master/src/main.cpp */
-#define STRINGIFY(x) #x
-#define MACRO_STRINGIFY(x) STRINGIFY(x)
+#if 0
+#define LIBNFSVIV_PYTHON_BINDINGS  /* avoid some deterministic checks */
+#endif
+#include "../libnfsviv.h"
 
 /* wrappers ----------------------------------------------------------------- */
 
@@ -128,7 +134,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       fd = open(outpath, O_RDONLY);
       if (fd == -1)
       {
-        printf("Cannot open output directory '%s': no such directory\n", outpath);
+        PySys_WriteStdout("Cannot open output directory '%s': no such directory", outpath);
         retv_obj = Py_BuildValue("i", 0);
         break;
       }
@@ -145,26 +151,26 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     close(fd);
 
-    buf_cwd = /* (char *) */malloc((size_t)(kUnvivtoolMaxPathLen * 4 + 64));
+    buf_cwd = /* (char *) */malloc(kUnvivtoolMaxPathLen * 4 + 64);
     if (!buf_cwd)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
       retv_obj = NULL;
       break;
     }
-    if (!getcwd(buf_cwd, (size_t)(kUnvivtoolMaxPathLen * 4 + 64)))
+    if (!getcwd(buf_cwd, kUnvivtoolMaxPathLen * 4 + 64))
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
       retv_obj = NULL;
       break;
     }
 
-    opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, 0);
+    opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 0);
     if (opt_direnlenfixed > 0)
     {
-      opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, -10);
-      opt_direnlenfixed = LIBNFSVIV_Min(opt_direnlenfixed, INT_MAX / 2);
-      printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+      opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 0);
+      opt_direnlenfixed = LIBNFSVIV_min(opt_direnlenfixed, INT_MAX / 2);
+      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
     }
 
     if (opt_dryrun)
@@ -183,9 +189,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     if (retv == 1)
-      printf("Decoder successful.\n");
+      PySys_WriteStdout("Decoder successful.");
     else
-      printf("Decoder failed.\n");
+      PySys_WriteStdout("Decoder failed.");
 
     retv_obj = Py_BuildValue("i", retv);
     break;
@@ -246,32 +252,9 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-#if 0
-if (opt_requestfmt_obj)
-{
-  char *str_ = NULL;
-  Py_ssize_t sz_;
-  if (PyBytes_AsStringAndSize(opt_requestfmt_obj, &str_, &sz_))
-  {
-    PyErr_SetString(PyExc_RuntimeError, "cannot convert str (format)");
-    return NULL;
-  }
-  memcpy(opt_requestfmt, str_, (size_t)LIBNFSVIV_Min(4, (int)sz_) + 1);
-  if (strncmp(opt_requestfmt, "BIGF", 5) &&
-      strncmp(opt_requestfmt, "BIGH", 5) &&
-      strncmp(opt_requestfmt, "BIG4", 5))
-  {
-    PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
-    return NULL;
-  }
-  printf("Requested format: %.4s\n", opt_requestfmt);
-  fflush(0);
-}
-#endif
-#if 1
 if (opt_requestfmt_ptr)
 {
-  memcpy(opt_requestfmt, opt_requestfmt_ptr, (size_t)LIBNFSVIV_Min(4, strlen(opt_requestfmt_ptr)) + 1);
+  memcpy(opt_requestfmt, opt_requestfmt_ptr, LIBNFSVIV_min(4, strlen(opt_requestfmt_ptr)) + 1);
   if (strncmp(opt_requestfmt, "BIGF", 5) &&
       strncmp(opt_requestfmt, "BIGH", 5) &&
       strncmp(opt_requestfmt, "BIG4", 5))
@@ -279,10 +262,8 @@ if (opt_requestfmt_ptr)
     PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
     return NULL;
   }
-  printf("Requested format: %.4s\n", opt_requestfmt);
-  fflush(0);
+  PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
 }
-#endif
 
   retv_obj = Py_BuildValue("i", retv);
 
@@ -344,7 +325,7 @@ if (opt_requestfmt_ptr)
     if (!retv_obj)
       break;  /* for (;;) */
 
-    infiles_paths = /* (char **) */malloc((size_t)(count_infiles + 1) * sizeof(*infiles_paths));
+    infiles_paths = /* (char **) */malloc((count_infiles + 1) * sizeof(*infiles_paths));
     if (!infiles_paths)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -352,7 +333,7 @@ if (opt_requestfmt_ptr)
       break;
     }
 
-    ptr = /* (char *) */malloc((size_t)length_str * sizeof(**infiles_paths));
+    ptr = /* (char *) */malloc(length_str * sizeof(**infiles_paths));
     if (!ptr)
     {
       PyErr_SetString(PyExc_MemoryError, "cannot allocate memory");
@@ -394,7 +375,7 @@ if (opt_requestfmt_ptr)
 
       length_str = (int)strlen(ptr) + 1;
 
-      memcpy(*infiles_paths + ofs, ptr, (size_t)length_str);
+      memcpy(*infiles_paths + ofs, ptr, length_str);
       infiles_paths[i] = *infiles_paths + ofs;
 
       ofs += length_str;
@@ -409,12 +390,12 @@ if (opt_requestfmt_ptr)
     break;
   }  /* for (;;) */
 
-  opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, 0);
+  opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 0);
   if (opt_direnlenfixed > 0)
   {
-    opt_direnlenfixed = -LIBNFSVIV_Min(-opt_direnlenfixed, -10);
-    opt_direnlenfixed = LIBNFSVIV_Min(opt_direnlenfixed, INT_MAX / 2);
-    printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+    opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 10);
+    opt_direnlenfixed = LIBNFSVIV_min(opt_direnlenfixed, INT_MAX / 2);
+    PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
   }
 
   if (retv_obj)
@@ -438,9 +419,9 @@ if (opt_requestfmt_ptr)
                            opt_filenameshex, opt_requestfmt);
 
       if (retv == 1)
-        printf("Encoder successful.\n");
+        PySys_WriteStdout("Encoder successful.");
       else
-        printf("Encoder failed.\n");
+        PySys_WriteStdout("Encoder failed.");
 
       retv_obj = Py_BuildValue("i", retv);
       break;

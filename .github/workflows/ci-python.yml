@@ -17,15 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
-        python-version: [ "3.8", "3.11" ] # 'pypy-3.8'
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -39,8 +39,8 @@ jobs:
     - name: "Print unvivtool.__version__, help"
       shell: bash
       run: |
-        echo "import unvivtool; print(f'unvivtool.__version__={unvivtool.__version__}')" > _version.py; cat _version.py
-        python -c "import subprocess; import sys; ret = subprocess.run([ sys.executable, '_version.py' ]); print('Exit code', ret.returncode); sys.exit(0)"
+        echo "import unvivtool; print(f'unvivtool.__version__={unvivtool.__version__}')" > print_version.py; cat print_version.py
+        python -c "import subprocess; import sys; ret = subprocess.run([ sys.executable, 'print_version.py' ]); print('Exit code', ret.returncode); sys.exit(0)"
         python -c "import unvivtool; help(unvivtool)"
 
     - name: "pytest"

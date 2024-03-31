@@ -3,7 +3,7 @@ name: ci-cli
 env:
   SRC: unvivtool.c
   DEST: unvivtool
-  BRANCHES: -DUVTVUTF8
+  BRANCHES: #-DUVTVUTF8
   CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
   CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -s -O2
   GCCDEBUGFLAGS: -pedantic -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Ubuntu C89/C++ (Linux/Win32)
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Compile
       shell: bash
       run: |
@@ -30,7 +30,7 @@ jobs:
         ls -lg
 
     - name: Store executables
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: unvivtool
         path: |
@@ -44,7 +44,7 @@ jobs:
         ls -lg
 
     - name: Store executables
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.DEST }}_mingw
         path: |
@@ -55,7 +55,7 @@ jobs:
     runs-on: macos-latest
     name: macOS C89/C++
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Compile
       shell: bash
       run: |
@@ -63,7 +63,7 @@ jobs:
         clang++ -std=c++17 ${{ env.CPPFLAGS_MACOS }} "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }}
         ls -lg
     - name: Store executables
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: unvivtool_${{ runner.os }}
         path: |
@@ -87,13 +87,13 @@ jobs:
     steps:
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Compile
       run: |
-        cl.exe /W3 /utf-8 /DUVTVUTF8 /O2 unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
+        cl.exe /W3 /utf-8 /O2 unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
         dir
     - name: Store executable
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: unvivtool_${{ matrix.arch }}.exe
         path: unvivtool_${{ matrix.arch }}.exe
@@ -112,14 +112,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ "3.11" ]
+        python-version: [ "3.12" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download executable
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: unvivtool
     - run: ls -lg
@@ -129,7 +129,7 @@ jobs:
       run: |
         sudo apt install valgrind
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: "pytest"
@@ -150,20 +150,20 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macos-latest ]
-        python-version: [ "3.11" ]
+        python-version: [ "3.12" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download executable
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: unvivtool_${{ runner.os }}
     - run: ls -lg
     - run: chmod +x unvivtool_${{ runner.os }}${{ matrix.std }}
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - name: "pytest"
@@ -186,17 +186,17 @@ jobs:
       matrix:
         os: [ windows-latest ]
         arch: [ x86, x64 ]
-        python-version: [ "3.11" ]
+        python-version: [ "3.12" ]
 
     name: Test ${{ matrix.arch }}-${{ matrix.os }} (python-${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download executable
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: unvivtool_${{ matrix.arch }}.exe
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.arch }}

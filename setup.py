@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
@@ -29,9 +29,9 @@ if "UVTVERBOSE" in os.environ:
 script_path = pathlib.Path(__file__).parent.resolve()
 os.chdir(script_path)
 
-module_name = "unvivtool"
+print("try reading VERSION_INFO from libnfsviv.h...")
 with open(script_path / "./libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(52 - 1):
+    for _ in range(54 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")
@@ -45,13 +45,17 @@ if "PYMEM_MALLOC" in os.environ:
     extra_compile_args += [ "-DPYMEM_MALLOC" ]
 if platform.system() == "Windows":
     extra_compile_args += [
-        ("/wd4267")  # prevents warnings on conversion from size_t to int
+        ("/wd4267"),  # prevents warnings on conversion from size_t to int
+        ("/std:c++latest"), ("/Zc:__cplusplus"),  # sets __cplusplus
     ]
 else:
     extra_compile_args += [
         # debug
         # ("-g"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
+        ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden
+        ("-Wformat-security"),
+        ("-Wdeprecated-declarations"),
     ]
 
     if "gcc" in platform.python_compiler().lower():
@@ -87,7 +91,6 @@ else:
         ]
     elif "clang" in platform.python_compiler().lower():
         extra_compile_args += [
-            ("-Wno-sign-compare"),  # prevents warnings on conversion from size_t to int
             # ("-Weverything"),
             ("-Wno-braced-scalar-init"),
             # ("-Wno-newline-eof"),
@@ -95,7 +98,7 @@ else:
 
 ext_modules = [
     setuptools.Extension(
-        name=module_name,
+        name="unvivtool",
         sources=sorted(["./python/unvivtoolmodule.c"]),
         define_macros=[
             ("VERSION_INFO", __version__),
@@ -107,7 +110,7 @@ ext_modules = [
 ]
 
 setuptools.setup(
-    name=module_name,
+    name="unvivtool",
     version=__version__,
     author="Benjamin Futasz",
     url="https://github.com/bfut/unvivtool",
@@ -116,7 +119,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=ext_modules,
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     # extras_require={"test": "pytest"},
     # Currently, build_ext only provides an optional "highest supported C++
     # level" feature, but in the future it may provide more features.
