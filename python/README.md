@@ -24,7 +24,7 @@ DESCRIPTION
     viv() -- encode files in new VIV/BIG archive
     unviv() -- decode and extract VIV/BIG archive
 
-    unvivtool 1.17 Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)
+    unvivtool 1.18 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     unviv(...)
@@ -165,4 +165,4 @@ FUNCTIONS
         |      ...
 
 VERSION
-    1.17
+    1.18

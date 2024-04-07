@@ -37,6 +37,7 @@ The canonical BIGF format description was taken from [1].
 __unvivtool License:__ GNU General Public License v3.0+<br/>
 __Website:__ <https://github.com/bfut/unvivtool>
 
-Third party license
+Third party licenses
 
+__sclpython.h:__ zlib License<br/>
 __UTF-8 Decoder dfa.h:__ MIT License

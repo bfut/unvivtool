@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2023 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 #
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.

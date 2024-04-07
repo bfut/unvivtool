@@ -452,7 +452,7 @@ PyDoc_STRVAR(
   "viv() -- encode files in new VIV/BIG archive\n"
   "unviv() -- decode and extract VIV/BIG archive\n"
   "\n"
-  "unvivtool "UVTVERS" Copyright (C) 2020-2023 Benjamin Futasz (GPLv3+)\n"
+  "unvivtool "UVTVERS" Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)\n"
 );
 
 PyDoc_STRVAR(
