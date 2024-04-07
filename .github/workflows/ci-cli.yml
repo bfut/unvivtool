@@ -67,7 +67,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest ]
-        arch: [ x86, x86_64 ]
+        arch: [ x86, x64 ]
 
     name: Windows (MSVC ${{ matrix.arch }})
     steps:
@@ -176,7 +176,7 @@ jobs:
         arch: [ x86, x64 ]
         python-version: [ "3.12" ]
 
-    name: Test ${{ matrix.arch }}-${{ matrix.os }} (python-${{ matrix.python-version }})
+    name: Test ${{ matrix.os }} ${{ matrix.arch }} (python-${{ matrix.python-version }})
     steps:
     - uses: actions/checkout@v4
     - name: Download executable

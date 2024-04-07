@@ -90,6 +90,7 @@ def test_cli_smoketest():
 """Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
        unvivtool <path/to/input.viv>
+       unvivtool <paths/to/input_files>...
 
 Commands:
   d             Decode and extract files from VIV/BIG archive
@@ -101,9 +102,9 @@ Options:
   -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
   -fh           decode/encode to/from Filenames in Hexadecimal
   -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
-  -p            Print archive contents, do not write to disk (dry run)
-  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v            Print archive contents, verbose
+  -p            print archive contents, do not write to disk (dry run)
+  -we           write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            print archive contents, verbose
 """
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
@@ -131,7 +132,7 @@ Options:
 def test_cli_decode_all_existing_dir(verbose, dry):
     err = ""
     out = \
-"""Directory Entries (header) = 2
+"""Directory Entries (header) = 2 (0x2)
 Header Size (header) = 55 (0x37)
 File format (parsed) = BIGF
 Directory Entries (parsed) = 2
@@ -141,28 +142,28 @@ Decoder successful.
     outv = \
 """Printing archive directory:
 
-   id Vld       Offset  Gap         Size Len  Name
- ---- --- ------------ ---- ------------ ---  -----------------------
-                     0                55      header
- ---- --- ------------ ---- ------------ ---  -----------------------
-    1   1           55    0        35149   8  LICENSE
-    2   1        35204    0          103  15  pyproject.toml
- ---- --- ------------ ---- ------------ ---  -----------------------
-                 35307             35252      2 files
+   id Valid       Offset          Gap         Size Len  Name
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+                       0                        55      header
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+    1     1           55            0        35149   8  LICENSE
+    2     1        35204            0          103  15  pyproject.toml
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+                   35307                     35252      2 files
 Number extracted: 2
 Decoder successful.
 """
     poutv = \
 """Printing archive directory:
 
-   id Vld       Offset  Gap         Size Len  Name
- ---- --- ------------ ---- ------------ ---  -----------------------
-                     0                55      header
- ---- --- ------------ ---- ------------ ---  -----------------------
-    1   1           55    0        35149   8  LICENSE
-    2   1        35204    0          103  15  pyproject.toml
- ---- --- ------------ ---- ------------ ---  -----------------------
-                 35307             35252      2 files
+   id Valid       Offset          Gap         Size Len  Name
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+                       0                        55      header
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+    1     1           55            0        35149   8  LICENSE
+    2     1        35204            0          103  15  pyproject.toml
+ ---- ----- ------------ ------------ ------------ ---  -----------------------
+                   35307                     35252      2 files
 End dry run
 Decoder successful.
 """
