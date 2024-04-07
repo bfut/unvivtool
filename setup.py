@@ -31,13 +31,13 @@ os.chdir(script_path)
 
 print("try reading VERSION_INFO from libnfsviv.h...")
 with open(script_path / "./libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(54 - 1):
+    for _ in range(59 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")
     __version__ = __version__.rstrip().split("\"")[-2]
     print(f"VERSION_INFO={__version__}")
-long_description = (script_path / "./README.md").read_text(encoding="utf-8")
+long_description = (script_path / "./python/README.md").read_text(encoding="utf-8")
 
 extra_compile_args = []
 if "PYMEM_MALLOC" in os.environ:
@@ -103,7 +103,7 @@ ext_modules = [
         define_macros=[
             ("VERSION_INFO", __version__),
             ("UVTVERBOSE", os.environ.get("UVTVERBOSE", 0)),  # 0 if key not set
-            ("UVTVUTF8", os.environ.get("UVTVUTF8", 0)),  # branch: unviv() detects utf8
+            ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
         ],
         extra_compile_args=extra_compile_args,
     )

@@ -37,20 +37,6 @@ jobs:
           ${{ env.DEST }}
           ${{ env.DEST }}_c++
 
-    - name: Cross-compile for Windows
-      run: |
-        sudo apt install gcc-mingw-w64-i686
-        i686-w64-mingw32-gcc-win32 $MINGWFLAGS $SRC -o "${{ env.DEST }}_mingw_x86.exe" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }}
-        ls -lg
-
-    - name: Store executables
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.DEST }}_mingw
-        path: |
-          ${{ env.DEST }}_mingw_x86.exe
-          # ${{ env.DEST }}_c++
-
   macos:
     runs-on: macos-latest
     name: macOS C89/C++
@@ -81,13 +67,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ windows-latest ]
-        arch: [ x86, x64 ]
+        arch: [ x86, x86_64 ]
 
-    name: Windows (${{ matrix.arch }})
+    name: Windows (MSVC ${{ matrix.arch }})
     steps:
+    - uses: actions/checkout@v4
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
-    - uses: actions/checkout@v4
+      with:
+          arch: ${{ matrix.arch }}
     - name: Compile
       run: |
         cl.exe /W3 /utf-8 /O2 unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe

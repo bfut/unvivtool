@@ -1,15 +1,18 @@
 # unvivtool - Python extension module
+unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
+
+Purported VIV/BIG archives sometimes contain faulty or manipulated header information.
+unvivtool is designed to validate and recover data as much as possible.
+
 This file describes installation and usage of unvivtool as Python extension module.
 
 ## Usage
-A ready to use decoder/encoder script can be found here: [/scripts/unvivtool_script.py](/scripts/unvivtool_script.py)
+A ready to use decoder/encoder script can be found here: [https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py](https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py)
 
 ## Installation
 Requires Python 3.9+
 
-       git clone https://github.com/bfut/unvivtool.git
-       cd unvivtool
-       python -m pip install .
+       python -m pip install unvivtool
 
 ## Documentation
 ```

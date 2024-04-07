@@ -1,16 +1,37 @@
 # unvivtool - command-line interface
-This file describes installation, and usage of unvivtool as command-line
+This file describes installation and usage of unvivtool as command-line
 interface.
 
-## Usage
-Ready to use scripts can be found in [/scripts](/scripts)
+## Installation
+#### Windows
+Download the latest release and extract ```unvivtool.exe``` to the directory of
+your choice.
 
+#### Linux
+
+       cd ~
+       git clone https://github.com/bfut/unvivtool
+       cd unvivtool
+       gcc -std=c89 -fPIE -pie -s -O2 unvivtool.c -o unvivtool
+
+## Compiling for Windows
+Requires MSVC.
+
+       git clone https://github.com/bfut/unvivtool
+       cd unvivtool
+       cl.exe /Za /Tc unvivtool.c
+
+## Usage
+Drag-and-drop a VIV/BIG archive onto the executable to decode it.<br>
+Drag-and-drop multiple files onto the executable to encode them into a VIV archive.
+
+Alternatively, use the command-line.
 ```
 EXAMPLE 1
    unvivtool d car.viv car_viv
 
       decodes and extracts all files from archive 'car.viv' to directory
-      'car_viv'. the output directory must be a valid path.
+      'car_viv'. the output directory must be an existing directory.
 
 EXAMPLE 2
    unvivtool d car.viv .
@@ -34,30 +55,12 @@ EXAMPLE 5
       Dry run of EXAMPLE 4, does not write to disk
 ```
 
-## Installation
-#### Windows
-Download the latest release and extract ```unvivtool.exe``` to the directory of
-your choice.
-
-#### Linux
-
-       cd ~
-       git clone https://github.com/bfut/unvivtool.git
-       cd unvivtool
-       gcc -std=c89 -fPIE -pie -s -O2 unvivtool.c -o unvivtool
-
-## Compiling for Windows
-Using MSVC
-
-       git clone https://github.com/bfut/unvivtool.git
-       cd unvivtool
-       cl.exe /Za /Tc unvivtool.c /W4
-
 ## Documentation
 ```
 Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
        unvivtool <path/to/input.viv>
+       unvivtool <paths/to/input_files>...
 
 Commands:
   d             Decode and extract files from VIV/BIG archive
@@ -69,7 +72,7 @@ Options:
   -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
   -fh           decode/encode to/from Filenames in Hexadecimal
   -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
-  -p            Print archive contents, do not write to disk (dry run)
-  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v            Print archive contents, verbose
+  -p            print archive contents, do not write to disk (dry run)
+  -we           write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            print archive contents, verbose
 ```

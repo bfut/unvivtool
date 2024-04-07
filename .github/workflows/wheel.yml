@@ -1,7 +1,7 @@
 name: wheel
 
 on:
-  [push, pull_request, release, workflow_dispatch]
+  [push, pull_request, workflow_dispatch]
 
 jobs:
   build_wheels:
@@ -9,13 +9,18 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        # https://github.com/actions/runner-images
         # macos-13 is an intel runner, macos-14 is apple silicon
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.17.0
+        env:
+          CIBW_ARCHS_WINDOWS: "AMD64 x86"
+          CIBW_SKIP: pp*
         with:
           package-dir: "."
           output-dir:  "./wheelhouse"
@@ -23,5 +28,51 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          # name: fcecodec-cp-wheels-${{ matrix.os }}  #-${{ strategy.job-index }}
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
+
+  make_sdist:
+    needs: build_wheels
+    name: Make SDist
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Optional, use if you use setuptools_scm
+        fetch-tags: true  # Optional, use if you use setuptools_scm
+
+    - name: Build SDist
+      run: pipx run build --sdist
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: cibw-sdist
+        path: dist/*.tar.gz
+
+  upload_all:
+    needs: [build_wheels, make_sdist]
+    name: Upload all
+    environment: release
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/1')
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: cibw-*
+        path: dist
+        merge-multiple: true
+
+    - uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        # Use Trusted Publisher feature:
+        # https://docs.pypi.org/trusted-publishers/
+        #  so no use of PYPI_API_TOKEN
+        #password: ${{ secrets.PYPI_API_TOKEN }}
+        #
+        # Avoid race condition when using multiple CIs
+        skip-existing: true
+        verbose: true

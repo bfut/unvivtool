@@ -17,21 +17,21 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define UVTVUTF8
+#define UVTUTF8
 #include "./libnfsviv.h"
 
 static
-void Usage()
+void Usage(void)
 {
   printf("Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
          "       unvivtool <path/to/input.viv>\n"
+         "       unvivtool <paths/to/input_files>...\n"
          "\n"
          "Commands:\n"
          "  d             Decode and extract files from VIV/BIG archive\n"
@@ -43,9 +43,36 @@ void Usage()
          "  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -fh           decode/encode to/from Filenames in Hexadecimal\n"
          "  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'\n"
-         "  -p            Print archive contents, do not write to disk (dry run)\n");
-  printf("  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
-         "  -v            Print archive contents, verbose\n");
+         "  -p            print archive contents, do not write to disk (dry run)\n");
+  printf("  -we           write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
+         "  -v            print archive contents, verbose\n");
+}
+
+int UVT_GetVivVersionFile(FILE *file)
+{
+  char buf[4];
+  if (fread(buf, 1, 4, file) != 4)
+    return 0;
+  if (strncmp(buf, "BIG4", 4) == 0)
+    return 4;
+  if (strncmp(buf, "BIGF", 4) == 0)
+    return 7;
+  if (strncmp(buf, "BIGH", 4) == 0)
+    return 8;
+  return -1;
+}
+
+/* Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), negative (unknown format), 0 (fread error) */
+int UVT_GetVivVersion(const char *path)
+{
+  int retv = 0;
+  FILE *file = fopen(path, "rb");
+  if (file)
+  {
+    retv = UVT_GetVivVersionFile(file);
+    fclose(file);
+  }
+  return retv;
 }
 
 int main(int argc, char **argv)
@@ -63,7 +90,11 @@ int main(int argc, char **argv)
   char *ptr;
   int i;
 
-  printf("unvivtool " UVTVERS " - Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)\n\n");
+#ifdef UVTUTF8
+  printf("unvivtool " UVTVERS " - " UVTCOPYRIGHT "\n\n");
+#else
+  printf("unvivtool " UVTVERS " - " UVTCOPYRIGHT " | no-UTF8\n\n");
+#endif
 
   if (argc < 2)
   {
@@ -196,31 +227,19 @@ int main(int argc, char **argv)
   /* Decoder */
   if (!strcmp(argv[1], "d") && (argc > count_options + 3))
   {
-    if (opt_wenccommand && !opt_dryrun)  /* Option: Write re-Encode command to file */
+    /* Option: Write re-Encode command to file */
+    if (opt_wenccommand && !opt_dryrun)
     {
       FILE *file_ = NULL;
-      const int size_ = strlen(argv[count_options + 2]);  /* does not count null */
       char buf_[kLibnfsvivFilenameMaxLen * 4] = {0};
 
       for (;;)
       {
-        if (size_ > (int)sizeof(buf_) - 5)
+        if (!LIBNFSVIV_AppendFileEnding(argv[count_options + 2], buf_, sizeof(buf_), ".txt"))
         {
-          fprintf(stderr, "Cannot use option '-we' (input path too long)\n");
+          fprintf(stderr, "Cannot use option '-we'\n");
           break;
         }
-
-        file_ = fopen(argv[count_options + 2], "r");
-        if (!file_)
-        {
-          fprintf(stderr, "Cannot open '%s'\n", argv[count_options + 2]);
-          retv = -1;
-          break;
-        }
-        fclose(file_);
-
-        memcpy(buf_, argv[count_options + 2], size_);
-        memcpy(buf_ + size_, ".txt", 4);
 
         file_ = fopen(buf_, "w+");
         if (!file_)
@@ -242,9 +261,9 @@ int main(int argc, char **argv)
               ++i;
               continue;
             }
-            else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "-we"))
-              continue;
           }
+          else if (!strcmp(argv[i], "-we"))
+            continue;
           else
             fprintf(file_, "%s ", argv[i]);
         }
@@ -256,8 +275,7 @@ int main(int argc, char **argv)
       }  /* for (;;) */
     }  /* if (opt_wenccommand) */
 
-    if (retv != 0 ||
-        !LIBNFSVIV_Unviv(argv[count_options + 2], argv[count_options + 3],
+    if (!LIBNFSVIV_Unviv(argv[count_options + 2], argv[count_options + 3],
                          request_file_idx, request_file_name,
                          opt_dryrun, opt_printlvl, opt_direnlenfixed,
                          opt_filenameshex, opt_wenccommand))
@@ -284,53 +302,41 @@ int main(int argc, char **argv)
       printf("Encoder successful.\n");
   }
 
-  /* Try Decoder for argv[1], decode to cwd */
-  else if (LIBNFSVIV_Exists(argv[1]))
+  /* Drag-and-drop
+
+    else if argv[1] has viv/big bytes, then decode to cwd
+    else try encoding **argv to argv[1].viv
+  */
+  else if (UVT_GetVivVersion(argv[1]) > 0)
   {
-    for (;;)
+    /* Win98 drag-and-drop extracts to C: (i.e., command.exe default cwd) */
+    if (!LIBNFSVIV_Unviv(argv[1], ".",
+                          request_file_idx, request_file_name,
+                          opt_dryrun, opt_printlvl, opt_direnlenfixed,
+                          opt_filenameshex, opt_wenccommand))
     {
-      int fsize;
-      char format[4];
-      FILE *file = fopen(argv[1], "rb");
-
-      if (!file)
-      {
-        fclose(file);
-        retv = -1;
-        break;
-      }
-
-      fsize = LIBNFSVIV_GetFilesize(file);
-      if ((fsize > 0) && (fsize < 0x4))
-      {
-        fclose(file);
-        break;
-      }
-
-      if (fread(format, 1, 4, file) != 4)
-      {
-        fclose(file);
-        fprintf(stderr, "cli: File read error (cli)\n");
-        retv = -1;
-        break;
-      }
-
-      fclose(file);
-
-      if (retv != 0 ||
-          !LIBNFSVIV_Unviv(argv[1], ".",
-                           request_file_idx, request_file_name,
-                           opt_dryrun, opt_printlvl, opt_direnlenfixed,
-                           opt_filenameshex, opt_wenccommand))
-      {
-        printf("Decoder failed.\n");
-        retv = -1;
-      }
-      else
-        printf("Decoder successful.\n");
-
-      break;
+      printf("Decoder failed.\n");
+      retv = -1;
     }
+    else
+      printf("Decoder successful.\n");
+  }
+  else if (LIBNFSVIV_IsFile(argv[1]) && !LIBNFSVIV_IsDir(argv[1]))
+  {
+    char buf[kLibnfsvivFilenameMaxLen * 4] = {0};
+
+    if (LIBNFSVIV_AppendFileEnding(argv[1], buf, sizeof(buf), ".viv")
+        && !LIBNFSVIV_Viv(buf,
+                          &argv[1], argc - 1,
+                          opt_dryrun, opt_printlvl, opt_direnlenfixed,
+                          opt_filenameshex, opt_requestfmt)
+       )
+    {
+      printf("Encoder failed.\n");
+      retv = -1;
+    }
+    else
+      printf("Encoder successful.\n");
   }
 
   /* Print usage */

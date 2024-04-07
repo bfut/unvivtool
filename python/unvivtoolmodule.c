@@ -60,9 +60,6 @@ static const int kUnvivtoolMaxPathLen = 4096;
 #define SCL_PY_PRINTF  /* native printf */
 #include "../include/SCL/sclpython.h"
 
-#if 0
-#define LIBNFSVIV_PYTHON_BINDINGS  /* avoid some deterministic checks */
-#endif
 #include "../libnfsviv.h"
 
 /* wrappers ----------------------------------------------------------------- */
@@ -452,7 +449,7 @@ PyDoc_STRVAR(
   "viv() -- encode files in new VIV/BIG archive\n"
   "unviv() -- decode and extract VIV/BIG archive\n"
   "\n"
-  "unvivtool "UVTVERS" Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)\n"
+  "unvivtool "UVTVERS" "UVTCOPYRIGHT"\n"
 );
 
 PyDoc_STRVAR(
