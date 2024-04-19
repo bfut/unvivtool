@@ -24,14 +24,14 @@ NAME
 DESCRIPTION
     Functions
     ---------
-    viv() -- encode files in new VIV/BIG archive
     unviv() -- decode and extract VIV/BIG archive
+    viv() -- encode files in new VIV/BIG archive
 
     unvivtool 1.19 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     unviv(...)
-        |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False)
+        |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
         |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
         |
         |      Parameters
@@ -56,6 +56,9 @@ FUNCTIONS
         |          archive contents, do not write to disk.
         |      verbose : bool, optional
         |          Verbose output.
+        |      overwrite : int, optional
+        |          If == 0, warns and attempts overwriting existing files. (default)
+        |          If == 1, attempts renaming existing files, skips on failure.
         |
         |      Returns
         |      -------

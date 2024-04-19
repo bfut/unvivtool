@@ -68,6 +68,12 @@ def get_valgrind_results(string):
     m3 = re.search(r"^.*?ERROR SUMMARY:.*?\n", string, flags=re.MULTILINE)
     return m1.group(0)[:-1], m2.group(0)[:-1], m3.group(0)[:-1]
 
+def delete_file(path):
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
 # ------------------------------------------------------------------------------
 def test_dir():
     print(OUTDIR)
@@ -87,7 +93,7 @@ def test_dir():
 def test_cli_smoketest():
     err = ""
     out = \
-"""Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
+"""Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/existing/output_directory>]
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
        unvivtool <path/to/input.viv>
        unvivtool <paths/to/input_files>...
@@ -97,14 +103,15 @@ Commands:
   e             Encode files in new VIV/BIG archive
 
 Options:
-  -dnl #        decode/encode, set fixed Directory eNtry Length (>= 10)
-  -i #          decode file at 1-based Index #
-  -f <name>     decode file <name> (cAse-sEnsitivE) from archive, overrides -i
+  -aot          decoder Overwrite mode: auto rename existing file
+  -dnl<N>       decode/encode, set fixed Directory eNtry Length (<N> >= 10)
+  -i<N>         decode file at 1-based Index <N>
+  -f<name>      decode File <name> (cAse-sEnsitivE) from archive, overrides -i
   -fh           decode/encode to/from Filenames in Hexadecimal
-  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
-  -p            print archive contents, do not write to disk (dry run)
-  -we           write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v            print archive contents, verbose
+  -fmt<format>  encode to Format 'BIGF' (default), 'BIGH' or 'BIG4'
+  -p            Print archive contents, do not write to disk (dry run)
+  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            print archive contents, Verbose
 """
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
@@ -167,6 +174,8 @@ Decoder successful.
 End dry run
 Decoder successful.
 """
+    delete_file(OUTDIR / "LICENSE")
+    delete_file(OUTDIR / "pyproject.toml")
     ret = get_subprocess_ret(" ".join([
       f"{EXECUTABLE_PATH}",
       "d",

@@ -31,7 +31,7 @@ os.chdir(script_path)
 
 print("try reading VERSION_INFO from libnfsviv.h...")
 with open(script_path / "./libnfsviv.h", mode="r", encoding="utf8") as f:
-    for _ in range(59 - 1):
+    for _ in range(80 - 1):
         next(f)
     __version__ = f.readline()
     print(f"readline() yields '{__version__}'")
@@ -77,14 +77,16 @@ else:
             ("-Wwrite-strings"),  # ("-Wno-discarded-qualifiers"),
 
             # # https://developers.redhat.com/blog/2018/03/21/compiler-and-linker-flags-gcc
-            # ("-D_FORTIFY_SOURCE=2"),
+            ("-D_GNU_SOURCE"),
+            ("-D_FORTIFY_SOURCE=2"),
             # ("-D_GLIBCXX_ASSERTIONS"),
-            # ("-fexceptions"),
+            # ("-fexceptions"),  # C++ exceptions
             # ("-fplugin=annobin"),
-            # ("-fstack-clash-protection"),
-            # ("-fstack-protector-strong"),
-            # ("-fcf-protection"),
-            # ("-Werror=format-security"),
+            ("-fstack-clash-protection"),
+            ("-fstack-protector-strong"),
+            # ("-mcet"), ("-fcf-protection"),  # (x86 only)
+            ("-Werror=format-security"),
+            ("-Werror=implicit-function-declaration"),
             # ("-Wl,-z,defs"),
             # ("-Wl,-z,now"),
             # ("-Wl,-z,relro"),
@@ -94,6 +96,8 @@ else:
             # ("-Weverything"),
             ("-Wno-braced-scalar-init"),
             # ("-Wno-newline-eof"),
+
+            ("-D_GNU_SOURCE"),
         ]
 
 ext_modules = [

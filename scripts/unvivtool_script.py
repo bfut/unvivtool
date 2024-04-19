@@ -16,17 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-    unvivtool_script.py - decode or encode VIV/BIG archives with unvivtool
+    unvivtool_script.py - decode or encode VIV/BIG archives
 
-HOW TO USE
+USAGE
     Run decoder:
-    python unvivtool_script.py d [</path/to/archive.viv>|</path/to/archive.big>]
+    python unvivtool_script.py d </path/to/archive.viv>|</path/to/archive.big>
 
     Run encoder:
-    python unvivtool_script.py e [</path/to/folder>]
+    python unvivtool_script.py e </path/to/folder>
 
     Print info only:
-    python unvivtool_script.py i [</path/to/archive.viv>|</path/to/archive.big>]
+    python unvivtool_script.py i </path/to/archive.viv>|</path/to/archive.big>
+    python unvivtool_script.py </path/to/archive.viv>|</path/to/archive.big>
+
+REQUIRES
+    installing unvivtool <https://github.com/bfut/unvivtool>
 """
 import argparse
 import os
@@ -44,6 +48,7 @@ def main():
     # Parameters
     opt_requestfmt = "BIGF"  # viv() only
     opt_direnlenfixed = 0
+    opt_overwrite = 1
 
     # Decode
     if args.cmd[0] == "d":
@@ -59,7 +64,7 @@ def main():
             os.mkdir(outdir)
         except FileExistsError:
             print(f"os.mkdir() not necessary, directory exists: {outdir}")
-        uvt.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed)  # extract all files in archive "vivfile"
+        uvt.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed, overwrite=opt_overwrite)  # extract all files in archive "vivfile"
 
     # Encode
     elif args.cmd[0] == "e":
@@ -95,7 +100,9 @@ def main():
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
-        uvt.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True)
+        uvt.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True, overwrite=opt_overwrite)
+    elif pathlib.Path(args.cmd[0]).is_file():
+        uvt.unviv(args.cmd[0], dir=".", direnlen=opt_direnlenfixed, dry=True, overwrite=opt_overwrite)
 
     #
     else:

@@ -137,9 +137,13 @@ def test_decode4():
     assert retv == 1
 
 def test_decode5():
-    print("Expected result: outdir does not exist, return 0")
-    retv = uvt.unviv(invivfile, "not_a_dir", verbose=1)
-    assert retv == 0
+    print("Expected result: outdir does not exist and is created, return 1")
+    try:
+        os.rmdir(outdir / "not_a_dir")
+    except FileNotFoundError:
+        pass
+    retv = uvt.unviv(invivfile, outdir / "not_a_dir", verbose=1)
+    assert retv == 1
 
 def test_decode6():
     print("Expected result: extract LICENSE, return 1")

@@ -24,12 +24,10 @@
 
 #ifdef _WIN32
 #include <direct.h>
-#define chdir _chdir
+/* #define chdir _chdir */  /* defined in libnfsviv.h */
 #define getcwd _getcwd
-static const int kUnvivtoolMaxPathLen = 255;
 #else
 #include <unistd.h>  /* chdir, getcwd */
-static const int kUnvivtoolMaxPathLen = 4096;
 #endif
 
 #include <fcntl.h>  /* open() */
@@ -61,6 +59,7 @@ static const int kUnvivtoolMaxPathLen = 4096;
 #include "../include/SCL/sclpython.h"
 
 #include "../libnfsviv.h"
+#define kUnvivtoolMaxPathLen kLibnfsvivFilenameMaxLen
 
 /* wrappers ----------------------------------------------------------------- */
 
@@ -69,9 +68,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv;
   PyObject *retv_obj;
-  char *viv_name;
+  char *viv_name = NULL;
   PyObject *viv_name_obj = NULL;
-  char *outpath;
+  char *outpath = NULL;
   PyObject *outpath_obj = NULL;
   int request_file_idx = 0;
   char *request_file_name = NULL;
@@ -80,38 +79,58 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_filenameshex = 0;
   int opt_dryrun = 0;
   int opt_verbose = 0;
+  int opt_overwrite = 0;
   int fd;
   char *buf_cwd = NULL;
-  static const char *keywords[] = { "viv", "dir", "direnlen", "fileidx",
-                                    "filename", "fnhex", "dry", "verbose",
-                                    NULL };
+  static const char *keywords[] = { "viv", "dir",
+                                    "fileidx", "filename",
+                                    "dry", "verbose", "direnlen", "fnhex",
+                                    "overwrite", NULL };
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|iiO&ppp:unviv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|$iO&ppipi:unviv",
                                    (char **)keywords,
-                                   PyUnicode_FSConverter, &viv_name_obj,
-                                   PyUnicode_FSConverter, &outpath_obj,
-                                   &opt_direnlenfixed, &request_file_idx,
-                                   PyUnicode_FSConverter, &request_file_name_obj,
-                                   &opt_dryrun, &opt_verbose, &opt_filenameshex))
+                                   PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &outpath_obj,
+                                   &request_file_idx, PyUnicode_FSConverter, &request_file_name_obj,
+                                   &opt_dryrun, &opt_verbose, &opt_direnlenfixed, &opt_filenameshex,
+                                   &opt_overwrite))
   {
     return NULL;
   }
 
-  viv_name = PyBytes_AsString(viv_name_obj);
-  if (!viv_name)
   {
-    PyErr_SetString(PyExc_TypeError, "cannot convert str");
-    return NULL;
+    const char *viv_name_ = PyBytes_AsString(viv_name_obj);
+    if (!viv_name_)
+    {
+      PyErr_SetString(PyExc_TypeError, "cannot convert str");
+      return NULL;
+    }
+    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, kUnvivtoolMaxPathLen) * sizeof(*viv_name));
+    if (!viv_name)
+    {
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+      return NULL;
+    }
+    memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
   }
 
   for (;;)
   {
-    outpath = PyBytes_AsString(outpath_obj);
-    if (!outpath)
     {
-      PyErr_SetString(PyExc_TypeError, "cannot convert str");
-      retv_obj = NULL;
-      break;
+      const char *outpath_ = PyBytes_AsString(outpath_obj);
+      if (!outpath_)
+      {
+        PyErr_SetString(PyExc_TypeError, "cannot convert str");
+        retv_obj = NULL;
+        break;
+      }
+      outpath = /* (char *) */malloc(LIBNFSVIV_max(strlen(outpath_) + 1, kUnvivtoolMaxPathLen) * sizeof(*outpath));
+      if (!outpath)
+      {
+        PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+        retv_obj = NULL;
+        break;
+      }
+      memcpy(outpath, outpath_, strlen(outpath_) + 1);
     }
 
     if (request_file_name_obj)
@@ -125,6 +144,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       }
     }
 
+#if 0
 #ifndef _WIN32
     else
     {
@@ -138,6 +158,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       close(fd);
     }
 #endif
+#endif
 
     fd = open(viv_name, O_RDONLY);
     if (fd == -1)
@@ -148,14 +169,14 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     close(fd);
 
-    buf_cwd = /* (char *) */malloc(kUnvivtoolMaxPathLen * 4 + 64);
+    buf_cwd = /* (char *) */malloc(kUnvivtoolMaxPathLen + 64);
     if (!buf_cwd)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
       retv_obj = NULL;
       break;
     }
-    if (!getcwd(buf_cwd, kUnvivtoolMaxPathLen * 4 + 64))
+    if (!getcwd(buf_cwd, kUnvivtoolMaxPathLen + 64))
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
       retv_obj = NULL;
@@ -176,7 +197,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     retv = LIBNFSVIV_Unviv(viv_name, outpath,
                            request_file_idx, request_file_name,
                            opt_dryrun, opt_verbose, opt_direnlenfixed,
-                           opt_filenameshex, 0);
+                           opt_filenameshex, 0, opt_overwrite);
 
     if (chdir(buf_cwd) != 0)
     {
@@ -196,6 +217,10 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 
   if (buf_cwd)
     free(buf_cwd);
+  if (outpath)
+    free(outpath);
+  if (viv_name)
+    free(viv_name);
   Py_DECREF(viv_name_obj);
   Py_XDECREF(outpath_obj);
   Py_XDECREF(request_file_name_obj);
@@ -208,7 +233,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv = 1;
   PyObject *retv_obj;
-  char *viv_name;
+  char *viv_name = NULL;
   PyObject *viv_name_obj;
   char **infiles_paths = NULL;
   PyObject *infiles_paths_obj;
@@ -231,36 +256,44 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
                                     "format", "direnlen", "fnhex", NULL };
 
   // if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|piO&ip:viv",
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|pisip:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$pisip:viv",
                                    (char **)keywords,
-                                   PyUnicode_FSConverter, &viv_name_obj,
-                                   &infiles_paths_obj, &opt_dryrun, &opt_verbose,
+                                   PyUnicode_FSConverter, &viv_name_obj, &infiles_paths_obj,
+                                   &opt_dryrun, &opt_verbose,
                                   //  PyUnicode_FSConverter, &opt_requestfmt_obj,
-                                   &opt_requestfmt_ptr,
-                                   &opt_direnlenfixed, &opt_filenameshex))
+                                   &opt_requestfmt_ptr, &opt_direnlenfixed, &opt_filenameshex))
   {
     return NULL;
   }
 
-  viv_name = PyBytes_AsString(viv_name_obj);
-  if (!viv_name)
   {
-    PyErr_SetString(PyExc_RuntimeError, "cannot convert str");
-    return NULL;
+    const char *viv_name_ = PyBytes_AsString(viv_name_obj);
+    if (!viv_name_)
+    {
+      PyErr_SetString(PyExc_TypeError, "cannot convert str");
+      return NULL;
+    }
+    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, kUnvivtoolMaxPathLen) * sizeof(*viv_name));
+    if (!viv_name)
+    {
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+      return NULL;
+    }
+    memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
   }
 
-if (opt_requestfmt_ptr)
-{
-  memcpy(opt_requestfmt, opt_requestfmt_ptr, LIBNFSVIV_min(4, strlen(opt_requestfmt_ptr)) + 1);
-  if (strncmp(opt_requestfmt, "BIGF", 5) &&
-      strncmp(opt_requestfmt, "BIGH", 5) &&
-      strncmp(opt_requestfmt, "BIG4", 5))
+  if (opt_requestfmt_ptr)
   {
-    PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
-    return NULL;
+    memcpy(opt_requestfmt, opt_requestfmt_ptr, LIBNFSVIV_min(4, strlen(opt_requestfmt_ptr)) + 1);
+    if (strncmp(opt_requestfmt, "BIGF", 5) &&
+        strncmp(opt_requestfmt, "BIGH", 5) &&
+        strncmp(opt_requestfmt, "BIG4", 5))
+    {
+      PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
+      return NULL;
+    }
+    PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
   }
-  PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
-}
 
   retv_obj = Py_BuildValue("i", retv);
 
@@ -433,6 +466,8 @@ if (opt_requestfmt_ptr)
   if (infiles_paths)
     free(infiles_paths);
 
+  if (viv_name)
+    free(viv_name);
   Py_DECREF(viv_name_obj);
 
   return retv_obj;
@@ -446,15 +481,15 @@ PyDoc_STRVAR(
   "\n"
   "Functions\n"
   "---------\n"
-  "viv() -- encode files in new VIV/BIG archive\n"
   "unviv() -- decode and extract VIV/BIG archive\n"
+  "viv() -- encode files in new VIV/BIG archive\n"
   "\n"
   "unvivtool "UVTVERS" "UVTCOPYRIGHT"\n"
 );
 
 PyDoc_STRVAR(
   unviv__doc__,
-  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False)\n"
+  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
   " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
   " |\n"
   " |      Parameters\n"
@@ -479,6 +514,9 @@ PyDoc_STRVAR(
   " |          archive contents, do not write to disk.\n"
   " |      verbose : bool, optional\n"
   " |          Verbose output.\n"
+  " |      overwrite : int, optional\n"
+  " |          If == 0, warns and attempts overwriting existing files. (default)\n"
+  " |          If == 1, attempts renaming existing files, skips on failure.\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"

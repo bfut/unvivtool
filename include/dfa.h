@@ -28,10 +28,6 @@ SOFTWARE.
 #ifndef _DFA_H_
 #define _DFA_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define UTF8_ACCEPT 0
 #define UTF8_REJECT 12
 
@@ -67,9 +63,5 @@ DFA_decode(unsigned int* state, unsigned int* codep, unsigned int byte) {
   *state = utf8d[256 + *state + type];
   return *state;
 }
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif  /* _DFA_H_ */

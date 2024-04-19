@@ -5,27 +5,30 @@ It is based on a header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
 
-Purported VIV/BIG archives sometimes contain faulty or manipulated header information.
+Purported VIV/BIG archives can contain faulty or manipulated header information.
 unvivtool is designed to validate and recover data as much as possible.
 
 ## Features
 * decode and encode archive
 * validate archive
 * decode entire archive at once
-* retrieve a single file from archive (by index or filename)
-* list archive contents without writing to disk (dry run)
-* encode files in set order
-* fully support UTF8-filenames in archive
-* fully support non-printable filenames in archive (represent as Base16)
-* decode/encode with set fixed directory entry length
-* low memory usage (typically ~30 kB; worst case ~25 MB)
-* experimental BIG4 support
+* drag-and-drop mode for command-line interface
+* encode files in specified order
+* full UTF8 support
+* auto-rename duplicated filenames
+* option: retrieve a single file from archive (by index or filename)
+* option: list archive contents without writing to disk (dry run)
+* option: support non-printable filenames in archive (Base16 representation)
+* option: decode/encode with set fixed directory entry length
+* compatible with Windows 98 and later
+* typical memory usage ~50-100 kB; worst case ~25 MB
 
 ## File format
-The formats are called ``BIGF``, ``BIGH``, and ``BIG4`` (equals first 4 bytes). Typical file extensions are ``.VIV`` and ``.BIG``.
+The formats are called ``BIGF``, ``BIGH``, and ``BIG4`` (equals first 4 bytes).<br/>
+Typical file extensions are ``.VIV`` and ``.BIG``.
 
 ## Installation / Documentation / Examples
-Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>
+Command-line interface: [/doc/README_cli.md](/doc/README_cli.md)<br/>
 Python extension module: [/python/README.md](/python/README.md)
 
 ## References
