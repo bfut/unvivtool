@@ -67,7 +67,7 @@ static
 PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv;
-  PyObject *retv_obj;
+  PyObject *retv_obj = NULL;
   char *viv_name = NULL;
   PyObject *viv_name_obj = NULL;
   char *outpath = NULL;
@@ -111,6 +111,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       return NULL;
     }
     memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
+    Py_DECREF(viv_name_obj);
   }
 
   for (;;)
@@ -120,17 +121,16 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       if (!outpath_)
       {
         PyErr_SetString(PyExc_TypeError, "cannot convert str");
-        retv_obj = NULL;
         break;
       }
       outpath = /* (char *) */malloc(LIBNFSVIV_max(strlen(outpath_) + 1, kUnvivtoolMaxPathLen) * sizeof(*outpath));
       if (!outpath)
       {
         PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
-        retv_obj = NULL;
         break;
       }
       memcpy(outpath, outpath_, strlen(outpath_) + 1);
+      Py_XDECREF(outpath_obj);
     }
 
     if (request_file_name_obj)
@@ -139,32 +139,14 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       if (!request_file_name)
       {
         PyErr_SetString(PyExc_TypeError, "cannot convert str");
-        retv_obj = NULL;
         break;
       }
     }
-
-#if 0
-#ifndef _WIN32
-    else
-    {
-      fd = open(outpath, O_RDONLY);
-      if (fd == -1)
-      {
-        PySys_WriteStdout("Cannot open output directory '%s': no such directory", outpath);
-        retv_obj = Py_BuildValue("i", 0);
-        break;
-      }
-      close(fd);
-    }
-#endif
-#endif
 
     fd = open(viv_name, O_RDONLY);
     if (fd == -1)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "cannot open viv: no such file or directory");
-      retv_obj = NULL;
       break;
     }
     close(fd);
@@ -173,13 +155,11 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     if (!buf_cwd)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
-      retv_obj = NULL;
       break;
     }
     if (!getcwd(buf_cwd, kUnvivtoolMaxPathLen + 64))
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
-      retv_obj = NULL;
       break;
     }
 
@@ -202,7 +182,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     if (chdir(buf_cwd) != 0)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot restore working directory");
-      retv_obj = NULL;
       break;
     }
 
@@ -221,9 +200,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     free(outpath);
   if (viv_name)
     free(viv_name);
-  Py_DECREF(viv_name_obj);
-  Py_XDECREF(outpath_obj);
   Py_XDECREF(request_file_name_obj);
+  // Py_XDECREF(outpath_obj);  // see above
+  // Py_DECREF(viv_name_obj);  // see above
 
   return retv_obj;
 }
@@ -232,7 +211,7 @@ static
 PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv = 1;
-  PyObject *retv_obj;
+  PyObject *retv_obj = NULL;
   char *viv_name = NULL;
   PyObject *viv_name_obj;
   char **infiles_paths = NULL;
@@ -280,25 +259,26 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       return NULL;
     }
     memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
+    Py_DECREF(viv_name_obj);
   }
-
-  if (opt_requestfmt_ptr)
-  {
-    memcpy(opt_requestfmt, opt_requestfmt_ptr, LIBNFSVIV_min(4, strlen(opt_requestfmt_ptr)) + 1);
-    if (strncmp(opt_requestfmt, "BIGF", 5) &&
-        strncmp(opt_requestfmt, "BIGH", 5) &&
-        strncmp(opt_requestfmt, "BIG4", 5))
-    {
-      PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
-      return NULL;
-    }
-    PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
-  }
-
-  retv_obj = Py_BuildValue("i", retv);
 
   for (;;)
   {
+    if (opt_requestfmt_ptr)
+    {
+      memcpy(opt_requestfmt, opt_requestfmt_ptr, LIBNFSVIV_min(4, strlen(opt_requestfmt_ptr)) + 1);
+      if (strncmp(opt_requestfmt, "BIGF", 5) &&
+          strncmp(opt_requestfmt, "BIGH", 5) &&
+          strncmp(opt_requestfmt, "BIG4", 5))
+      {
+        PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
+        break;
+      }
+      PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
+    }
+
+    retv_obj = Py_BuildValue("i", retv);
+
     count_infiles = (int)PyList_Size(infiles_paths_obj);
     if (count_infiles < 0)
     {
@@ -468,7 +448,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 
   if (viv_name)
     free(viv_name);
-  Py_DECREF(viv_name_obj);
+  // Py_DECREF(viv_name_obj);  // see above
 
   return retv_obj;
 }
