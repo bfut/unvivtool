@@ -12,7 +12,7 @@ A ready to use decoder/encoder script can be found here: [https://github.com/bfu
 ## Installation
 Requires Python 3.9+
 
-       python -m pip install unvivtool
+    python -m pip install unvivtool
 
 ## Documentation
 ```
@@ -39,7 +39,7 @@ FUNCTIONS
         |      viv : str, os.PathLike object
         |          Absolute or relative, path/to/archive.viv
         |      dir : str, os.PathLike object
-        |          Absolute or relative, path/to/existing/output/directory
+        |          Absolute or relative, path/to/output/directory
         |      direnlen : int, optional
         |          If >= 10, set as fixed archive directory entry length.
         |      fileidx : int, optional
@@ -73,7 +73,7 @@ FUNCTIONS
         |      Examples
         |      --------
         |      Extract all files in "car.viv" in the current working directory
-        |      to existing subdirectory "car_viv".
+        |      to subdirectory "car_viv".
         |
         |      >>> unvivtool.unviv("car.viv", "car_viv")
         |      ...

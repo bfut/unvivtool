@@ -35,25 +35,25 @@
 static
 void Usage(void)
 {
-  printf("Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/existing/output_directory>]\n"
+  printf("Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
          "       unvivtool <path/to/input.viv>\n"
          "       unvivtool <paths/to/input_files>...\n"
          "\n");
   printf("Commands:\n"
-         "  d             Decode and extract files from VIV/BIG archive\n"
-         "  e             Encode files in new VIV/BIG archive\n"
+         "  d            Decode and extract files from VIV/BIG archive\n"
+         "  e            Encode files in new VIV/BIG archive\n"
          "\n");
   printf("Options:\n"
-         "  -aot          decoder Overwrite mode: auto rename existing file\n"
-         "  -dnl<N>       decode/encode, set fixed Directory eNtry Length (<N> >= 10)\n"
-         "  -i<N>         decode file at 1-based Index <N>\n"
-         "  -f<name>      decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
-         "  -fh           decode/encode to/from Filenames in Hexadecimal\n"
-         "  -fmt<format>  encode to Format 'BIGF' (default), 'BIGH' or 'BIG4'\n"
-         "  -p            Print archive contents, do not write to disk (dry run)\n");
-  printf("  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
-         "  -v            print archive contents, Verbose\n");
+         "  -aot         decoder Overwrite mode: auto rename existing file\n"
+         "  -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)\n"
+         "  -i<N>        decode file at 1-based Index <N>\n"
+         "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
+         "  -fh          decode/encode to/from Filenames in base16/Hexadecimal\n"
+         "  -fmt<format> encode to Format \"BIGF\" (default), \"BIGH\" or \"BIG4\" (w/o quotes)\n"
+         "  -p           Print archive contents, do not write to disk (dry run)\n");
+  printf("  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
+         "  -v           print archive contents, Verbose\n");
   fflush(stdout);
 }
 

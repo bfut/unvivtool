@@ -93,25 +93,25 @@ def test_dir():
 def test_cli_smoketest():
     err = ""
     out = \
-"""Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/existing/output_directory>]
+"""Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
        unvivtool <path/to/input.viv>
        unvivtool <paths/to/input_files>...
 
 Commands:
-  d             Decode and extract files from VIV/BIG archive
-  e             Encode files in new VIV/BIG archive
+  d            Decode and extract files from VIV/BIG archive
+  e            Encode files in new VIV/BIG archive
 
 Options:
-  -aot          decoder Overwrite mode: auto rename existing file
-  -dnl<N>       decode/encode, set fixed Directory eNtry Length (<N> >= 10)
-  -i<N>         decode file at 1-based Index <N>
-  -f<name>      decode File <name> (cAse-sEnsitivE) from archive, overrides -i
-  -fh           decode/encode to/from Filenames in Hexadecimal
-  -fmt<format>  encode to Format 'BIGF' (default), 'BIGH' or 'BIG4'
-  -p            Print archive contents, do not write to disk (dry run)
-  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v            print archive contents, Verbose
+  -aot         decoder Overwrite mode: auto rename existing file
+  -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)
+  -i<N>        decode file at 1-based Index <N>
+  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
+  -fh          decode/encode to/from Filenames in Hexadecimal
+  -fmt<format> encode to Format "BIGF" (default), "BIGH" or "BIG4" (w/o quotes)
+  -p           Print archive contents, do not write to disk (dry run)
+  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v           print archive contents, Verbose
 """
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
