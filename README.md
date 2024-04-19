@@ -28,7 +28,7 @@ The formats are called ``BIGF``, ``BIGH``, and ``BIG4`` (equals first 4 bytes).<
 Typical file extensions are ``.VIV`` and ``.BIG``.
 
 ## Installation / Documentation / Examples
-Command-line interface: [/doc/README_cli.md](/doc/README_cli.md)<br/>
+Command-line interface: [/cli/README.md](/cli/README.md)<br/>
 Python extension module: [/python/README.md](/python/README.md)
 
 ## References
