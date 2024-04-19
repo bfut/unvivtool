@@ -50,7 +50,7 @@ void Usage(void)
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -fh          decode/encode to/from Filenames in base16/Hexadecimal\n"
-         "  -fmt<format> encode to Format \"BIGF\" (default), \"BIGH\" or \"BIG4\" (w/o quotes)\n"
+         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)\n"
          "  -p           Print archive contents, do not write to disk (dry run)\n");
   printf("  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
          "  -v           print archive contents, Verbose\n");

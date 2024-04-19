@@ -108,7 +108,7 @@ Options:
   -i<N>        decode file at 1-based Index <N>
   -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
   -fh          decode/encode to/from Filenames in base16/Hexadecimal
-  -fmt<format> encode to Format "BIGF" (default), "BIGH" or "BIG4" (w/o quotes)
+  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)
   -p           Print archive contents, do not write to disk (dry run)
   -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
   -v           print archive contents, Verbose

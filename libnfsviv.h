@@ -77,7 +77,7 @@
 #endif
 #endif
 
-#define UVTVERS "1.19"
+#define UVTVERS "1.20"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 
 #ifndef UVTVERBOSE
