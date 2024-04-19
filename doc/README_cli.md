@@ -6,19 +6,19 @@ This file describes installation and usage of unvivtool as command-line interfac
 Download the latest release and extract ```unvivtool.exe``` to the directory of your choice.
 
 ### Linux
-
-      cd ~
-      git clone https://github.com/bfut/unvivtool
-      cd unvivtool
-      gcc -std=c89 -D_GNU_SOURCE -fPIE -pie -O2 unvivtool.c -o unvivtool
-
+```
+cd ~
+git clone https://github.com/bfut/unvivtool
+cd unvivtool
+gcc -std=c89 -D_GNU_SOURCE -fPIE -pie -O2 unvivtool.c -o unvivtool
+```
 ### Compiling for Windows
 Requires MSVC.
-
-      git clone https://github.com/bfut/unvivtool
-      cd unvivtool
-      cl.exe /Ze /TC unvivtool.c
-
+```
+git clone https://github.com/bfut/unvivtool
+cd unvivtool
+cl.exe /Ze /TC unvivtool.c
+```
 ## Usage
 Drag-and-drop a VIV/BIG archive onto the executable to decode it.<br>
 Drag-and-drop multiple files onto the executable to encode them into a VIV archive.

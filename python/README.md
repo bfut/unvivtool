@@ -11,8 +11,9 @@ A ready to use decoder/encoder script can be found here: [https://github.com/bfu
 
 ## Installation
 Requires Python 3.9+
-
-    python -m pip install unvivtool
+```
+python -m pip install unvivtool
+```
 
 ## Documentation
 ```
