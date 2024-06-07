@@ -1,5 +1,7 @@
 # unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 #
+# Portions copyright, see each source file for more information.
+#
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
 #
@@ -20,77 +22,86 @@
 
 USAGE
     Run decoder:
-    python unvivtool_script.py d </path/to/archive.viv>|</path/to/archive.big>
+    python unvivtool_script.py </path/to/archive.viv>|</path/to/archive.big> [</path/to/output_folder>]
 
     Run encoder:
-    python unvivtool_script.py e </path/to/folder>
+    python unvivtool_script.py </path/to/folder> [</path/to/archive.viv>|</path/to/archive.big>]
 
     Print info only:
     python unvivtool_script.py i </path/to/archive.viv>|</path/to/archive.big>
     python unvivtool_script.py </path/to/archive.viv>|</path/to/archive.big>
 
 REQUIRES
-    installing unvivtool <https://github.com/bfut/unvivtool>
+    python -m pip install unvivtool
+        this installs unvivtool <https://github.com/bfut/unvivtool>
 """
 import argparse
 import os
 import pathlib
 import re
+import time
 
 import unvivtool as uvt
+
+CONFIG = {
+    "opt_requestfmt" : "BIGF",  # viv() only
+    "opt_direnlenfixed" : 0,
+    "opt_overwrite" : 1,
+}
+
 
 def main():
     # Parse command (or print module help)
     parser = argparse.ArgumentParser()
-    parser.add_argument("cmd", nargs="+", help="d: unviv(), e: viv(), i: print archive info")
+    parser.add_argument("cmd", nargs="+", help= "<path/to/file>, <path/to/folder>, i <path/to/file>")
     args = parser.parse_args()
+    inpath = pathlib.Path(args.cmd[0])
+    
+    print(f"inpath: '{inpath}'")
 
-    # Parameters
-    opt_requestfmt = "BIGF"  # viv() only
-    opt_direnlenfixed = 0
-    opt_overwrite = 1
 
     # Decode
-    if args.cmd[0] == "d":
+    if inpath.is_file():
+        print(f"#{args.cmd[:]}#")
+        outdir = None
+        if len(args.cmd) > 1:
+            outdir = pathlib.Path(args.cmd[1])
+        if not isinstance(outdir, pathlib.Path) or not outdir.is_dir():
+            outdir = inpath.parent / (inpath.stem + "_" + inpath.suffix[1:])
+
+        ptn = time.process_time_ns()
+        if uvt.unviv(str(inpath), str(outdir), direnlen=CONFIG["opt_direnlenfixed"], overwrite=CONFIG["opt_overwrite"]):  # extract all files in archive "inpath"
+            print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
+
+
+
+    # Encode
+    elif inpath.is_dir():
+        print(f"#{args.cmd[:]}#")
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(args.cmd[1])
         else:
-            vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
-        if not vivfile.is_file():
-            raise FileExistsError(f"{vivfile}")
+            suffix1 = re.compile(r"(\w+)_[vV][iI][vV]$", re.IGNORECASE)
+            suffix2 = re.compile(r"(\w+)_[bB][iI][gG]$", re.IGNORECASE)
+            if suffix1.match(inpath.stem):
+                vivfile = (inpath.parent / inpath.stem[:-4]).with_suffix(".viv")
+            elif suffix2.match(inpath.stem):
+                vivfile = (inpath.parent / inpath.stem[:-4]).with_suffix(".big")
+            else:
+                vivfile = (inpath.parent / inpath.stem).with_suffix(".viv")
 
-        outdir = pathlib.Path(vivfile).parent / (vivfile.stem + "_" + vivfile.suffix[1:])
-        try:
-            os.mkdir(outdir)
-        except FileExistsError:
-            print(f"os.mkdir() not necessary, directory exists: {outdir}")
-        uvt.unviv(str(vivfile), str(outdir), direnlen=opt_direnlenfixed, overwrite=opt_overwrite)  # extract all files in archive "vivfile"
-
-    # Encode
-    elif args.cmd[0] == "e":
-        if len(args.cmd) > 1:
-            infolder = pathlib.Path(args.cmd[1])
-        else:
-            infolder = pathlib.Path(__file__).parent / "car_viv/"
-
-        suffix1 = re.compile(r"(\w+)_[vV][iI][vV]$", re.IGNORECASE)
-        suffix2 = re.compile(r"(\w+)_[bB][iI][gG]$", re.IGNORECASE)
-        if suffix1.match(infolder.stem):
-            vivfile = (infolder.parent / infolder.stem[:-4]).with_suffix(".viv")
-        elif suffix2.match(infolder.stem):
-            vivfile = (infolder.parent / infolder.stem[:-4]).with_suffix(".big")
-        else:
-            vivfile = (infolder.parent / infolder.stem).with_suffix(".viv")
-
-        infiles = os.listdir(infolder)
+        infiles = os.listdir(inpath)
         for i in range(len(infiles)):
-            infiles[i] = str(infolder / infiles[i])
+            infiles[i] = str(inpath / infiles[i])
         infiles = sorted(infiles)
         print(infiles)
-        uvt.viv(str(vivfile), infiles, format=opt_requestfmt, direnlen=opt_direnlenfixed)  # encode all files in path/to/infiles
+        ptn = time.process_time_ns()
+        if uvt.viv(str(vivfile), infiles, format=CONFIG["opt_requestfmt"], direnlen=CONFIG["opt_direnlenfixed"]):  # encode all files in path/to/infiles
+            print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
 
-    # Print info (dry run)
-    elif args.cmd[0] == "i":
+
+    # Print archive info (dry run)
+    elif args.cmd[0] == "i" and len(args.cmd) > 1:
         print(f"#{args.cmd[1:]}#")
         print( " ".join(args.cmd[1:]) ,  pathlib.Path(" ".join(args.cmd[1:]))  )
         if len(args.cmd) > 1:
@@ -100,14 +111,16 @@ def main():
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
-        uvt.unviv(str(vivfile), dir=".", direnlen=opt_direnlenfixed, dry=True, overwrite=opt_overwrite)
-    elif pathlib.Path(args.cmd[0]).is_file():
-        uvt.unviv(args.cmd[0], dir=".", direnlen=opt_direnlenfixed, dry=True, overwrite=opt_overwrite)
+        ptn = time.process_time_ns()
+        if uvt.unviv(str(vivfile), dir=".", direnlen=CONFIG["opt_direnlenfixed"], dry=True, overwrite=CONFIG["opt_overwrite"]):
+            print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
+
 
     #
     else:
-        print("Invalid command (expects {d, e, i}):", args.cmd[0])
-        help(uvt)
+        print("Invalid command (expects {<path/to/file>, <path/to/folder>, i <path/to/file>}):", args.cmd[0])
+        # help(uvt)
 
 if __name__ == "__main__":
+    # print(CONFIG)
     main()

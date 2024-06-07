@@ -168,7 +168,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     {
       opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 0);
       opt_direnlenfixed = LIBNFSVIV_min(opt_direnlenfixed, INT_MAX / 2);
-      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
     }
 
     if (opt_dryrun)
@@ -186,9 +186,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     }
 
     if (retv == 1)
-      PySys_WriteStdout("Decoder successful.");
+      PySys_WriteStdout("Decoder successful.\n");
     else
-      PySys_WriteStdout("Decoder failed.");
+      PySys_WriteStdout("Decoder failed.\n");
 
     retv_obj = Py_BuildValue("i", retv);
     break;
@@ -274,7 +274,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
         PyErr_SetString(PyExc_ValueError, "expects format parameter 'BIGF', 'BIGH' or 'BIG4'");
         break;
       }
-      PySys_WriteStdout("Requested format: %.4s", opt_requestfmt);
+      PySys_WriteStdout("Requested format: %.4s\n", opt_requestfmt);
     }
 
     retv_obj = Py_BuildValue("i", retv);
@@ -405,7 +405,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 10);
     opt_direnlenfixed = LIBNFSVIV_min(opt_direnlenfixed, INT_MAX / 2);
-    PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+    PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
   }
 
   if (retv_obj)
@@ -429,9 +429,9 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
                            opt_filenameshex, opt_requestfmt);
 
       if (retv == 1)
-        PySys_WriteStdout("Encoder successful.");
+        PySys_WriteStdout("Encoder successful.\n");
       else
-        PySys_WriteStdout("Encoder failed.");
+        PySys_WriteStdout("Encoder failed.\n");
 
       retv_obj = Py_BuildValue("i", retv);
       break;

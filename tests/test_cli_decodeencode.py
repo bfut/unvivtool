@@ -92,27 +92,25 @@ def test_dir():
 @pytest.mark.skipif(0, reason="")
 def test_cli_smoketest():
     err = ""
-    out = \
-"""Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
-       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
-       unvivtool <path/to/input.viv>
-       unvivtool <paths/to/input_files>...
 
-Commands:
-  d            Decode and extract files from VIV/BIG archive
-  e            Encode files in new VIV/BIG archive
-
-Options:
-  -aot         decoder Overwrite mode: auto rename existing file
-  -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)
-  -i<N>        decode file at 1-based Index <N>
-  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
-  -fh          decode/encode to/from Filenames in base16/Hexadecimal
-  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)
-  -p           Print archive contents, do not write to disk (dry run)
-  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v           print archive contents, Verbose
-"""
+    # capture stdout of Usage(void) from unvivtool.c
+    void_Usage = re.findall(
+        r"void Usage\(void\)(.*){1}fflush\(stdout\);",
+        (SCRIPT_PATH / "../unvivtool.c").read_text("utf-8"),
+        re.DOTALL
+    )[0]
+    void_Usage_strings = re.findall(
+        r"(?!#include )\"(.*)\\n\"",
+        void_Usage,
+        re.MULTILINE
+    )
+    out = "\n".join([s for s in void_Usage_strings])
+#     out = \
+# """Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
+#        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
+#        unvivtool <path/to/input.viv>
+#        unvivtool <paths/to/input_files>...
+# """
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
     stdout = delete_whitespace(ret.stdout.decode("utf-8"))

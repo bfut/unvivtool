@@ -1524,26 +1524,29 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
       break;
     }
 
-    if (!LIBNFSVIV_IsDir(outpath))
+    if (!opt_dryrun)
     {
-      printf("Unviv: Attempt creating directory '%s'\n", outpath);
-      if (mkdir(outpath, 0755) != 0)
+      if (!LIBNFSVIV_IsDir(outpath))
       {
-        fprintf(stderr, "Unviv: Cannot create directory '%s'\n", outpath);
+        printf("Unviv: Attempt creating directory '%s'\n", outpath);
+        if (mkdir(outpath, 0755) != 0)
+        {
+          fprintf(stderr, "Unviv: Cannot create directory '%s'\n", outpath);
+          retv = -1;
+          break;
+        }
+      }
+
+#ifdef _WIN32
+      if (!LIBNFSVIV_GetFullPathName(outpath, NULL, 0, NULL))
+#else
+      if (!LIBNFSVIV_GetFullPathName(outpath, NULL))
+#endif
+      {
+        fprintf(stderr, "Unviv: Cannot get full path of outpath.\n");
         retv = -1;
         break;
       }
-    }
-
-#ifdef _WIN32
-    if (!LIBNFSVIV_GetFullPathName(outpath, NULL, 0, NULL))
-#else
-    if (!LIBNFSVIV_GetFullPathName(outpath, NULL))
-#endif
-    {
-      fprintf(stderr, "Unviv: Cannot get full path of outpath.\n");
-      retv = -1;
-      break;
     }
 
     if (opt_wenccommand)
