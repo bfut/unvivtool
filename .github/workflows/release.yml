@@ -44,10 +44,7 @@ jobs:
       - name: Create archive (Windows x86)
         run: |
           7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_win32.zip" \
-          scripts/batch-decode_archives_to_folders.sh \
-          scripts/batch-encode_folders_to_archives.sh \
-          scripts/batch-encode_folder_to_archive.sh \
-          cli/README.md \
+          cli \
           include/dfa.h \
           references \
           libnfsviv.h \
@@ -78,10 +75,7 @@ jobs:
       - name: Create archive (Windows x64)
         run: |
           7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_x64.zip" \
-          scripts/batch-decode_archives_to_folders.sh \
-          scripts/batch-encode_folders_to_archives.sh \
-          scripts/batch-encode_folder_to_archive.sh \
-          cli/README.md \
+          cli \
           include/dfa.h \
           references \
           libnfsviv.h \
