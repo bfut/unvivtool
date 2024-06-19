@@ -20,6 +20,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,35 +58,8 @@ void Usage(void)
   fflush(stdout);
 }
 
-int UVT_GetVivVersionFile(FILE *file)
-{
-  char buf[4];
-  if (fread(buf, 1, 4, file) != 4)
-    return 0;
-  if (strncmp(buf, "BIG4", 4) == 0)
-    return 4;
-  if (strncmp(buf, "BIGF", 4) == 0)
-    return 7;
-  if (strncmp(buf, "BIGH", 4) == 0)
-    return 8;
-  return -1;
-}
-
-/* Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), negative (unknown format), 0 (fread error) */
-int UVT_GetVivVersion(const char *path)
-{
-  int retv = 0;
-  FILE *file = fopen(path, "rb");
-  if (file)
-  {
-    retv = UVT_GetVivVersionFile(file);
-    fclose(file);
-  }
-  return retv;
-}
-
 #ifdef _WIN32
-/* Should be safe enough with sz >= 260 * 4 */
+/* Should be safe enough with sz >= 256 * 4 */
 void UVT_GetExePath(char *buf, const size_t sz)
 {
   if (GetModuleFileName(NULL, buf, sz) > 1)
@@ -100,13 +74,13 @@ void UVT_GetExePath(char *buf)
 }
 #endif
 
-void CreateWENCFile(int *retv, const int argc, char **argv, const char *viv_name)
+void UVT_CreateWENCFile(int *retv, const int argc, char **argv, const char *viv_name)
 {
-  char buf_[kLibnfsvivFilenameMaxLen] = {0};
+  char buf_[kLibnfsvivFilenameMaxLen];
   FILE *file_ = NULL;
   int i;
-  memcpy(buf_, viv_name, LIBNFSVIV_min(strlen(viv_name), sizeof(buf_) - 1));
-  if (!LIBNFSVIV_AppendFileEnding(buf_, sizeof(buf_), ".txt"))
+  memcpy(buf_, viv_name, LIBNFSVIV_min(strlen(viv_name) + 1, sizeof(buf_)));
+  if (!LIBNFSVIV_AppendFileEnding(buf_, sizeof(buf_), kLibnfsvivWENCFileEnding))
   {
     fprintf(stderr, "Cannot use option '-we'\n");
     *retv = -1;
@@ -145,10 +119,22 @@ void CreateWENCFile(int *retv, const int argc, char **argv, const char *viv_name
   fclose(file_);
 }
 
+void UVT_RemoveWENCFile(const char *viv_name)
+{
+  char buf_[kLibnfsvivFilenameMaxLen];
+  memcpy(buf_, viv_name, LIBNFSVIV_min(strlen(viv_name) + 1, sizeof(buf_)));
+  if (!LIBNFSVIV_AppendFileEnding(buf_, sizeof(buf_), kLibnfsvivWENCFileEnding))
+  {
+    fprintf(stderr, "Cannot remove re-Encoding file\n");
+    return;
+  }
+  remove(buf_);
+}
+
 int main(int argc, char **argv)
 {
   int retv = 0;
-  char viv_name[kLibnfsvivFilenameMaxLen] = {0};
+  char viv_name[kLibnfsvivFilenameMaxLen];
   char *out_dir = NULL;
   char **infiles_paths = NULL;
   size_t infiles_paths_sz = 0;
@@ -176,22 +162,25 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  viv_name[0] = '\0';
+
   /** Drag-and-drop mode
     always: argv[1] used to copy/derive viv_name
 
     decode if argv[1] has viv/big bytes
       needs viv_name
-      mallocs and gets out_dir as parent_dir of viv_name
+      malloc's and gets out_dir as parent_dir of viv_name
     else encode **argv to argv[1].viv
       needs infiles_paths
-      gets viv_name from argv[1] with appended extension ".viv "
+      gets viv_name from argv[1] with appended extension ".viv"
     no options
    */
   if (strlen(argv[1]) > 1)
   {
-    memcpy(viv_name, argv[1], LIBNFSVIV_min(strlen(argv[1]), sizeof(viv_name) - 6));  /* leave 5 bytes for ".viv" */
+    memcpy(viv_name, argv[1], LIBNFSVIV_min(strlen(argv[1]) + 1, sizeof(viv_name) - 6));  /* leave 5 bytes for ".viv" */
+    viv_name[sizeof(viv_name) - 6] = '\0';
 
-    if (/* LIBNFSVIV_IsFile(viv_name) && */ UVT_GetVivVersion(viv_name) > 0)  /* decoder */
+    if (/* LIBNFSVIV_IsFile(viv_name) && */ LIBNFSVIV_GetVivVersion(viv_name) > 0)  /* decoder */
     {
       out_dir = (char *)calloc(kLibnfsvivFilenameMaxLen * sizeof(*out_dir), 1);
       if (!out_dir)
@@ -241,7 +230,8 @@ int main(int argc, char **argv)
     {
       if (argv[i][0] != '-')
       {
-        memcpy(viv_name, argv[i], LIBNFSVIV_min(strlen(argv[i]), sizeof(viv_name) - 1));
+        memcpy(viv_name, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, sizeof(viv_name)));
+        viv_name[sizeof(viv_name) - 1] = '\0';
         break;
       }
     }
@@ -358,7 +348,7 @@ int main(int argc, char **argv)
   }  /* command mode */
 
   if (retv == 0 && argv[1][0] == 'd' && opt_wenccommand && !opt_dryrun)
-    CreateWENCFile(&retv, argc, argv, viv_name);
+    UVT_CreateWENCFile(&retv, argc, argv, viv_name);
 
   /** Decoder
    */
@@ -371,6 +361,8 @@ int main(int argc, char **argv)
     {
       printf("Decoder failed.\n");
       retv = -1;
+      if (opt_wenccommand && !opt_dryrun)
+        UVT_RemoveWENCFile(viv_name);  /* cleanup */
     }
     else
       printf("Decoder successful.\n");

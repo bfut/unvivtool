@@ -53,7 +53,7 @@ static const unsigned char utf8d[] = {
 };
 
 unsigned int
-DFA_decode(unsigned int* state, unsigned int* codep, unsigned int byte) {
+DFA_decode(unsigned int* state, unsigned int* codep, const unsigned int byte) {
   unsigned int type = utf8d[byte];
 
   *codep = (*state != UTF8_ACCEPT) ?

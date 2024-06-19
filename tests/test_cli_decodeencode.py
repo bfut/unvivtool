@@ -140,6 +140,7 @@ def test_cli_decode_all_existing_dir(verbose, dry):
 """Directory Entries (header) = 2 (0x2)
 Header Size (header) = 55 (0x37)
 File format (parsed) = BIGF
+Header Size (parsed) = 55 (0x37)
 Directory Entries (parsed) = 2
 Number extracted: 2
 Decoder successful.
