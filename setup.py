@@ -106,7 +106,7 @@ ext_modules = [
         define_macros=[
             ("VERSION_INFO", __version__),
             ("UVTVERBOSE", os.environ.get("UVTVERBOSE", 0)),  # 0 if key not set
-            ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
+            # defined in unvivtoolmodule.c # ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
         ],
         extra_compile_args=extra_compile_args,
     )

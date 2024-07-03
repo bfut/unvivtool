@@ -41,12 +41,12 @@ def main():
 
     print(f"inpath: '{inpath}'")
 
-    ret = uvt.GetVivDirectory_path(inpath, verbose=True)
-    retx = uvt.GetVivDirectory_path(inpath, verbose=True, fnhex=True)
+    ret = uvt.GetFileList(inpath, verbose=True)
+    retx = uvt.GetFileList(inpath, verbose=True, fnhex=True)
     print(ret)
     print(retx)
 
-    ret = uvt.GetVivDirectory_path(inpath, direnlen=80)
+    ret = uvt.GetFileList(inpath, direnlen=80)
     print(ret)
 
 

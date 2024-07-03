@@ -1,5 +1,5 @@
 /*
-  libnfsviv.h - simple BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)
+  libnfsviv.h - simple BIGF BIGH BIG4 decoder/encoder (widely known as VIV/BIG)
   unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
@@ -22,21 +22,35 @@
 */
 
 /*
-  Simple C89 library for decoding/encoding BIGF, BIGH and BIG4 archives.
+  The API in this header-only library is composed of two parts:
 
-  LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions, as used in unvivtool CLI.
-
-  Additionally, pure data anlysis is available via
+  1. LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions (see, e.g., unvivtool CLI)
+  2. Pure data anlysis is available via
     LIBNFSVIV_GetVivVersion*()
-    LIBNFSVIV_GetVivDirectory*() - gets archive header per struct VivDirectory
-    LIBNFSVIV_VivDirectoryToFileList*() - returns char **filelist in archive
+    LIBNFSVIV_GetVivDirectory*() - returns struct *VivDirectory, the archive header
+    LIBNFSVIV_VivDirectoryToFileList*() - returns char** of filenames listed in the archive header
 
-  Both parts of the API are exposed in the unvivtool Python extension module.
+  Both parts of the API are also provided in the unvivtool Python extension module.
+
+  The decoder performs a single pass buffered read of the archive header, which
+  limits memory usage, typically to a few kilobytes in total. Memory usage is
+  solely variable in the number of listed files (16 byte per entry). Files can
+  be encoded to new archive in a user-determined order. All functions are
+  designed to be safe (and fast).
+  A known BIGF variation with fixed directory entry length and non-printable
+  filenames is supported in a first.
+
+  The archive formats are neither bound in header size nor filesize, which makes
+  it impractible to read the entire archive header at once, let alone the entire
+  archive. Additionaly, a given archive may have (deliberately) manipulated
+  header values, often in historic attemps at copy protection.
 
   Compiling:
-    assumes little-endian, and 32-bit or 64-bit architecture
-    compiles on Win98+ (MSVC 6.0+), Linux, macOS, etc. as C/C++
-    non-Win32 requires _GNU_SOURCE #define'd for realpath()
+    * C89/C++
+    * assumes little-endian, and 32-bit or 64-bit architecture
+    * compiles on Win98+ (MSVC 6.0+), Linux, macOS
+    * non-Win32 requires _GNU_SOURCE #define'd for realpath()
+    * optionally #define UVTUTF8 for the UVTUTF8 branch (decoder supports utf8-filenames within archive header), results in dfa.h dependency; can be dropped for most use-cases
 
 
   BIGF theoretical limits, assuming signed int:
@@ -52,7 +66,7 @@
     BIG4 header has filesize encoded in little endian
     BIGF header can have a fixed directory entry length (e.g., 80 bytes). This allows names with embedded nul's.
 
-  unviv() handles the following archive manipulations / oddities {with strategy}:
+  LIBNFSVIV_unviv() handles the following archive manipulations / oddities {with strategy}:
     * Archive header has incorrect number of directory entries {assume large enough value}
     * Archive header has incorrect number directory length {value unused}
     * Archive header has incorrect offset {value unused}
@@ -91,7 +105,7 @@
 #endif
 #endif
 
-#define UVTVERS "2.00"
+#define UVTVERS "2.0"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 #define UVT_DEVMODE 0  /* 0: release, 1: development, 2: experimental */
 
@@ -140,7 +154,6 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define LIBNFSVIV_DirEntrMax 1572864  /* ceil(((1024 << 10) * 24) / 16) */
 
 #define LIBNFSVIV_WENCFileEnding ".txt"
-
 
 #ifndef __cplusplus
 typedef struct VivDirEntr VivDirEntr;
@@ -594,7 +607,6 @@ void LIBNFSVIV_PrintVivDirEntr(const VivDirectory *viv_dir)
     WDL - circbuf.h
     Copyright (C) 2005 Cockos Incorporated (zlib License)
 */
-
 #ifndef __cplusplus
 typedef struct LIBNFSVIV_CircBuf LIBNFSVIV_CircBuf;
 #endif
@@ -2018,7 +2030,7 @@ VivDirectory *LIBNFSVIV_GetVivDirectory(VivDirectory *viv_directory, char *path,
 }
 
 /*
-  Sum filename sizes plus nul's.
+  Sums clamped filename sizes plus nul's.
   Sums all entries, valid and invalid.
 */
 static
@@ -2034,6 +2046,7 @@ int LIBNFSVIV__SumVivDirectoryFilenameSizes(VivDirectory *viv_directory)
 #endif
     sz += viv_directory->buffer[i].filename_len_;
     ++sz;  /* nul */
+    sz = LIBNFSVIV_clamp(sz, 1, LIBNFSVIV_FilenameMaxLen);
   }
   return sz;
 }
@@ -2050,7 +2063,7 @@ int LIBNFSVIV__SumVivDirectoryFilenameSizes(VivDirectory *viv_directory)
 
   NB: filelist and filelist[0] malloc'd sizes are upper-bounded in libnfsviv.h, see header for details.
 */
-char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *viv_directory, FILE *file, const int filesz, const int opt_filenameshex)
+char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *viv_directory, FILE *file, const int filesz)
 {
   char **ret = NULL;
   if (!viv_directory || !file)  return NULL;
@@ -2062,6 +2075,11 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *viv_directory, FI
     if (!filelist)  break;
     filelist[viv_directory->count_dir_entries_true] = NULL;
 
+    /* Create list of all filenames, even invalid ones.
+       All values are clamped s.t. they do not exceed file size.
+
+       Strings of length 1 are allowed, but not 0.
+    */
     if (viv_directory->count_dir_entries_true > 0)
     {
       int filenames_sz;
@@ -2079,11 +2097,12 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *viv_directory, FI
         char *p = filelist[0];
         for (i = 0; i < viv_directory->count_dir_entries_true; ++i)
         {
-          int len = viv_directory->buffer[i].filename_len_;
-          if (len < 1)  continue;
+          int len = viv_directory->buffer[i].filename_len_;  /* length without nul */
           filelist[i] = p;
-          fseek(file, viv_directory->buffer[i].filename_ofs_, SEEK_SET);
-          if (fread(p, 1, len, file) != (size_t)len)
+          /* read at least 0 byte */
+          fseek(file, LIBNFSVIV_clamp(viv_directory->buffer[i].filename_ofs_, 0, filesz), SEEK_SET);  /* fseek within file */
+          len = LIBNFSVIV_max(len, filesz - (int)ftell(file));
+          if ((int)fread(p, 1, len, file) != len)
           {
             fprintf(stderr, "VivDirectoryToFileList: File read error at %d\n", viv_directory->buffer[i].filename_ofs_);
             free(filelist[0]);
@@ -2103,11 +2122,11 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *viv_directory, FI
 }
 
 /* Wrapper for LIBNFSVIV_VivDirectoryToFileList_FromFile() */
-char **LIBNFSVIV_VivDirectoryToFileList(VivDirectory *viv_directory, char *path, const int opt_filenameshex)
+char **LIBNFSVIV_VivDirectoryToFileList(VivDirectory *viv_directory, char *path)
 {
   const int filesz = LIBNFSVIV_GetFilesize(path);
   FILE *file = fopen(path, "rb");
-  char **ret = LIBNFSVIV_VivDirectoryToFileList_FromFile(viv_directory, file, filesz, opt_filenameshex);
+  char **ret = LIBNFSVIV_VivDirectoryToFileList_FromFile(viv_directory, file, filesz);
   if (!!file)  fclose(file);
   return ret;
 }

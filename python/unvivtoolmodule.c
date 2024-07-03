@@ -61,14 +61,15 @@
 #define SCL_PY_PRINTF  /* native printf */
 #include "../include/SCL/sclpython.h"
 
+#define UVTUTF8
 #define SCL_DEBUG 0
 #include "../libnfsviv.h"
 #define UVT_PY_MaxPathLen LIBNFSVIV_FilenameMaxLen
 
-/* 2.0 wrappers ----------------------------------------------------------------- */
+/* data analysis ------------------------------------------------------------ */
 
 static
-PyObject *GetVivDirectory_path(PyObject *self, PyObject *args, PyObject *kwargs)
+PyObject *GetFilesList(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv;
   PyObject *retv_obj = NULL;
@@ -86,7 +87,7 @@ PyObject *GetVivDirectory_path(PyObject *self, PyObject *args, PyObject *kwargs)
   char **filelist = NULL;
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", NULL };
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|pip:GetVivDirectory_path",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|pip:GetFilesList",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
                                    &opt_verbose, &opt_direnlenfixed, &opt_filenameshex))
@@ -123,22 +124,22 @@ PyObject *GetVivDirectory_path(PyObject *self, PyObject *args, PyObject *kwargs)
   const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
 
   retv = !!LIBNFSVIV_GetVivDirectory(&viv_directory, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex);
-  SCL_printf("LIBNFSVIV_GetVivDirectory_FromPath: %d\n", retv);
+  SCL_printf("LIBNFSVIV_GetVivDirectory: %d\n", retv);
 
   if (retv == 1)
   {
-    filelist = LIBNFSVIV_VivDirectoryToFileList(&viv_directory, viv_name, local_opt_filenameshex);
+    filelist = LIBNFSVIV_VivDirectoryToFileList(&viv_directory, viv_name);
     if (!filelist)
     {
       PyErr_SetString(PyExc_Exception, "Cannot get filelist");
       retv = 0;
     }
-    SCL_printf("LIBNFSVIV_VivDirectoryToFileList_FromPath: %d\n", retv);
+    SCL_printf("LIBNFSVIV_VivDirectoryToFileList: %d\n", retv);
   }
 
   for (;retv == 1;)
   {
-    /* From (filelist != NULL) immediately follows (list_len > 0), see LIBNFSVIV_VivDirectoryToFileList_FromPath() */
+    /* From (filelist != NULL) immediately follows (list_len > 0), see LIBNFSVIV_VivDirectoryToFileList() */
     int list_len = 0;
 
 #if defined(SCL_DEBUG) && SCL_DEBUG > 0
@@ -199,10 +200,10 @@ PyObject *GetVivDirectory_path(PyObject *self, PyObject *args, PyObject *kwargs)
   return retv_obj;
 }
 
-/* wrappers ----------------------------------------------------------------- */
+/* decoder/encoder ---------------------------------------------------------- */
 
 static
-PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
+PyObject *Unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv;
   PyObject *retv_obj = NULL;
@@ -225,7 +226,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
                                     "dry", "verbose", "direnlen", "fnhex",
                                     "overwrite", NULL };
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|$iO&ppipi:unviv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|$iO&ppipi:Unviv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &outpath_obj,
                                    &request_file_idx, PyUnicode_FSConverter, &request_file_name_obj,
@@ -346,7 +347,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static
-PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
+PyObject *Viv(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv = 1;
   PyObject *retv_obj = NULL;
@@ -373,7 +374,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
                                     "format", "direnlen", "fnhex", NULL };
 
   // if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|piO&ip:viv",
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$pisip:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$pisip:Viv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, &infiles_paths_obj,
                                    &opt_dryrun, &opt_verbose,
@@ -595,28 +596,48 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 
 PyDoc_STRVAR(
   m_doc,
-  "VIV/BIG decoding/encoding\n"
+  "simple BIGF BIGH BIG4 decoder/encoder (widely known as VIV/BIG)\n"
   "\n"
   "Functions\n"
   "---------\n"
-  "unviv() -- decode and extract VIV/BIG archive\n"
-  "viv() -- encode files in new VIV/BIG archive\n"
+  "Unviv() -- decode and extract archive\n"
+  "Viv() -- encode files in new archive\n"
   "\n"
   "unvivtool "UVTVERS" "UVTCOPYRIGHT"\n"
 );
 
 PyDoc_STRVAR(
-  GetVivDirectory_path__doc__,
-  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
-  " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
+  GetFilesList__doc__,
+  " |  GetFilesList(path, verbose=False, direnlen=0, fnhex=False)\n"
+  " |      Returns list of filenames in archive.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
+  " |      path : str, os.PathLike object\n"
+  " |          Absolute or relative, path/to/archive.viv\n"
+  " |      verbose : bool, optional\n"
+  " |          Verbose output.\n"
+  " |      direnlen : int, optional\n"
+  " |          If >= 10, set as fixed archive directory entry length.\n"
+  " |      fnhex : bool, optional\n"
+  " |          If True, encode filenames to Base16/hexadecimal.\n"
+  " |          Use for non-printable filenames in archive. Keeps\n"
+  " |          leading/embedding null bytes.\n"
+  " |\n"
+  " |      Returns\n"
+  " |      -------\n"
+  " |      filenames : list\n"
+  " |          Will be an empty list if the directory has zero entries.\n"
+  " |\n"
+  " |      Raises\n"
+  " |      ------\n"
+  " |      FileNotFoundError\n"
+  " |          When 'path' cannot be opened.\n"
 );
 
 PyDoc_STRVAR(
-  unviv__doc__,
-  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
+  Unviv__doc__,
+  " |  Unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
   " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
   " |\n"
   " |      Parameters\n"
@@ -635,7 +656,7 @@ PyDoc_STRVAR(
   " |      fnhex : bool, optional\n"
   " |          If True, encode filenames to Base16/hexadecimal.\n"
   " |          Use for non-printable filenames in archive. Keeps\n"
-  " |          leading/embedding null bytes.\n"
+  " |          leading/embedded null bytes.\n"
   " |      dry : bool, optional\n"
   " |          If True, perform dry run: run all format checks and print\n"
   " |          archive contents, do not write to disk.\n"
@@ -654,6 +675,8 @@ PyDoc_STRVAR(
   " |      ------\n"
   " |      FileNotFoundError\n"
   " |          When 'viv' cannot be opened.\n"
+);
+#if 0
   " |\n"
   " |      Examples\n"
   " |      --------\n"
@@ -692,11 +715,11 @@ PyDoc_STRVAR(
   " |      Some archives may have broken headers. When detected, unvivtool\n"
   " |      will print warnings. Up to a certain point, such archives can\n"
   " |      still be extracted.\n"
-);
+#endif
 
 PyDoc_STRVAR(
-  viv__doc__,
-  " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", direnlen=0, fnhex=False)\n"
+  Viv__doc__,
+  " |  Viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", direnlen=0, fnhex=False)\n"
   " |      Encode files to new archive in BIGF, BIGH or BIG4 format.\n"
   " |      Skips given input paths that cannot be opened.\n"
   " |\n"
@@ -718,7 +741,7 @@ PyDoc_STRVAR(
   " |      fnhex : bool, optional\n"
   " |          If True, decode input filenames from Base16/hexadecimal.\n"
   " |          Use for non-printable filenames in archive. Keeps\n"
-  " |          leading/embedding null bytes.\n"
+  " |          leading/embedded null bytes.\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"
@@ -729,6 +752,8 @@ PyDoc_STRVAR(
   " |      ------\n"
   " |      FileNotFoundError\n"
   " |          When 'viv' cannot be created.\n"
+);
+#if 0
   " |\n"
   " |      Examples\n"
   " |      --------\n"
@@ -756,15 +781,15 @@ PyDoc_STRVAR(
   " |\n"
   " |      >>> unvivtool.viv(viv, infiles_paths, verbose=True)\n"
   " |      ...\n"
-);
+#endif
 
 /* -------------------------------------------------------------------------- */
 
 static
 PyMethodDef m_methods[] = {
-  {"GetVivDirectory_path", (PyCFunction)(void(*)(void))GetVivDirectory_path, METH_VARARGS | METH_KEYWORDS, GetVivDirectory_path__doc__},
-  {"unviv",  (PyCFunction)(void(*)(void))unviv, METH_VARARGS | METH_KEYWORDS, unviv__doc__},
-  {"viv",    (PyCFunction)(void(*)(void))viv, METH_VARARGS | METH_KEYWORDS, viv__doc__},
+  {"GetFilesList", (PyCFunction)(void(*)(void))GetFilesList, METH_VARARGS | METH_KEYWORDS, GetFilesList__doc__},
+  {"Unviv",  (PyCFunction)(void(*)(void))Unviv, METH_VARARGS | METH_KEYWORDS, Unviv__doc__},
+  {"Viv",    (PyCFunction)(void(*)(void))Viv, METH_VARARGS | METH_KEYWORDS, Viv__doc__},
   {NULL,     NULL}
 };
 

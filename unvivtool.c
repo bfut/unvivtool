@@ -142,6 +142,11 @@ void UVT_DEBUG_sanity()
 {
   assert(sizeof(VivDirEntr) == 16);
   assert(sizeof(VivDirectory) == 64);
+#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(__x86_64__)
+  assert(sizeof(LIBNFSVIV_CircBuf) == 24);
+#else
+  assert(sizeof(LIBNFSVIV_CircBuf) == 16);
+#endif
 }
 #endif
 

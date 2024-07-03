@@ -43,8 +43,8 @@ Fixed directory entry length and all format deviations, own research.
 __unvivtool License:__ GNU General Public License v3.0+<br/>
 __Website:__ <https://github.com/bfut/unvivtool>
 
-Third party license
+Third party licenses
 
 __UTF-8 Decoder dfa.h:__ MIT License<br/>
-__LIBNFSVIV_CircBuf libnfsviv.h:__ zlib License (portions copyright)<br/>
+__circular buffer libnfsviv.h:__ zlib License (portions copyright)<br/>
 __sclpython.h:__ zlib License
