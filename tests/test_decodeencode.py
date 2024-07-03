@@ -374,9 +374,11 @@ def test_tracemalloc1():
     print(flush = True)
     # tracemalloc -- END --------------------------------------
 
-    # macos   second_size=507913  second_peak=1843124
-    # ubuntu  second_size=245752  second_peak=284290
-    # windows second_size=578873  second_peak=1866884
+    # macos   second_size=164595 second_peak=205471
+    # ubuntu  second_size=245752 second_peak=284290
+    # windows second_size=615734 second_peak=1901992 Python 3.10
+    # windows second_size=425980 second_peak=1859260 Python 3.11
+    # windows second_size=333462 second_peak=1827646 Python 3.12
     assert second_size < 580000 and second_peak < 1870000
 
 if __name__ == "__main__":

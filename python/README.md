@@ -10,7 +10,7 @@ This file describes installation and usage of unvivtool as Python extension modu
 A ready to use decoder/encoder script can be found here: [https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py](https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py)
 
 ## Installation
-Requires Python 3.9+
+Requires Python 3.10+
 ```
 python -m pip install unvivtool
 ```
@@ -28,9 +28,16 @@ DESCRIPTION
     unviv() -- decode and extract VIV/BIG archive
     viv() -- encode files in new VIV/BIG archive
 
-    unvivtool 1.20 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 2.00 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
+    GetVivDirectory_path(...)
+        |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
+        |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
+        |
+        |      Parameters
+        |      ----------
+
     unviv(...)
         |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
         |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
@@ -172,4 +179,4 @@ FUNCTIONS
         |      ...
 
 VERSION
-    1.20
+    2.00

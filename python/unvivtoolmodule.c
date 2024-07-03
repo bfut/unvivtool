@@ -2,6 +2,8 @@
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
   unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 
+  Portions copyright, see each source file for more information.
+
   You may not redistribute this program without its source code.
   README.md may not be removed or altered from any unvivtool redistribution.
 
@@ -18,6 +20,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,8 +61,143 @@
 #define SCL_PY_PRINTF  /* native printf */
 #include "../include/SCL/sclpython.h"
 
+#define SCL_DEBUG 0
 #include "../libnfsviv.h"
-#define kUnvivtoolMaxPathLen kLibnfsvivFilenameMaxLen
+#define UVT_PY_MaxPathLen LIBNFSVIV_FilenameMaxLen
+
+/* 2.0 wrappers ----------------------------------------------------------------- */
+
+static
+PyObject *GetVivDirectory_path(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+  int retv;
+  PyObject *retv_obj = NULL;
+  char *viv_name = NULL;
+  PyObject *viv_name_obj = NULL;
+  int opt_verbose = 0;
+  int opt_direnlenfixed = 0;
+  int opt_filenameshex = 0;
+  VivDirectory viv_directory = {
+    {0}, 0, 0, 0,
+    0, 0,
+    0, 0, NULL, NULL,
+    {0}
+  };
+  char **filelist = NULL;
+  static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", NULL };
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|pip:GetVivDirectory_path",
+                                   (char **)keywords,
+                                   PyUnicode_FSConverter, &viv_name_obj,
+                                   &opt_verbose, &opt_direnlenfixed, &opt_filenameshex))
+  {
+    return NULL;
+  }
+
+  {
+    const char *viv_name_ = PyBytes_AsString(viv_name_obj);
+    if (!viv_name_)
+    {
+      PyErr_SetString(PyExc_TypeError, "Cannot convert str");
+      return NULL;
+    }
+    viv_name = (char *)malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, UVT_PY_MaxPathLen) * sizeof(*viv_name));
+    if (!viv_name)
+    {
+      PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+      return NULL;
+    }
+    memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
+    Py_DECREF(viv_name_obj);
+  }
+
+  if (opt_direnlenfixed != 0)
+  {
+    int temp_ = opt_direnlenfixed;
+    opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 0);
+    opt_direnlenfixed = LIBNFSVIV_min(opt_direnlenfixed, INT_MAX / 2);
+    if (temp_ != opt_direnlenfixed)
+      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, INT_MAX / 2);
+  }
+
+  const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
+
+  retv = !!LIBNFSVIV_GetVivDirectory(&viv_directory, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex);
+  SCL_printf("LIBNFSVIV_GetVivDirectory_FromPath: %d\n", retv);
+
+  if (retv == 1)
+  {
+    filelist = LIBNFSVIV_VivDirectoryToFileList(&viv_directory, viv_name, local_opt_filenameshex);
+    if (!filelist)
+    {
+      PyErr_SetString(PyExc_Exception, "Cannot get filelist");
+      retv = 0;
+    }
+    SCL_printf("LIBNFSVIV_VivDirectoryToFileList_FromPath: %d\n", retv);
+  }
+
+  for (;retv == 1;)
+  {
+    /* From (filelist != NULL) immediately follows (list_len > 0), see LIBNFSVIV_VivDirectoryToFileList_FromPath() */
+    int list_len = 0;
+
+#if defined(SCL_DEBUG) && SCL_DEBUG > 0
+    for (int i = 0; i < viv_directory.count_dir_entries_true && !!filelist[i]; ++i)
+      PySys_WriteStdout("File %d: %s\n", i, filelist[i]);
+#endif
+
+    /* Create list object */
+    while (!!filelist[list_len])
+      ++list_len;
+
+    retv_obj = PyList_New(list_len);
+    if (!retv_obj)
+    {
+      PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+      retv = 0;
+      break;
+    }
+    if (list_len == 0)  /* list of length zero */
+      break;
+
+    for (int i = 0; i < list_len; ++i)
+    {
+      PyObject *item_;
+      if (!local_opt_filenameshex)
+      {
+        item_ = PyUnicode_FromString(filelist[i]);
+      }
+      else  /* filenames as hex */
+      {
+        item_ = PyBytes_FromStringAndSize(filelist[i], viv_directory.buffer[i].filename_len_);
+      }
+
+      if (!item_)
+      {
+        PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+        retv = 0;
+        Py_DECREF(viv_name_obj);
+        break;
+      }
+      SCL_printf("item_: %p\n", item_);
+      PyList_SetItem(retv_obj, i, item_);
+    }
+
+    break;
+  }
+
+  if (!!filelist)
+  {
+    free(filelist[0]);
+    free(filelist);
+  }
+  if (viv_name)
+    free(viv_name);
+
+  if (!retv)
+    retv_obj = NULL;
+  return retv_obj;
+}
 
 /* wrappers ----------------------------------------------------------------- */
 
@@ -101,13 +239,13 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *viv_name_ = PyBytes_AsString(viv_name_obj);
     if (!viv_name_)
     {
-      PyErr_SetString(PyExc_TypeError, "cannot convert str");
+      PyErr_SetString(PyExc_TypeError, "Cannot convert str");
       return NULL;
     }
-    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, kUnvivtoolMaxPathLen) * sizeof(*viv_name));
+    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, UVT_PY_MaxPathLen) * sizeof(*viv_name));
     if (!viv_name)
     {
-      PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+      PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
       return NULL;
     }
     memcpy(viv_name, viv_name_, strlen(viv_name_) + 1);
@@ -120,13 +258,13 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       const char *outpath_ = PyBytes_AsString(outpath_obj);
       if (!outpath_)
       {
-        PyErr_SetString(PyExc_TypeError, "cannot convert str");
+        PyErr_SetString(PyExc_TypeError, "Cannot convert str");
         break;
       }
-      outpath = /* (char *) */malloc(LIBNFSVIV_max(strlen(outpath_) + 1, kUnvivtoolMaxPathLen) * sizeof(*outpath));
+      outpath = /* (char *) */malloc(LIBNFSVIV_max(strlen(outpath_) + 1, UVT_PY_MaxPathLen) * sizeof(*outpath));
       if (!outpath)
       {
-        PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+        PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
         break;
       }
       memcpy(outpath, outpath_, strlen(outpath_) + 1);
@@ -138,7 +276,7 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       request_file_name = PyBytes_AsString(request_file_name_obj);
       if (!request_file_name)
       {
-        PyErr_SetString(PyExc_TypeError, "cannot convert str");
+        PyErr_SetString(PyExc_TypeError, "Cannot convert str");
         break;
       }
     }
@@ -146,18 +284,18 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     fd = open(viv_name, O_RDONLY);
     if (fd == -1)
     {
-      PyErr_SetString(PyExc_FileNotFoundError, "cannot open viv: no such file or directory");
+      PyErr_SetString(PyExc_FileNotFoundError, "Cannot open viv: no such file or directory");
       break;
     }
     close(fd);
 
-    buf_cwd = /* (char *) */malloc(kUnvivtoolMaxPathLen + 64);
+    buf_cwd = /* (char *) */malloc(UVT_PY_MaxPathLen + 64);
     if (!buf_cwd)
     {
-      PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
+      PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
       break;
     }
-    if (!getcwd(buf_cwd, kUnvivtoolMaxPathLen + 64))
+    if (!getcwd(buf_cwd, UVT_PY_MaxPathLen + 64))
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
       break;
@@ -252,7 +390,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       PyErr_SetString(PyExc_TypeError, "cannot convert str");
       return NULL;
     }
-    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, kUnvivtoolMaxPathLen) * sizeof(*viv_name));
+    viv_name = /* (char *) */malloc(LIBNFSVIV_max(strlen(viv_name_) + 1, UVT_PY_MaxPathLen) * sizeof(*viv_name));
     if (!viv_name)
     {
       PyErr_SetString(PyExc_FileNotFoundError, "Cannot allocate memory");
@@ -468,6 +606,15 @@ PyDoc_STRVAR(
 );
 
 PyDoc_STRVAR(
+  GetVivDirectory_path__doc__,
+  " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
+  " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
+  " |\n"
+  " |      Parameters\n"
+  " |      ----------\n"
+);
+
+PyDoc_STRVAR(
   unviv__doc__,
   " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
   " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
@@ -615,6 +762,7 @@ PyDoc_STRVAR(
 
 static
 PyMethodDef m_methods[] = {
+  {"GetVivDirectory_path", (PyCFunction)(void(*)(void))GetVivDirectory_path, METH_VARARGS | METH_KEYWORDS, GetVivDirectory_path__doc__},
   {"unviv",  (PyCFunction)(void(*)(void))unviv, METH_VARARGS | METH_KEYWORDS, unviv__doc__},
   {"viv",    (PyCFunction)(void(*)(void))viv, METH_VARARGS | METH_KEYWORDS, viv__doc__},
   {NULL,     NULL}

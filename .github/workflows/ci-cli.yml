@@ -56,11 +56,6 @@ jobs:
         path: |
           ${{ env.DEST }}_${{ runner.os }}
           ${{ env.DEST }}_${{ runner.os }}_c++
-    # - run: |
-    #       brew tap LouisBrunner/valgrind
-    #       brew install --HEAD LouisBrunner/valgrind/valgrind
-    #       valgrind ${{ env.DEST }}_${{ runner.os }}
-    #       valgrind ${{ env.DEST }}_${{ runner.os }}_c++
 
   windows:
     runs-on: ${{ matrix.os }}

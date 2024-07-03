@@ -53,35 +53,33 @@ EXAMPLE 5
       Dry run of EXAMPLE 4, does not write to disk
 
 EXAMPLE 6
-      unvivtool d -dnl80 -fh -we archive.viv archive_viv
+      unvivtool d -dnl80 -x -we archive.viv archive_viv
 
       Real-world example of an archive where the archive header has a fixed
       directory length of 80 bytes (-dnl80). The supposed filenames are
       non-printable characters which are represented in  hexadecimal (base16)
-      on extraction to disk (-fh). The archive contains a large number of files
+      on extraction to disk (-x). The archive contains a large number of files
       that are expected in a specific order; the complete re-encoding command
       is written 'archive.viv.txt' (-we).
 ```
 
 ## Documentation
 ```
-Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
+Usage: unvivtool d [<options>...] <path/to/input.viv> <path/to/existing/output_directory>
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
        unvivtool <path/to/input.viv>
-       unvivtool <paths/to/input_files>...
 
 Commands:
-  d            Decode and extract files from VIV/BIG archive
-  e            Encode files in new VIV/BIG archive
+  d             Decode and extract files from VIV/BIG archive
+  e             Encode files in new VIV/BIG archive
 
 Options:
-  -aot         decoder Overwrite mode: auto rename existing file
-  -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)
-  -i<N>        decode file at 1-based Index <N>
-  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
-  -fh          decode/encode to/from Filenames in base16/Hexadecimal
-  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)
-  -p           Print archive contents, do not write to disk (dry run)
-  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v           print archive contents, Verbose
+  -dnl #        set fixed Directory eNtry Length (>= 10)
+  -i #          decode file at 1-based Index #
+  -f <name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
+  -fh           decode/encode to/from Filenames in Hexadecimal
+  -fmt <format> encode 'BIGF' (default), 'BIGH' or 'BIG4'
+  -p            Print archive contents, do not write to disk (dry run)
+  -we           Write re-Encode command to path/to/input.viv.txt (keep files in order)
+  -v            Verbose
 ```
