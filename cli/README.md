@@ -55,9 +55,9 @@ EXAMPLE 5
 EXAMPLE 6
       unvivtool d -dnl80 -x -we archive.viv archive_viv
 
-      Real-world example of an archive where the archive header has a fixed
+      Real-world example of an archive with an archive header of a fixed
       directory length of 80 bytes (-dnl80). The supposed filenames are
-      non-printable characters which are represented in  hexadecimal (base16)
+      non-printable characters that are represented in hexadecimal (base16)
       on extraction to disk (-x). The archive contains a large number of files
       that are expected in a specific order; the complete re-encoding command
       is written 'archive.viv.txt' (-we).
@@ -79,7 +79,7 @@ Options:
   -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)
   -i<N>        decode file at 1-based Index <N>
   -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
-  -x           decode/encode to/from Filenames in base16/Hexadecimal
+  -x           decode/encode to/from filenames in base16/heXadecimal
   -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)
   -p           Print archive contents, do not write to disk (dry run)
   -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)

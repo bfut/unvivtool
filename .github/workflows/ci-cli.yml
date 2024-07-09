@@ -3,13 +3,12 @@ name: ci-cli
 env:
   SRC: unvivtool.c
   DEST: unvivtool
-  BRANCHES: #-DUVTVUTF8
+  BRANCHES: #-DUVTUTF8
   GCCFLAGS: -fPIE -D_FORTIFY_SOURCE=2 -fstack-clash-protection -fstack-protector-strong -D_GNU_SOURCE
   CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
   CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
   GCCDEBUGFLAGS: -pedantic -Og -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
   CPPDEBUGFLAGS: -Og -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
-  MINGWFLAGS: -std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp
 
 on:
   push:
@@ -20,7 +19,7 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-latest
-    name: Ubuntu C89/C++ (Linux/Win32)
+    name: Ubuntu C89/C++
     steps:
     - uses: actions/checkout@v4
     - name: Compile
@@ -28,6 +27,8 @@ jobs:
       run: |
         gcc -std=c89 ${{ env.GCCFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }}
         g++ -std=c++17 ${{ env.CPPFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }}
+        clang -std=c89 ${{ env.GCCFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_clang" ${{ env.GCCDEBUGFLAGS }} ${{ env.BRANCHES }} -Wno-embedded-directive
+        clang++ -std=c++17 ${{ env.CPPFLAGS }} "${{ env.SRC }}" -o "${{ env.DEST }}_clang_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }} -Wno-embedded-directive
         ls -lg
 
     - name: Store executables
@@ -37,6 +38,8 @@ jobs:
         path: |
           ${{ env.DEST }}
           ${{ env.DEST }}_c++
+          ${{ env.DEST }}_clang
+          ${{ env.DEST }}_clang_c++
 
   macos:
     runs-on: macos-latest

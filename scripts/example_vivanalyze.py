@@ -18,10 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import argparse
-import os
 import pathlib
-import re
-import time
 
 import unvivtool as uvt
 
@@ -30,7 +27,6 @@ CONFIG = {
     "opt_direnlenfixed" : 0,
     "opt_overwrite" : 1,
 }
-
 
 def main():
     # Parse command (or print module help)
@@ -41,13 +37,27 @@ def main():
 
     print(f"inpath: '{inpath}'")
 
-    ret = uvt.GetFileList(inpath, verbose=True)
-    retx = uvt.GetFileList(inpath, verbose=True, fnhex=True)
+    ret = None
+    retx = None
+    retLEN = None
+    ret = uvt.GetInfo(inpath)
+    # ret = uvt.GetInfo(inpath, verbose=True)
+    retx = uvt.GetInfo(inpath, fnhex=True)
+    # retx = uvt.GetInfo(inpath, fnhex=True, verbose=True)
+    retLEN = uvt.GetInfo(inpath, direnlen=80)
+    # retLEN = uvt.GetInfo(inpath, direnlen=80, verbose=True)
+    print("ret", "retx", "retLEN")
     print(ret)
     print(retx)
-
-    ret = uvt.GetFileList(inpath, direnlen=80)
-    print(ret)
+    print(retLEN)
+    print("ret", "retx", "retLEN")
+    if ret is not None: print(len(ret.get("files", [])))
+    if retx is not None: print(len(retx.get("files", [])))
+    if retLEN is not None: print(len(retLEN.get("files", [])))
+    print("ret", "retx", "retLEN")
+    if ret is not None: print(ret["format"])
+    if retx is not None: print(retx["format"])
+    if retLEN is not None: print(retLEN["format"])
 
 
 if __name__ == "__main__":

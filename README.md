@@ -17,17 +17,18 @@ Developers can drop-in and use, the encoder/decoder and some data analysis funct
 * drag-and-drop mode for command-line interface
 * encode files in specified order
 * full UTF8 support
-* auto-rename duplicated filenames
+* option: auto-rename duplicated filenames on decode
 * option: retrieve a single file from archive (by index or filename)
 * option: list archive contents without writing to disk (dry run)
 * option: support non-printable filenames in archive (Base16 representation)
 * option: decode/encode with set fixed directory entry length
-* compatible with Windows 98 and later
-* memory usage typically peaks at ~45 kB; worst case ~25 MB
+* Win98 compatibility
+* memory usage typically peaks below 20 kB even for large archives; worst case ~25 MB
 
 ## File format
 The supported formats are called ``BIGF``, ``BIGH``, and ``BIG4`` (equals first 4 bytes).<br/>
-Typical file extensions are ``.VIV`` and ``.BIG``.
+Typical file extensions are ``.VIV`` and ``.BIG``.<br/>
+Archives can be arbitrarily large and can contain arbitrarily many entries.
 
 ## Installation / Documentation
 Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>
@@ -35,7 +36,7 @@ Python extension module: [/python/README.md](/python/README.md)
 
 ## References
 The canonical BIGF format description was taken from [1].
-Fixed directory entry length and all format deviations, own research.
+Fixed directory entry length and format deviations, own work.
 
 [1] D. Auroux et al. [_The unofficial Need For Speed III file format specifications - Version 1.0_](/references/unofficial_nfs3_file_specs_10.txt) [1998]
 

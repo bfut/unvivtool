@@ -57,18 +57,7 @@ if platform.python_implementation() != "PyPy" and __name__ != "__main__":
     tracemalloc.start(2)
     # tracemalloc -- END --------------------------------------
 
-# Look for local build, if not installed
-try:
-    import unvivtool as uvt
-except ModuleNotFoundError:
-    import sys
-    PATH = pathlib.Path(pathlib.Path(__file__).parent / "../python/build")
-    print(PATH)
-    for x in PATH.glob("**"):
-        sys.path.append(str(x.resolve()))
-    del PATH
-
-    import unvivtool as uvt
+import unvivtool as uvt
 
 if platform.python_implementation() != "PyPy" and __name__ != "__main__":
     # tracemalloc -- BEGIN ------------------------------------

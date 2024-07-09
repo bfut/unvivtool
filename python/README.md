@@ -18,20 +18,21 @@ python -m pip install unvivtool
 Help on module unvivtool:
 
 NAME
-    unvivtool - simple BIGF BIGH BIG4 decoder/encoder (widely known as VIV/BIG)
+    unvivtool - simple BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)
 
 DESCRIPTION
     Functions
     ---------
+    GetInfo() -- get archive header and filenames
     Unviv() -- decode and extract archive
     Viv() -- encode files in new archive
 
     unvivtool 2.0 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
-    GetFilesList(...)
-        |  GetFilesList(path, verbose=False, direnlen=0, fnhex=False)
-        |      Returns list of filenames in archive.
+    GetInfo(...)
+        |  GetInfo(path, verbose=False, direnlen=0, fnhex=False)
+        |      Return dictionary of archive header info and list of filenames.
         |
         |      Parameters
         |      ----------
@@ -42,14 +43,14 @@ FUNCTIONS
         |      direnlen : int, optional
         |          If >= 10, set as fixed archive directory entry length.
         |      fnhex : bool, optional
-        |          If True, encode filenames to Base16/hexadecimal.
+        |          If True, interpret filenames as Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
         |          leading/embedding null bytes.
         |
         |      Returns
         |      -------
-        |      filenames : list
-        |          Will be an empty list if the directory has zero entries.
+        |      filenames : dictionary
+        |          Filename list will be empty if the directory has zero valid entries.
         |
         |      Raises
         |      ------
@@ -74,7 +75,7 @@ FUNCTIONS
         |          Extract file 'filename' (cAse-sEnsitivE) from archive.
         |          Overrides the fileidx parameter.
         |      fnhex : bool, optional
-        |          If True, encode filenames to Base16/hexadecimal.
+        |          If True, interpret filenames as Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
         |          leading/embedded null bytes.
         |      dry : bool, optional

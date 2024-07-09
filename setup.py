@@ -1,5 +1,7 @@
 # unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
 #
+# Portions copyright, see each source file for more information.
+#
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
 #
@@ -45,6 +47,7 @@ if "PYMEM_MALLOC" in os.environ:
 if platform.system() == "Windows":
     extra_compile_args += [
         ("/wd4267"),  # prevents warnings on conversion from size_t to int
+        ("/wd4996"),  # prevents warnings on fopen() and other POSIX functions
         ("/std:c++latest"), ("/Zc:__cplusplus"),  # sets __cplusplus
     ]
 else:
@@ -52,6 +55,7 @@ else:
         # debug
         # ("-g"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
+
         ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden
         ("-Wformat-security"),
         ("-Wdeprecated-declarations"),
@@ -76,7 +80,7 @@ else:
             ("-Wwrite-strings"),  # ("-Wno-discarded-qualifiers"),
 
             # # https://developers.redhat.com/blog/2018/03/21/compiler-and-linker-flags-gcc
-            ("-D_GNU_SOURCE"),
+            ("-D_GNU_SOURCE"),  # realpath()
             ("-D_FORTIFY_SOURCE=2"),
             # ("-D_GLIBCXX_ASSERTIONS"),
             # ("-fexceptions"),  # C++ exceptions
@@ -94,6 +98,7 @@ else:
         extra_compile_args += [
             # ("-Weverything"),
             ("-Wno-braced-scalar-init"),
+            ("-Wno-embedded-directive"),
             # ("-Wno-newline-eof"),
 
             ("-D_GNU_SOURCE"),
@@ -105,7 +110,8 @@ ext_modules = [
         sources=sorted(["./python/unvivtoolmodule.c"]),
         define_macros=[
             ("VERSION_INFO", __version__),
-            ("UVTVERBOSE", os.environ.get("UVTVERBOSE", 0)),  # 0 if key not set
+            # ("SCL_DEVMODE", os.environ.get("SCL_DEVMODE", 0)),  # 0 if key not set
+            # ("SCL_DEBUG", os.environ.get("SCL_DEBUG", 0)),  # 0 if key not set
             # defined in unvivtoolmodule.c # ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
         ],
         extra_compile_args=extra_compile_args,
@@ -118,7 +124,7 @@ setuptools.setup(
     author="Benjamin Futasz",
     url="https://github.com/bfut/unvivtool",
     license="GPLv3+",
-    description="VIV/BIG decoder/encoder",
+    description="simple BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)",
     long_description=long_description,
     long_description_content_type="text/markdown",
     ext_modules=ext_modules,

@@ -34,7 +34,7 @@
 #define SCL_DEBUG 0
 #include "./libnfsviv.h"
 
-#if defined(SCL_DEBUG) && SCL_DEBUG > 0
+#if SCL_DEBUG > 0
 #include <assert.h>
 #endif
 
@@ -55,7 +55,7 @@ void Usage(void)
          "  -dnl<N>      decode/encode, set fixed Directory eNtry Length (<N> >= 10)\n"
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
-         "  -x           decode/encode to/from Filenames in base16/Hexadecimal\n"
+         "  -x           decode/encode to/from filenames in base16/heXadecimal\n"
          "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)\n"
          "  -p           Print archive contents, do not write to disk (dry run)\n");
   printf("  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
@@ -136,7 +136,7 @@ void UVT_RemoveWENCFile(const char *viv_name)
   remove(buf_);
 }
 
-#if defined(SCL_DEBUG) && SCL_DEBUG > 0
+#if SCL_DEBUG > 0
 static
 void UVT_DEBUG_sanity()
 {
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
   int opt_overwrite = 0;
   int i;
 
-  #if defined(SCL_DEBUG) && SCL_DEBUG > 0
+  #if SCL_DEBUG > 0
   UVT_DEBUG_sanity();
   #endif
 
@@ -177,7 +177,7 @@ int main(int argc, char **argv)
   #ifndef UVTUTF8
          "|no-UTF8"
   #endif
-  #if defined(SCL_DEBUG) && SCL_DEBUG > 0
+  #if SCL_DEBUG > 0
          "|debug"
   #endif
          "\n\n");
@@ -201,7 +201,7 @@ int main(int argc, char **argv)
       needs infiles_paths
       gets viv_name from argv[1] with appended extension ".viv"
     no options
-   */
+  */
   if (strlen(argv[1]) > 1)
   {
     memcpy(viv_name, argv[1], LIBNFSVIV_min(strlen(argv[1]) + 1, sizeof(viv_name) - 6));  /* leave 5 bytes for ".viv" */
@@ -267,7 +267,7 @@ int main(int argc, char **argv)
     /* Decode: get output directory */
     if (retv == 0 && argv[1][0] == 'd')
     {
-      out_dir = (char *)calloc(LIBNFSVIV_FilenameMaxLen * sizeof(*out_dir), 1);
+      out_dir = (char *)malloc(LIBNFSVIV_FilenameMaxLen * sizeof(*out_dir));
       if (!out_dir)  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
       else
       {
@@ -275,7 +275,7 @@ int main(int argc, char **argv)
         {
           if (argv[i][0] != '-' && strcmp(argv[i], viv_name))
           {
-            memcpy(out_dir, argv[i], LIBNFSVIV_min(strlen(argv[i]), LIBNFSVIV_FilenameMaxLen - 1));
+            memcpy(out_dir, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, LIBNFSVIV_FilenameMaxLen));
             break;
           }
         }
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
     }  /* if 'e' */
 
     /** Get options
-     */
+    */
     for (i = 2; i < argc && retv == 0; ++i)
     {
       if (argv[i][0] == '-')
@@ -319,12 +319,9 @@ int main(int argc, char **argv)
           if (sz > 4 && !strncmp(argv[i], "-dnl", 4))  /* fixed directory length (clamped) */
           {
             ptr += 4;
-            opt_direnlenfixed = LIBNFSVIV_clamp(strtol(ptr, NULL, 10), 0, LIBNFSVIV_BufferSize + 16 - 1 /* INT_MAX / 100 */);
-            if (opt_direnlenfixed > 0)
-            {
-              opt_direnlenfixed = LIBNFSVIV_max(opt_direnlenfixed, 10);
-              printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1 /* INT_MAX / 100 */);
-            }
+            opt_direnlenfixed = (int)strtol(ptr, NULL, 10);
+            if (opt_direnlenfixed != 0)
+              opt_direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt_direnlenfixed, 1);
           }
           else if (/* sz > 2 && */ !request_file_name && !strncmp(argv[i], "-i", 2))
           {
@@ -378,13 +375,14 @@ int main(int argc, char **argv)
     UVT_CreateWENCFile(&retv, argc, argv, viv_name);
 
   /** Decoder
-   */
+  */
   if (retv == 0 && out_dir)
   {
     if (!LIBNFSVIV_Unviv(viv_name, out_dir,
                          request_file_idx, request_file_name,
                          opt_dryrun, opt_printlvl, opt_direnlenfixed,
-                         opt_filenameshex, opt_wenccommand, opt_overwrite))
+                         LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed),
+                         opt_wenccommand, opt_overwrite))
     {
       printf("Decoder failed.\n");
       retv = -1;
@@ -396,13 +394,14 @@ int main(int argc, char **argv)
   }
 
   /** Encoder
-   */
+  */
   else if (retv == 0 && infiles_paths)
   {
     if (!LIBNFSVIV_Viv(viv_name,
                        infiles_paths, count_infiles,
                        opt_dryrun, opt_printlvl, opt_direnlenfixed,
-                       opt_filenameshex, opt_requestfmt))
+                       LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed),
+                       opt_requestfmt))
     {
       printf("Encoder failed.\n");
       retv = -1;
@@ -411,8 +410,7 @@ int main(int argc, char **argv)
       printf("Encoder successful.\n");
   }
 
-  /** Print usage
-   */
+  /* Print usage */
   else if (retv == 0)
   {
     Usage();
