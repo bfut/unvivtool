@@ -99,7 +99,7 @@ char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
     return NULL;
   }
   memcpy(dest, p, len);
-  dest[len - 1] = '\0';  /* guarantee nul-termination */
+  dest[len - 1] = '\0';
   return dest;
 }
 
@@ -329,6 +329,55 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     SCL_printf("UVT retv: %d before PyDict_SetItemString\n", retv);
     retv &= 0 == PyDict_SetItemString(retv_obj, "files", list_);
     SCL_printf("UVT retv: %d after PyDict_SetItemString\n", retv);
+
+
+
+    {
+      PyObject *list_offset = PyList_New(list_len);
+      PyObject *list_filesize = PyList_New(list_len);
+      PyObject *list_fn_len_ = PyList_New(list_len);
+      PyObject *list_fn_ofs_ = PyList_New(list_len);
+      PyObject *list_validity = PyList_New(list_len);
+      if (!list_offset || !list_filesize || !list_fn_len_ || !list_fn_ofs_ || !list_validity)
+      {
+        PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+        retv = 0;
+      }
+      for (int i = 0; i < list_len && (retv); ++i)
+      {
+        PyObject *tmp1 = Py_BuildValue("i", vd.buffer[i].offset);
+        PyObject *tmp2 = Py_BuildValue("i", vd.buffer[i].filesize);
+        PyObject *tmp3 = Py_BuildValue("i", vd.buffer[i].filename_len_);
+        PyObject *tmp4 = Py_BuildValue("i", vd.buffer[i].filename_ofs_);
+        PyObject *tmp5 = Py_BuildValue("i", LIBNFSVIV_GetBitmapValue(vd.validity_bitmap, i));
+        if (!tmp1 || !tmp2 || !tmp3 || !tmp4 || !tmp5)
+        {
+          PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+          retv = 0;
+          break;
+        }
+        retv &= 0 == PyList_SetItem(list_offset, i, tmp1);
+        retv &= 0 == PyList_SetItem(list_filesize, i, tmp2);
+        retv &= 0 == PyList_SetItem(list_fn_len_, i, tmp3);
+        retv &= 0 == PyList_SetItem(list_fn_ofs_, i, tmp4);
+        retv &= 0 == PyList_SetItem(list_validity, i, tmp5);
+      }  /* for i */
+      retv &= 0 == PyDict_SetItemString(retv_obj, "files_offsets", list_offset);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "files_sizes", list_filesize);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_lens", list_fn_len_);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_ofs", list_fn_ofs_);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "validity_bitmap", list_validity);
+
+      if (!retv)
+      {
+        Py_XDECREF(list_offset);
+        Py_XDECREF(list_filesize);
+        Py_XDECREF(list_fn_len_);
+        Py_XDECREF(list_fn_ofs_);
+        Py_XDECREF(list_validity);
+      }
+    }
+
     break;
   }  /* for (;;) */
 
