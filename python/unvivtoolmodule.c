@@ -305,7 +305,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
         if (LIBNFSVIV_IsUTF8String(filelist[i], vd.buffer[i].filename_len_, 0) == vd.buffer[i].filename_len_)
         {
           // item_ = PyUnicode_FromString(filelist[i]);
-          item_ = PyBytes_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
+          item_ = PyUnicode_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
         }
         else
           item_ = Py_NewRef(Py_None);

@@ -58,8 +58,8 @@ else:
     extra_compile_args += [
         # debug
         # ("-std=c23"),
-        ("-g"),
-        ("-Og"),
+        # ("-g"),
+        # ("-Og"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
 
         ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden

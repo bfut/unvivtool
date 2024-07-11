@@ -1580,7 +1580,7 @@ int LIBNFSVIV_GetVivDir(VivDirectory *vd,
     }
 
     SCL_printf("  Read initial chunk\n");
-    if (viv_filesize - (int)ftell(file) >= 10 && LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf)) < opt_direnlenfixed)
+    if (viv_filesize - (int)ftell(file) >= 10 && LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf) - 4) < opt_direnlenfixed)
     {
       fprintf(stderr, "GetVivDir: File read error at %d\n", vd->viv_hdr_size_true);
       return 0;
@@ -1604,6 +1604,7 @@ int LIBNFSVIV_GetVivDir(VivDirectory *vd,
         }
 
         lefttoread = LIBNFSVIV_CircBuf_lefttoread(&cbuf);
+        lefttoread = lefttoread > 0 ? lefttoread : (int)sizeof(buf);
       }
 
       /* Get next entry */
