@@ -60,7 +60,7 @@ EXAMPLE 6
       non-printable characters that are represented in hexadecimal (base16)
       on extraction to disk (-x). The archive contains a large number of files
       that are expected in a specific order; the complete re-encoding command
-      is written 'archive.viv.txt' (-we).
+      is written to 'archive.viv.txt' (-we).
 ```
 
 ## Documentation

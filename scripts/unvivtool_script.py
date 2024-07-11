@@ -56,7 +56,7 @@ def main():
     parser.add_argument("cmd", nargs="+", help= "<path/to/file>, <path/to/folder>, i <path/to/file>")
     args = parser.parse_args()
     inpath = pathlib.Path(args.cmd[0])
-    
+
     print(f"inpath: '{inpath}'")
 
 
@@ -70,7 +70,7 @@ def main():
             outdir = inpath.parent / (inpath.stem + "_" + inpath.suffix[1:])
 
         ptn = time.process_time_ns()
-        if uvt.Unviv(str(inpath), str(outdir), direnlen=CONFIG["opt_direnlenfixed"], overwrite=CONFIG["opt_overwrite"]):  # extract all files in archive "inpath"
+        if uvt.unviv(str(inpath), str(outdir), direnlen=CONFIG["opt_direnlenfixed"], overwrite=CONFIG["opt_overwrite"]):  # extract all files in archive "inpath"
             print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
 
 
@@ -96,7 +96,7 @@ def main():
         infiles = sorted(infiles)
         print(infiles)
         ptn = time.process_time_ns()
-        if uvt.Viv(str(vivfile), infiles, format=CONFIG["opt_requestfmt"], direnlen=CONFIG["opt_direnlenfixed"]):  # encode all files in path/to/infiles
+        if uvt.viv(str(vivfile), infiles, format=CONFIG["opt_requestfmt"], direnlen=CONFIG["opt_direnlenfixed"]):  # encode all files in path/to/infiles
             print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
 
 
@@ -112,7 +112,7 @@ def main():
         if not vivfile.is_file():
             raise FileExistsError(f"{vivfile}")
         ptn = time.process_time_ns()
-        if uvt.Unviv(str(vivfile), dir=".", direnlen=CONFIG["opt_direnlenfixed"], dry=True, overwrite=CONFIG["opt_overwrite"]):
+        if uvt.unviv(str(vivfile), dir=".", direnlen=CONFIG["opt_direnlenfixed"], dry=True, overwrite=CONFIG["opt_overwrite"]):
             print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
 
 

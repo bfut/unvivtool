@@ -110,22 +110,22 @@ if platform.python_implementation() != "PyPy" and __name__ != "__main__":
 
 def test_decode1():
     print("Expected result: extract all, return 1")
-    retv = uvt.Unviv(invivfile, outdir, verbose=1)
+    retv = uvt.unviv(invivfile, outdir, verbose=1)
     assert retv == 1
 
 def test_decode2():
     print("Expected result: extract LICENSE, return 1")
-    retv = uvt.Unviv(invivfile, outdir, fileidx=0, filename=request_filename, verbose=1, dry=False)
+    retv = uvt.unviv(invivfile, outdir, fileidx=0, filename=request_filename, verbose=1, dry=False)
     assert retv == 1
 
 def test_decode3():
     print("Expected result: extract file at index 2, return 1")
-    retv = uvt.Unviv(invivfile, outdir, fileidx=request_fileid, verbose=True)
+    retv = uvt.unviv(invivfile, outdir, fileidx=request_fileid, verbose=True)
     assert retv == 1
 
 def test_decode4():
     print("Expected result: extract LICENSE, return 1")
-    retv = uvt.Unviv(invivfile, outdir, fileidx=request_fileid, filename=request_filename, verbose=1)
+    retv = uvt.unviv(invivfile, outdir, fileidx=request_fileid, filename=request_filename, verbose=1)
     assert retv == 1
 
 def test_decode5():
@@ -134,45 +134,45 @@ def test_decode5():
         os.rmdir(outdir / "not_a_dir")
     except FileNotFoundError:
         pass
-    retv = uvt.Unviv(invivfile, outdir / "not_a_dir", verbose=1)
+    retv = uvt.unviv(invivfile, outdir / "not_a_dir", verbose=1)
     assert retv == 1
 
 def test_decode6():
     print("Expected result: extract LICENSE, return 1")
-    retv = uvt.Unviv(invivfile, outdir, filename=request_filename, verbose=1)
+    retv = uvt.unviv(invivfile, outdir, filename=request_filename, verbose=1)
     assert retv == 1
 
 def test_decode7():
     print("Expected result: extract file at index 2, return 1")
-    retv = uvt.Unviv(invivfile, outdir, fileidx=request_fileid, verbose=1)
+    retv = uvt.unviv(invivfile, outdir, fileidx=request_fileid, verbose=1)
     assert retv == 1
 
 @pytest.mark.xfail(sys.platform.startswith("win"),
                    reason="encoding issues on Windows...")
 def test_decode8():
-    retv = uvt.Unviv(script_path / "in/@二.viv", outdir, verbose=1, filename=request_filename)
+    retv = uvt.unviv(script_path / "in/@二.viv", outdir, verbose=1, filename=request_filename)
     assert retv == 1
 
 def test_decode9():
-    print('Test9: uvt.Unviv(invivfile, outdir, keyword="ß二")'.encode())
+    print('Test9: uvt.unviv(invivfile, outdir, keyword="ß二")'.encode())
     print("Expected result: cannot find requested file, return 0")
-    retv = uvt.Unviv(invivfile, outdir, filename="ß二", verbose=1)
+    retv = uvt.unviv(invivfile, outdir, filename="ß二", verbose=1)
     assert retv == 0
 
 def test_decode10():
-    print('Test10: uvt.Unviv("öäü", None)')
+    print('Test10: uvt.unviv("öäü", None)')
     print("Expected result: TypeError")
     try:
-        uvt.Unviv("öäü", None)
+        uvt.unviv("öäü", None)
         assert False
     except TypeError as e:
         print("TypeError:", e)
 
 def test_decode11():
-    print('Test11: uvt.Unviv("foo", None)')
+    print('Test11: uvt.unviv("foo", None)')
     print("Expected result: TypeError")
     try:
-        uvt.Unviv("foo", None)
+        uvt.unviv("foo", None)
         assert False
     except TypeError as e:
         print("TypeError:", e)
@@ -183,7 +183,7 @@ def test_encode1():
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]  # (7+1) + (14+1) = 23
     for path in infiles:
         assert pathlib.Path(path).is_file()
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode2():
@@ -194,14 +194,14 @@ def test_encode2():
     infiles = [str(script_path / path) for path in infiles]
     for path in infiles:
         assert pathlib.Path(path).exists() or pathlib.Path(path).stem == "invalid_path"
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode3():
     print("Test3: infiles = []")
     vivfile = script_path / ".out/car_out_encode3.viv"
     infiles = []
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and len(vivfile.read_bytes()) == 0
 
 def test_encode4():
@@ -212,7 +212,7 @@ def test_encode4():
     infiles = [infiles, infiles]
     assert isinstance(infiles, list)
     try:
-        uvt.Viv(vivfile, infiles)
+        uvt.viv(vivfile, infiles)
         assert False
     except TypeError as e:
         print("TypeError:", e)
@@ -228,7 +228,7 @@ def test_encode5():
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]
     for path in infiles:
         assert pathlib.Path(path).is_file()
-    retv = uvt.Viv(vivfile, infiles, verbose=True)
+    retv = uvt.viv(vivfile, infiles, verbose=True)
     assert retv == 1 and vivfile.exists()
 
 def test_encode6():
@@ -238,7 +238,7 @@ def test_encode6():
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml"), str(script_path / "in/") ]
     for path in infiles:
         assert pathlib.Path(path).is_file() or pathlib.Path(path).is_dir()
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode7():
@@ -248,7 +248,7 @@ def test_encode7():
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml"), str(script_path / "./") ]
     for path in infiles:
         assert pathlib.Path(path).is_file() or pathlib.Path(path).is_dir()
-    retv = uvt.Viv(vivfile, infiles, verbose=True)
+    retv = uvt.viv(vivfile, infiles, verbose=True)
     assert retv == 1 and vivfile.exists()
 
 def test_encode8():
@@ -259,7 +259,7 @@ def test_encode8():
     infiles = [str(script_path / path) for path in infiles]
     for path in infiles:
         assert pathlib.Path(path).is_file()
-    retv = uvt.Viv(vivfile, infiles, verbose=True)
+    retv = uvt.viv(vivfile, infiles, verbose=True)
     assert retv == 1 and vivfile.exists()
 
 def test_encode9():
@@ -267,7 +267,7 @@ def test_encode9():
     infiles = ( "in/LICENSE", "in/pyproject.toml" )
     assert isinstance(infiles, tuple)
     try:
-        uvt.Viv(vivfile, infiles)
+        uvt.viv(vivfile, infiles)
         assert False
     except TypeError as e:
         print("TypeError:", e)
@@ -278,7 +278,7 @@ def test_encode10():
     vivfile = script_path / ".out/car_out_encode10.viv"
     infiles = None
     try:
-        uvt.Viv(vivfile, infiles)
+        uvt.viv(vivfile, infiles)
         assert False
     except TypeError as e:
         print("TypeError:", e)
@@ -289,7 +289,7 @@ def test_encode11():
     vivfile = None
     infiles = [ "in/LICENSE", "in/pyproject.toml" ]
     try:
-        uvt.Viv(vivfile, infiles)
+        uvt.viv(vivfile, infiles)
         assert False
     except TypeError as e:
         print("TypeError:", e)
@@ -302,7 +302,7 @@ def test_encode12():
     print(infiles)
     for path in infiles:
         assert not pathlib.Path(path).exists()
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode13():
@@ -311,40 +311,40 @@ def test_encode13():
     print(infiles)
     for path in infiles:
         assert not pathlib.Path(path).exists()
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode14():
     vivfile = script_path / ".out/car_out_encode14.viv"
     infiles = [ "invalid_path", "invalid_path", "invalid_path" ]
     print(script_path, infiles)
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode15():
     vivfile = script_path / ".out/car_out_encode15.viv"
     infiles = [ "in/LICENSE", "in/pyproject.toml", "invalid_path" ]  # notice file-ending
     print(script_path, infiles)
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
 
 def test_encode16():
     vivfile = script_path / ".out/car_out_encode16.viv"
     infiles = [ "in/LICENSE", "in/pyproject.toml", ]
     print(script_path, infiles)
-    retv = uvt.Viv(vivfile, infiles, verbose=1, dry=0)
+    retv = uvt.viv(vivfile, infiles, verbose=1, dry=0)
     assert retv == 1 and vivfile.exists()
 
 def test_encode17():
-    """uvt.Viv() overwrite existing file"""
+    """uvt.viv() overwrite existing file"""
     vivfile = script_path / ".out/car_out_encode17.viv"
     infiles = [ "invalid" ]
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) == 16
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]
     for path in infiles:
         assert pathlib.Path(path).is_file()
-    retv = uvt.Viv(vivfile, infiles, verbose=1)
+    retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
 
 

@@ -40,12 +40,12 @@ def main():
     ret = None
     retx = None
     retLEN = None
-    ret = uvt.GetInfo(inpath)
-    # ret = uvt.GetInfo(inpath, verbose=True)
-    retx = uvt.GetInfo(inpath, fnhex=True)
-    # retx = uvt.GetInfo(inpath, fnhex=True, verbose=True)
-    retLEN = uvt.GetInfo(inpath, direnlen=80)
-    # retLEN = uvt.GetInfo(inpath, direnlen=80, verbose=True)
+    ret = uvt.get_info(inpath)
+    # ret = uvt.get_info(inpath, verbose=True)
+    retx = uvt.get_info(inpath, fnhex=True)
+    # retx = uvt.get_info(inpath, fnhex=True, verbose=True)
+    retLEN = uvt.get_info(inpath, direnlen=80)
+    # retLEN = uvt.get_info(inpath, direnlen=80, verbose=True)
     print("ret", "retx", "retLEN")
     print(ret)
     print(retx)

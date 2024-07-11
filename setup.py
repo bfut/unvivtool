@@ -40,6 +40,10 @@ print(f"VERSION_INFO={__version__}")
 
 long_description = (SCRIPT_PATH / "./python/README.md").read_text(encoding="utf-8")
 
+# os.environ["CC"] = "gcc"
+# os.environ["CC"] = "clang"
+os.environ["PYMEM_MALLOC"] = ""
+
 extra_compile_args = []
 if "PYMEM_MALLOC" in os.environ:
     print(f'PYMEM_MALLOC={os.environ["PYMEM_MALLOC"]}')
@@ -53,7 +57,9 @@ if platform.system() == "Windows":
 else:
     extra_compile_args += [
         # debug
-        # ("-g"),
+        # ("-std=c23"),
+        ("-g"),
+        ("-Og"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
 
         ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden

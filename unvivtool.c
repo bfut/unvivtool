@@ -136,20 +136,6 @@ void UVT_RemoveWENCFile(const char *viv_name)
   remove(buf_);
 }
 
-#if SCL_DEBUG > 0
-static
-void UVT_DEBUG_sanity()
-{
-  assert(sizeof(VivDirEntr) == 16);
-  assert(sizeof(VivDirectory) == 64);
-#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(__x86_64__)
-  assert(sizeof(LIBNFSVIV_CircBuf) == 24);
-#else
-  assert(sizeof(LIBNFSVIV_CircBuf) == 16);
-#endif
-}
-#endif
-
 int main(int argc, char **argv)
 {
   int retv = 0;
@@ -162,18 +148,25 @@ int main(int argc, char **argv)
   int request_file_idx = 0;
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
-  char opt_requestfmt[5] = "BIGF";  /* viv() only */
+  char opt_requestfmt[5] = "BIGF";  /* Viv() only */
   int opt_dryrun = 0;
   int opt_wenccommand = 0;
   int opt_printlvl = 0;
   int opt_overwrite = 0;
   int i;
 
-  #if SCL_DEBUG > 0
-  UVT_DEBUG_sanity();
-  #endif
+  SCL_assert(sizeof(VivDirEntr) == 16);
+  SCL_assert(sizeof(VivDirectory) == 64);
+#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(__x86_64__)
+  SCL_assert(sizeof(LIBNFSVIV_CircBuf) == 24);
+#else
+  SCL_assert(sizeof(LIBNFSVIV_CircBuf) == 16);
+#endif
 
-  printf("unvivtool " UVTVERS " - " UVTCOPYRIGHT
+  printf("unvivtool " UVTVERS " - " UVTCOPYRIGHT " "
+  #ifdef __cplusplus
+         "|C++"
+  #endif
   #ifndef UVTUTF8
          "|no-UTF8"
   #endif
@@ -207,7 +200,7 @@ int main(int argc, char **argv)
     memcpy(viv_name, argv[1], LIBNFSVIV_min(strlen(argv[1]) + 1, sizeof(viv_name) - 6));  /* leave 5 bytes for ".viv" */
     viv_name[sizeof(viv_name) - 6] = '\0';
 
-    if (/* LIBNFSVIV_IsFile(viv_name) && */ LIBNFSVIV_GetVivVersion(viv_name) > 0)  /* decoder */
+    if (/* LIBNFSVIV_IsFile(viv_name) && */ LIBNFSVIV_GetVivVersion_FromPath(viv_name) > 0)  /* decoder */
     {
       out_dir = (char *)calloc(LIBNFSVIV_FilenameMaxLen * sizeof(*out_dir), 1);
       if (!out_dir)

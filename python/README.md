@@ -23,15 +23,15 @@ NAME
 DESCRIPTION
     Functions
     ---------
-    GetInfo() -- get archive header and filenames
-    Unviv() -- decode and extract archive
-    Viv() -- encode files in new archive
+    get_info() -- get archive header and filenames
+    unviv() -- decode and extract archive
+    viv() -- encode files in new archive
 
-    unvivtool 2.0 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 2.1 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
-    GetInfo(...)
-        |  GetInfo(path, verbose=False, direnlen=0, fnhex=False)
+    get_info(...)
+        |  get_info(path, verbose=False, direnlen=0, fnhex=False, invalid=False)
         |      Return dictionary of archive header info and list of filenames.
         |
         |      Parameters
@@ -46,19 +46,24 @@ FUNCTIONS
         |          If True, interpret filenames as Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
         |          leading/embedding null bytes.
+        |      invalid : bool, optional
+        |          If True, export all directory entries, even if invalid.
         |
         |      Returns
         |      -------
-        |      filenames : dictionary
-        |          Filename list will be empty if the directory has zero valid entries.
+        |      header : dictionary
+        |          The only guaranteed entry is "format" with a string or None.
+        |          Filenames list will be empty if the directory has zero (valid) entries.
         |
         |      Raises
         |      ------
         |      FileNotFoundError
         |          When 'path' cannot be opened.
+        |      MemoryError
+        |      Exception
 
-    Unviv(...)
-        |  Unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
+    unviv(...)
+        |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
         |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
         |
         |      Parameters
@@ -97,8 +102,8 @@ FUNCTIONS
         |      FileNotFoundError
         |          When 'viv' cannot be opened.
 
-    Viv(...)
-        |  Viv(viv, infiles, dry=False, verbose=False, format="BIGF", direnlen=0, fnhex=False)
+    viv(...)
+        |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", direnlen=0, fnhex=False)
         |      Encode files to new archive in BIGF, BIGH or BIG4 format.
         |      Skips given input paths that cannot be opened.
         |
@@ -133,4 +138,4 @@ FUNCTIONS
         |          When 'viv' cannot be created.
 
 VERSION
-    2.0
+    2.1
