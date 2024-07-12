@@ -1,6 +1,6 @@
 # unvivtool
 unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
-unvivtool is available as command-line interface, and as Python extension module.
+unvivtool is available as command-line interface (CLI), and as Python extension module.
 It is based on a dependency-free header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
@@ -13,10 +13,10 @@ Developers can drop-in and use, the encoder/decoder and some data analysis funct
 ## Features
 * decode and encode archive
 * validate archive
-* decode entire archive at once
-* drag-and-drop mode for command-line interface
+* decode entire archive
 * encode files in specified order
-* full UTF8 support
+* support UTF8 names in archive
+* CLI: drag-and-drop mode
 * option: auto-rename duplicated filenames on decode
 * option: retrieve a single file from archive (by index or filename)
 * option: list archive contents without writing to disk (dry run)
@@ -31,7 +31,7 @@ Typical file extensions are ``.VIV`` and ``.BIG``.<br/>
 Archives can be arbitrarily large and can contain arbitrarily many entries.
 
 ## Installation / Documentation
-Command-line interface: [/doc/unvivtool_cli.md](/doc/unvivtool_cli.md)<br/>
+Command-line interface: [/cli/README.md](/cli/README.md)<br/>
 Python extension module: [/python/README.md](/python/README.md)
 
 ## References
@@ -47,5 +47,5 @@ __Website:__ <https://github.com/bfut/unvivtool>
 Third party licenses
 
 __UTF-8 Decoder dfa.h:__ MIT License<br/>
-__circular buffer libnfsviv.h:__ zlib License (portions copyright)<br/>
+__LIBNFSVIV_CircBuf libnfsviv.h:__ zlib License (portions copyright)<br/>
 __sclpython.h:__ zlib License

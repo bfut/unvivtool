@@ -1,5 +1,8 @@
 # unvivtool - command-line interface
-This file describes installation and usage of unvivtool as command-line interface.
+unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
+
+Purported VIV/BIG archives can contain faulty or manipulated header information.
+unvivtool is designed to validate and recover data as much as possible.
 
 ## Installation
 ### Windows
