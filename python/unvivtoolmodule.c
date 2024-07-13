@@ -185,10 +185,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
     switch (viv_format)
     {
-      /* case 7:case 8:case 4:
-        if (0 == PyDict_SetItemString(retv_obj, "format", PyUnicode_FromStringAndSize(vd.format, 4)))
-          return retv_obj;
-        break; */
       case -7:
         if (0 == PyDict_SetItemString(retv_obj, "format", PyUnicode_FromString("REFPACK_BIGF")))
           return retv_obj;
@@ -202,16 +198,16 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
           return retv_obj;
         break;
       default:  /* valid file of unknown format */
-      {
+        {
 #if defined(UVTUTF8)
-        const char *fmt_s = (LIBNFSVIV_IsUTF8String(vd.format, 4, 0) == 4) ? vd.format : NULL;
+          const char *fmt_s = (LIBNFSVIV_IsUTF8String(vd.format, 4, 0) == 4) ? vd.format : NULL;
 #else
-        const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4, 4) == 4) ? vd.format : NULL;
+          const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4, 4) == 4) ? vd.format : NULL;
 #endif
-        PyObject *fmt_ = fmt_s ? PyUnicode_FromStringAndSize(fmt_s, 4) : Py_NewRef(Py_None);
-        if (0 == PyDict_SetItemString(retv_obj, "format", fmt_))
-          return retv_obj;
-      }
+          PyObject *fmt_ = fmt_s ? PyUnicode_FromStringAndSize(fmt_s, 4) : Py_NewRef(Py_None);
+          if (0 == PyDict_SetItemString(retv_obj, "format", fmt_))
+            return retv_obj;
+        }
         break;
     }
 
@@ -330,8 +326,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     retv &= 0 == PyDict_SetItemString(retv_obj, "files", list_);
     SCL_printf("UVT retv: %d after PyDict_SetItemString\n", retv);
 
-
-
     {
       PyObject *list_offset = PyList_New(list_len);
       PyObject *list_filesize = PyList_New(list_len);
@@ -426,7 +420,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
                                     "dry", "verbose", "direnlen", "fnhex",
                                     "overwrite", NULL };
 
-  /* Handle arguments */
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|$iO&ppipi:unviv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &outpath_obj,
@@ -456,7 +449,10 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
         PyErr_SetString(PyExc_TypeError, "Cannot convert str");
         break;
       }
+      PySys_WriteStdout("Requested file: %s\n", request_file_name);
     }
+
+    if (request_file_idx > 0 && !request_file_name)  PySys_WriteStdout("Requested file at index: %d\n", request_file_idx);
 
     fd = open(viv_name, O_RDONLY);
     if (fd == -1)
@@ -530,12 +526,13 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   char **infiles_paths = NULL;
   PyObject *infiles_paths_obj;
   char opt_requestfmt[5] = "BIGF";
-  // PyObject *opt_requestfmt_obj = NULL;
   char *opt_requestfmt_ptr = NULL;
+  int opt_requestendian = 0xe;
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_dryrun = 0;
   int opt_verbose = 0;
+  int opt_faithfulencode = 0;
   int count_infiles = 1;
   int i;
   int length_str = 0;
@@ -545,15 +542,15 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *bytes = NULL;
   char *ptr = NULL;
   static const char *keywords[] = { "viv", "infiles", "dry", "verbose",
-                                    "format", "direnlen", "fnhex", NULL };
+                                    "format", "endian", "direnlen", "fnhex", "faithful", NULL };
 
-  // if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|piO&ip:viv",
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$pisip:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$ppsiipp:viv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, &infiles_paths_obj,
                                    &opt_dryrun, &opt_verbose,
-                                  //  PyUnicode_FSConverter, &opt_requestfmt_obj,
-                                   &opt_requestfmt_ptr, &opt_direnlenfixed, &opt_filenameshex))
+                                   &opt_requestfmt_ptr, &opt_requestendian,
+                                   &opt_direnlenfixed, &opt_filenameshex,
+                                   &opt_faithfulencode))
   {
     return NULL;
   }
@@ -725,7 +722,8 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 
       retv = LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles,
                            opt_dryrun, opt_verbose, opt_direnlenfixed,
-                           opt_filenameshex, opt_requestfmt);
+                           opt_filenameshex, opt_requestfmt, opt_requestendian,
+                           opt_faithfulencode);
 
       if (retv == 1)
         PySys_WriteStdout("Encoder successful.\n");
@@ -845,7 +843,7 @@ PyDoc_STRVAR(
 
 PyDoc_STRVAR(
   viv__doc__,
-  " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", direnlen=0, fnhex=False)\n"
+  " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", endian=0xE, direnlen=0, fnhex=False, faithful=False)\n"
   " |      Encode files to new archive in BIGF, BIGH or BIG4 format.\n"
   " |      Skips given input paths that cannot be opened.\n"
   " |\n"
@@ -862,12 +860,16 @@ PyDoc_STRVAR(
   " |          If True, print archive contents.\n"
   " |      format : str, optional\n"
   " |          Expects \"BIGF\", \"BIGH\" or \"BIG4\".\n"
+  " |      endian : int, char, optional\n"
+  " |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.\n"
+  " |          Only use for rare occurences where BIGF has to be 0xC.\n"
   " |      direnlen : int, optional\n"
   " |          If >= 10, set as fixed archive directory entry length.\n"
   " |      fnhex : bool, optional\n"
   " |          If True, decode input filenames from Base16/hexadecimal.\n"
   " |          Use for non-printable filenames in archive. Keeps\n"
   " |          leading/embedded null bytes.\n"
+  " |      faithful : bool, optional\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"

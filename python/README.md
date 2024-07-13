@@ -27,7 +27,7 @@ DESCRIPTION
     unviv() -- decode and extract archive
     viv() -- encode files in new archive
 
-    unvivtool 2.2 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 2.3 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -103,7 +103,7 @@ FUNCTIONS
         |          When 'viv' cannot be opened.
 
     viv(...)
-        |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", direnlen=0, fnhex=False)
+        |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", endian=0xE, direnlen=0, fnhex=False, faithful=False)
         |      Encode files to new archive in BIGF, BIGH or BIG4 format.
         |      Skips given input paths that cannot be opened.
         |
@@ -120,12 +120,16 @@ FUNCTIONS
         |          If True, print archive contents.
         |      format : str, optional
         |          Expects "BIGF", "BIGH" or "BIG4".
+        |      endian : int, char, optional
+        |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.
+        |          Only use for rare occurences where BIGF has to be 0xC.
         |      direnlen : int, optional
         |          If >= 10, set as fixed archive directory entry length.
         |      fnhex : bool, optional
         |          If True, decode input filenames from Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
         |          leading/embedded null bytes.
+        |      faithful : bool, optional
         |
         |      Returns
         |      -------
@@ -138,4 +142,4 @@ FUNCTIONS
         |          When 'viv' cannot be created.
 
 VERSION
-    2.2
+    2.3

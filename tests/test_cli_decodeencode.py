@@ -140,9 +140,11 @@ def test_cli_smoketest():
 def test_cli_decode_all_existing_dir(verbose, dry):
     err = ""
     out = \
-"""Directory Entries (header) = 2 (0x2)
+"""File format (header) = BIGF
+Archive Size (header) = 35307 (0x89eb)
+Directory Entries (header) = 2
 Header Size (header) = 55 (0x37)
-File format (parsed) = BIGF
+Archive Size (parsed) = 35307 (0x89eb)
 Header Size (parsed) = 55 (0x37)
 Directory Entries (parsed) = 2
 Endianness (parsed) = 0xe
@@ -199,7 +201,7 @@ Decoder successful.
         # print(log)
     if dry != "-p":
         if verbose != "-v":
-            assert re.sub(r"^.*?Directory", "Directory", stdout) == delete_whitespace(out)
+            assert re.sub(r"^.*?File", "File", stdout) == delete_whitespace(out)
         else:
             assert re.sub(r"^.*?Printing", "Printing", stdout) == delete_whitespace(outv)
     else:

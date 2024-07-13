@@ -148,7 +148,9 @@ int main(int argc, char **argv)
   int request_file_idx = 0;
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
+  int opt_faithfulencode = 0;
   char opt_requestfmt[5] = "BIGF";  /* Viv() only */
+  int opt_requestendian = 0xe;
   int opt_dryrun = 0;
   int opt_wenccommand = 0;
   int opt_printlvl = 0;
@@ -316,7 +318,7 @@ int main(int argc, char **argv)
             if (opt_direnlenfixed != 0)
               opt_direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt_direnlenfixed, 1);
           }
-          else if (/* sz > 2 && */ !request_file_name && !strncmp(argv[i], "-i", 2))
+          else if (/* sz > 2 && */ !request_file_name && !strncmp(argv[i], "-i", 2))  /* decode: request filename (overrides file idx request) */
           {
             ptr += 2;
             request_file_idx = LIBNFSVIV_clamp(strtol(ptr, NULL, 10), 0, INT_MAX / 100);  /* 1-based index, 0 means no file requested */
@@ -394,7 +396,7 @@ int main(int argc, char **argv)
                        infiles_paths, count_infiles,
                        opt_dryrun, opt_printlvl, opt_direnlenfixed,
                        LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed),
-                       opt_requestfmt))
+                       opt_requestfmt, opt_requestendian, opt_faithfulencode))
     {
       printf("Encoder failed.\n");
       retv = -1;
