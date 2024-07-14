@@ -1,7 +1,7 @@
 name: release
 
 on:
-  [workflow_dispatch]
+  [release, workflow_dispatch]
 
 env:
   SRC: unvivtool.c
@@ -9,91 +9,158 @@ env:
   BRANCHES: #-DUVTVUTF8
 
 jobs:
-  win32:
-    runs-on: ubuntu-latest  # required for -fstack-clash-protection
-
-    name: Compile (Windows)
+  windows:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2019 ]
+        # arch: [ x86, x64 ]
+        arch: [ x64 ]
+    name: Windows (${{ matrix.os }}, MSVC ${{ matrix.arch }})
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+    - name: Setup Developer Command Prompt
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.arch }}
+    - name: Get the version (Mmm)
+      shell: bash
+      run: |
+        export UVT_VERS=$(grep "UVTVERS" 'libnfsviv.h' | sed -n "s/^.*UVTVERS \"\s*\(\S*\)\".*$/\1/p")
+        #export UVT_VERS="2.10"
+        echo "${UVT_VERS}"
+        export UVT_VERS_NODOT="${UVT_VERS//./}"
+        echo "${UVT_VERS_NODOT}"
+        export UVT_VERS_MAJOR=$(echo "${UVT_VERS_NODOT}" | sed "s@\([0-9]\).*@\1@")
+        echo "${UVT_VERS_MAJOR}"
+        export UVT_VERS_MINOR=$(echo "${UVT_VERS_NODOT}" | sed "s@[0-9]\([0-9]\)@\1@")
+        export UVT_VERS_MINOR=$(printf "%02d\n" $((UVT_VERS_MINOR)) )
+        echo "${UVT_VERS_MINOR}"
+        export UVT_VERS_NODOT="${UVT_VERS_MAJOR}${UVT_VERS_MINOR}"
+        echo "${UVT_VERS_NODOT}"
 
-      - name: Get the version
-        run: |
-          export UVT_VERS=$(grep "UVTVERS" 'libnfsviv.h' | sed -n "s/^.*UVTVERS \"\s*\(\S*\)\".*$/\1/p")
-          echo "${UVT_VERS}"
-          export UVT_VERS_NODOT="${UVT_VERS//./}"
-          echo "${UVT_VERS_NODOT}"
+        echo "version=${UVT_VERS_NODOT}" >> "$GITHUB_ENV"
+    - name: Compile
+      run: |
+        cl.exe /utf-8 /O2 /TC unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
+        dir
+    - name: Package
+      shell: bash
+      run: |
+        # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
+        # Create and upload a folder as artifact
 
-          echo "version=${UVT_VERS_NODOT}" >> "$GITHUB_ENV"
+        mkdir "${{ env.DEST }}${{ env.version }}_cli_win32"
+        mkdir "${{ env.DEST }}${{ env.version }}_cli_win32/include"
+        ls -lga
 
-      - name: Install
-        run: |
-          sudo apt update
-          sudo apt install gcc-mingw-w64-i686
-          sudo apt install gcc-mingw-w64-x86-64
+        # cp unvivtool_${{ matrix.arch }}.exe "${{ env.DEST }}${{ env.version }}_cli_win32"
+        cp -r \
+        cli \
+        include/dfa.h \
+        references \
+        libnfsviv.h \
+        LICENSE \
+        README.md \
+        unvivtool.c \
+        unvivtool_${{ matrix.arch }}.exe \
+        "${{ env.DEST }}${{ env.version }}_cli_win32"
 
-      - name: Set build flags
-        run: |
-          export MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp'
-          # export  MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
+        ls -lga "${{ env.DEST }}${{ env.version }}_cli_win32"
+    - name: Store executable
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{ env.DEST }}${{ env.version }}_cli_win32"
+        path: "${{ env.DEST }}${{ env.version }}_cli_win32"
+        compression-level: 9
+        retention-days: 7
 
-      - name: Build (Windows x86)
-        run: |
-          i686-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}.exe" ${{ env.BRANCHES }}
-          sha256sum "${{ env.DEST }}.exe"
+  # mingw32:
+  #   runs-on: ubuntu-latest  # required for -fstack-clash-protection
 
-      - name: Create archive (Windows x86)
-        run: |
-          7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_win32.zip" \
-          cli \
-          include/dfa.h \
-          references \
-          libnfsviv.h \
-          LICENSE \
-          README.md \
-          ${{ env.DEST }}.exe \
-          unvivtool.c
+  #   name: Compile (Windows)
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-          ls -lg
+  #     - name: Get the version
+  #       run: |
+  #         export UVT_VERS=$(grep "UVTVERS" 'libnfsviv.h' | sed -n "s/^.*UVTVERS \"\s*\(\S*\)\".*$/\1/p")
+  #         echo "${UVT_VERS}"
+  #         export UVT_VERS_NODOT="${UVT_VERS//./}"
+  #         echo "${UVT_VERS_NODOT}"
 
-          # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
-          # Extract archive to folder, subsequently upload folder as artifact
-          7z x -y "${{ env.DEST }}${{ env.version }}_cli_win32.zip" -o"${{ env.DEST }}${{ env.version }}_cli_win32"
+  #         echo "version=${UVT_VERS_NODOT}" >> "$GITHUB_ENV"
 
-      - name: Store archive (Windows x86)
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ env.DEST }}${{ env.version }}_cli_win32"
-          path: "${{ env.DEST }}${{ env.version }}_cli_win32"
-          compression-level: 9
-          retention-days: 1
+  #     - name: Install
+  #       run: |
+  #         sudo apt update
+  #         sudo apt install gcc-mingw-w64-i686
+  #         sudo apt install gcc-mingw-w64-x86-64
 
-      - name: Build (Windows x64)
-        run: |
-          x86_64-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}_x64.exe" ${{ env.BRANCHES }}
-          sha256sum "${{ env.DEST }}_x64.exe"
+  #     - name: Set build flags
+  #       run: |
+  #         export MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp'
+  #         # export  MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
 
-      - name: Create archive (Windows x64)
-        run: |
-          7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_x64.zip" \
-          cli \
-          include/dfa.h \
-          references \
-          libnfsviv.h \
-          LICENSE \
-          README.md \
-          ${{ env.DEST }}_x64.exe \
-          unvivtool.c
+  #     - name: Build (Windows x86)
+  #       run: |
+  #         i686-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}.exe" ${{ env.BRANCHES }}
+  #         sha256sum "${{ env.DEST }}.exe"
 
-          ls -lg
+  #     - name: Create archive (Windows x86)
+  #       run: |
+  #         7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_win32.zip" \
+  #         cli \
+  #         include/dfa.h \
+  #         references \
+  #         libnfsviv.h \
+  #         LICENSE \
+  #         README.md \
+  #         ${{ env.DEST }}.exe \
+  #         unvivtool.c
 
-          # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
-          # Extract archive to folder, subsequently upload folder as artifact
-          7z x -y "${{ env.DEST }}${{ env.version }}_cli_x64.zip" -o"${{ env.DEST }}${{ env.version }}_cli_x64"
+  #         ls -lg
 
-      - name: Store archive (Windows x64)
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ env.DEST }}${{ env.version }}_cli_x64"
-          path: "${{ env.DEST }}${{ env.version }}_cli_x64"
-          compression-level: 9
-          retention-days: 7
+  #         # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
+  #         # Extract archive to folder, subsequently upload folder as artifact
+  #         7z x -y "${{ env.DEST }}${{ env.version }}_cli_win32.zip" -o"${{ env.DEST }}${{ env.version }}_cli_win32"
+
+  #     - name: Store archive (Windows x86)
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: "${{ env.DEST }}${{ env.version }}_cli_win32"
+  #         path: "${{ env.DEST }}${{ env.version }}_cli_win32"
+  #         compression-level: 9
+  #         retention-days: 1
+
+  #     - name: Build (Windows x64)
+  #       run: |
+  #         x86_64-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}_x64.exe" ${{ env.BRANCHES }}
+  #         sha256sum "${{ env.DEST }}_x64.exe"
+
+  #     - name: Create archive (Windows x64)
+  #       run: |
+  #         7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_x64.zip" \
+  #         cli \
+  #         include/dfa.h \
+  #         references \
+  #         libnfsviv.h \
+  #         LICENSE \
+  #         README.md \
+  #         ${{ env.DEST }}_x64.exe \
+  #         unvivtool.c
+
+  #         ls -lg
+
+  #         # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
+  #         # Extract archive to folder, subsequently upload folder as artifact
+  #         7z x -y "${{ env.DEST }}${{ env.version }}_cli_x64.zip" -o"${{ env.DEST }}${{ env.version }}_cli_x64"
+
+  #     - name: Store archive (Windows x64)
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: "${{ env.DEST }}${{ env.version }}_cli_x64"
+  #         path: "${{ env.DEST }}${{ env.version }}_cli_x64"
+  #         compression-level: 9
+  #         retention-days: 7

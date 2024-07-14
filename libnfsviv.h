@@ -1020,7 +1020,7 @@ void __LIBNFSVIV_PrintVivDirectoryStats_Parsed(VivDirectory * const vd)
 
       }
     }
-    printf("Archive Size (parsed) = %d (0x%x)\n", vd->filesize, vd->filesize);
+    printf("Archive Size (parsed) = %d (0x%x)\n", fsz, fsz);
   }
   printf("Header Size (parsed) = %d (0x%x)\n", vd->viv_hdr_size_true, vd->viv_hdr_size_true);
   printf("Directory Entries (parsed) = %d\n", vd->count_dir_entries_true);
@@ -1658,14 +1658,14 @@ int LIBNFSVIV_GetVivDir(VivDirectory *vd,
           Accepts embedded/leading nul's and missing terminating nul.
         */
         {
-          int len = opt_direnlenfixed - 0x08;
+          int len_ = opt_direnlenfixed - 0x08;
           unsigned char buf_[sizeof(buf)];
           const unsigned char *p_;
-          LIBNFSVIV_CircBuf_Peek(&cbuf, buf_, 0, len);
-          p_ = buf_ + len - 1;  /* last byte */
-          while (*p_-- == '\0' && len > 0)
-            --len;
-          vd->buffer[i].filename_len_ = len;
+          LIBNFSVIV_CircBuf_Peek(&cbuf, buf_, 0, len_);
+          p_ = buf_ + len_ - 1;  /* last byte */
+          while (*p_-- == '\0' && len_ > 0)
+            --len_;
+          vd->buffer[i].filename_len_ = len_;
         }
       }
       else

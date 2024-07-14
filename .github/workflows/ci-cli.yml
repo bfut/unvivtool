@@ -5,16 +5,13 @@ env:
   DEST: unvivtool
   BRANCHES: #-DUVTUTF8
   GCCFLAGS: -fPIE -D_FORTIFY_SOURCE=2 -fstack-clash-protection -fstack-protector-strong -D_GNU_SOURCE
-  CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
-  CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -pie -Wl,-pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE
+  CPPFLAGS: -D_GLIBCXX_ASSERTIONS -fPIE -Wl,-pie -fstack-clash-protection -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE  #  -pie
+  CPPFLAGS_MACOS: -D_GLIBCXX_ASSERTIONS -fPIE -Wl,-pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE  #  -pie
   GCCDEBUGFLAGS: -pedantic -Og -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
   CPPDEBUGFLAGS: -Og -g -Wall -Wextra -Wstack-protector -fasynchronous-unwind-tables
 
 on:
-  push:
-    branches:
-  pull_request:
-    branches:
+  [push, pull_request]
 
 jobs:
   linux:
@@ -74,10 +71,10 @@ jobs:
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
       with:
-          arch: ${{ matrix.arch }}
+        arch: ${{ matrix.arch }}
     - name: Compile
       run: |
-        cl.exe /W3 /utf-8 /O2 unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
+        cl.exe /W4 /utf-8 /O2 /TC unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
         dir
     - name: Store executable
       uses: actions/upload-artifact@v4
