@@ -71,7 +71,7 @@ void UVT_GetExePath(char *buf, const size_t sz)
     LIBNFSVIV_BkwdToFwdSlash(buf);
 }
 #else
-/* gcc -std=c89 requires sizeof(buf) >= 4096 to avoid buffer overflow */
+/* Assumes sizeof(buf) >= 4096 */
 void UVT_GetExePath(char *buf)
 {
   char *ptr = realpath("/proc/self/exe", buf);

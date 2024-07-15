@@ -4,10 +4,7 @@ env:
   SCL_DEBUG: 1
 
 on:
-  push:
-    branches:
-  pull_request:
-    branches:
+  [push, pull_request]
 
 jobs:
 
@@ -18,7 +15,6 @@ jobs:
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
         python-version: [ "3.10", "3.12", "3.13" ]
-        # python-version: [ "3.10", "3.11", "3.12", "3.13" ]
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:

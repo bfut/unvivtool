@@ -17,7 +17,7 @@ jobs:
         os: [ windows-2019 ]
         # arch: [ x86, x64 ]
         arch: [ x64 ]
-    name: Windows (${{ matrix.os }}, MSVC ${{ matrix.arch }})
+    name: Windows (MSVC ${{ matrix.arch }})
     steps:
     - uses: actions/checkout@v4
     - name: Setup Developer Command Prompt
@@ -55,10 +55,8 @@ jobs:
         mkdir "${{ env.DEST }}${{ env.version }}_cli_win32/include"
         ls -lga
 
-        # cp unvivtool_${{ matrix.arch }}.exe "${{ env.DEST }}${{ env.version }}_cli_win32"
         cp -r \
         cli \
-        include/dfa.h \
         references \
         libnfsviv.h \
         LICENSE \
@@ -66,6 +64,7 @@ jobs:
         unvivtool.c \
         unvivtool_${{ matrix.arch }}.exe \
         "${{ env.DEST }}${{ env.version }}_cli_win32"
+        cp include/dfa.h "${{ env.DEST }}${{ env.version }}_cli_win32/include"
 
         ls -lga "${{ env.DEST }}${{ env.version }}_cli_win32"
     - name: Store executable
@@ -75,92 +74,3 @@ jobs:
         path: "${{ env.DEST }}${{ env.version }}_cli_win32"
         compression-level: 9
         retention-days: 7
-
-  # mingw32:
-  #   runs-on: ubuntu-latest  # required for -fstack-clash-protection
-
-  #   name: Compile (Windows)
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Get the version
-  #       run: |
-  #         export UVT_VERS=$(grep "UVTVERS" 'libnfsviv.h' | sed -n "s/^.*UVTVERS \"\s*\(\S*\)\".*$/\1/p")
-  #         echo "${UVT_VERS}"
-  #         export UVT_VERS_NODOT="${UVT_VERS//./}"
-  #         echo "${UVT_VERS_NODOT}"
-
-  #         echo "version=${UVT_VERS_NODOT}" >> "$GITHUB_ENV"
-
-  #     - name: Install
-  #       run: |
-  #         sudo apt update
-  #         sudo apt install gcc-mingw-w64-i686
-  #         sudo apt install gcc-mingw-w64-x86-64
-
-  #     - name: Set build flags
-  #       run: |
-  #         export MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -s -O2 -Xlinker --no-insert-timestamp'
-  #         # export  MINGWFLAGS='-std=c89 -fPIE -pie -Wl,-pie -fstack-clash-protection -s -O2 -Xlinker --no-insert-timestamp'
-
-  #     - name: Build (Windows x86)
-  #       run: |
-  #         i686-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}.exe" ${{ env.BRANCHES }}
-  #         sha256sum "${{ env.DEST }}.exe"
-
-  #     - name: Create archive (Windows x86)
-  #       run: |
-  #         7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_win32.zip" \
-  #         cli \
-  #         include/dfa.h \
-  #         references \
-  #         libnfsviv.h \
-  #         LICENSE \
-  #         README.md \
-  #         ${{ env.DEST }}.exe \
-  #         unvivtool.c
-
-  #         ls -lg
-
-  #         # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
-  #         # Extract archive to folder, subsequently upload folder as artifact
-  #         7z x -y "${{ env.DEST }}${{ env.version }}_cli_win32.zip" -o"${{ env.DEST }}${{ env.version }}_cli_win32"
-
-  #     - name: Store archive (Windows x86)
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: "${{ env.DEST }}${{ env.version }}_cli_win32"
-  #         path: "${{ env.DEST }}${{ env.version }}_cli_win32"
-  #         compression-level: 9
-  #         retention-days: 1
-
-  #     - name: Build (Windows x64)
-  #       run: |
-  #         x86_64-w64-mingw32-gcc-win32 $MINGWFLAGS "${{ env.SRC }}" -o "${{ env.DEST }}_x64.exe" ${{ env.BRANCHES }}
-  #         sha256sum "${{ env.DEST }}_x64.exe"
-
-  #     - name: Create archive (Windows x64)
-  #       run: |
-  #         7z a -tzip "${{ env.DEST }}${{ env.version }}_cli_x64.zip" \
-  #         cli \
-  #         include/dfa.h \
-  #         references \
-  #         libnfsviv.h \
-  #         LICENSE \
-  #         README.md \
-  #         ${{ env.DEST }}_x64.exe \
-  #         unvivtool.c
-
-  #         ls -lg
-
-  #         # Uploading zip artifact to Github Actions creates a nested zip at this time. Hence...
-  #         # Extract archive to folder, subsequently upload folder as artifact
-  #         7z x -y "${{ env.DEST }}${{ env.version }}_cli_x64.zip" -o"${{ env.DEST }}${{ env.version }}_cli_x64"
-
-  #     - name: Store archive (Windows x64)
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: "${{ env.DEST }}${{ env.version }}_cli_x64"
-  #         path: "${{ env.DEST }}${{ env.version }}_cli_x64"
-  #         compression-level: 9
-  #         retention-days: 7
