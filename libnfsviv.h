@@ -278,7 +278,7 @@ VivDirectory *LIBNFSVIV_VivDirectory_Init(VivDirectory *vd, const int len)
 }
 
 #if defined(UVTUTF8)
-/* Returns UTF8 length without nul. If __s is not nul-terminated, set nul_terminate=0 */
+/* Returns UTF8 length without nul. If __s is not nul-terminated, call with nul_terminate=0 */
 static
 int LIBNFSVIV_IsUTF8String(void *__s, const size_t max_len, const char nul_terminate)
 {
@@ -292,7 +292,7 @@ int LIBNFSVIV_IsUTF8String(void *__s, const size_t max_len, const char nul_termi
     ++pos;
   }
   SCL_printf("    IsUTF8String: pos = %d, max_len = %d, state = %d (UTF8_ACCEPT %d); return=%d\n", (int)pos, (int)max_len, (int)state, UTF8_ACCEPT, (int)(pos * (!nul_terminate || (pos < max_len)) * (state == UTF8_ACCEPT)));
-  return pos * (!nul_terminate || (pos < max_len)) * (state == UTF8_ACCEPT);
+  return (int)pos * (!nul_terminate || (pos < max_len)) * (state == UTF8_ACCEPT);
 }
 #else
 /* Returns isprint length without nul. If __s is not nul-terminated, set nul_terminate=0 */
@@ -322,6 +322,19 @@ int LIBNFSVIV_SwapEndian(const int y)
       ((x << 8) & 0xff0000) | ((x >> 8) & 0x00ff00);
   memcpy(&z, &x, sizeof(x));
   return z;
+}
+
+/* Assumes (buf) and (bufsz > 1). Returns len == strlen(buf) on success, otherwise -1.*/
+static
+int LIBNFSVIV_FreadToStr(char *buf, const int bufsz, const int ofs, int len, FILE *src)
+{
+  len = LIBNFSVIV_min(len, bufsz - 1);
+  if (len >= 0 && !fseek(src, ofs, SEEK_SET) && (int)fread(buf, 1, len, src) == len)
+  {
+    buf[len] = '\0';
+    return len;
+  }
+  return -1;
 }
 
 /* Assumes src_len is length without nul. */
@@ -702,12 +715,7 @@ int LIBNFSVIV_CircBuf_lefttoread(const LIBNFSVIV_CircBuf * const cb)
 static
 int LIBNFSVIV_CircBuf_readtoend(const LIBNFSVIV_CircBuf * const cb)
 {
-#if 1
   return cb->sz - cb->rd;
-#else
-  const int d = cb->sz - cb->rd;
-  return cb->rd >= cb->wr ? d : cb->wr - cb->rd;
-#endif
 }
 
 /* len is NOT upper-bounded by EOF */
@@ -743,11 +751,8 @@ int LIBNFSVIV_CircBuf_addFromFile(LIBNFSVIV_CircBuf *cb, FILE *file, const int f
 static
 void LIBNFSVIV_CircBuf_Fwd(LIBNFSVIV_CircBuf *cb, int len)
 {
-  SCL_printf("    circbuf_Fwd() stats: len: %d, cb->rd: %d, cb->wr: %d\n", len, cb->rd, cb->wr);
   cb->rd += len;
-  SCL_printf("    circbuf_Fwd() stats: len: %d, cb->rd: %d, cb->wr: %d\n", len, cb->rd, cb->wr);
   cb->rd %= cb->sz;
-  SCL_printf("    circbuf_Fwd() stats: len: %d, cb->rd: %d, cb->wr: %d\n", len, cb->rd, cb->wr);
 }
 
 static
@@ -1376,14 +1381,14 @@ void LIBNFSVIV_FixVivHdr(VivDirectory *vd, const int filesz)
 /* Assumes ftell(file) == 0
    Returns 1, if Viv header can be read. Else 0. */
 static
-int LIBNFSVIV_GetVivHdr(VivDirectory *vd, FILE *file)
+int LIBNFSVIV_GetVivHeader(VivDirectory *vd, FILE *file)
 {
   int sz = 0;
 
-  sz += fread(vd->format, 1, 4, file);
-  sz += fread(&vd->filesize, 1, 4, file);
-  sz += fread(&vd->count_dir_entries, 1, 4, file);
-  sz += fread(&vd->header_size, 1, 4, file);
+  sz += (int)fread(vd->format, 1, 4, file);
+  sz += (int)fread(&vd->filesize, 1, 4, file);
+  sz += (int)fread(&vd->count_dir_entries, 1, 4, file);
+  sz += (int)fread(&vd->header_size, 1, 4, file);
 
   if (sz != 16)
   {
@@ -1722,19 +1727,6 @@ int LIBNFSVIV_GetVivDir(VivDirectory *vd,
   return 1;
 }
 
-/* Assumes (buf) and (bufsz > 1). Returns len == strlen(buf) on success, otherwise -1.*/
-static
-int LIBNFSVIV_FreadToStr(char *buf, const int bufsz, const int ofs, int len, FILE *src)
-{
-  len = LIBNFSVIV_min(len, bufsz - 1);
-  if (len >= 0 && !fseek(src, ofs, SEEK_SET) && (int)fread(buf, 1, len, src) == len)
-  {
-    buf[len] = '\0';
-    return len;
-  }
-  return -1;
-}
-
 /*
   Extracts the described file to disk. Returns boolean.
   Assumes (vde), (infile). If (wenc_file), assumes (wenc_outpath).
@@ -1802,7 +1794,7 @@ static
 int LIBNFSVIV_GetIdxFromFname(const VivDirectory *vd, FILE* infile, const char *request_file_name)
 {
   char buf[LIBNFSVIV_FilenameMaxLen];
-  const int len = strlen(request_file_name);
+  const int len = (int)strlen(request_file_name);
   int i;
 
   if (len + 1 > LIBNFSVIV_FilenameMaxLen)
@@ -1983,9 +1975,9 @@ int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
 {
   int val;
   char buf[LIBNFSVIV_FilenameMaxLen] = {0};
-  int len;
+  int len;  /* strlen() of viv directory entry filename  */
   int i;
-  size_t err = 0;
+  size_t err = 0x10;  /* track VivDirectory written length */
 
   for (i = 0; i < count_infiles; ++i)
   {
@@ -2012,7 +2004,7 @@ int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
     buf[len] = '\0';
     {
       char *ptr = LIBNFSVIV_GetPathBasename(buf);
-      len = strlen(ptr);
+      len = (int)strlen(ptr);
       memmove(buf, ptr, len + 1);
     }
 #else
@@ -2034,31 +2026,23 @@ int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
 
     if (opt_direnlenfixed >= 10 && len > opt_direnlenfixed - 0x8)
     {
-      printf("Warning:WriteVivDirectory: Filename too long. Limited to fit fixed directory entry length (%d > %d)\n", len, opt_direnlenfixed);
+      printf("Warning:WriteVivDirectory: Filename too long. Trim to fixed directory entry length (%d > %d).\n", len, opt_direnlenfixed);
       len = opt_direnlenfixed - 0x8;
     }
 
-    err += len && (len == (int)fwrite(buf, 1, len, file));
+    err += len * (len == (int)fwrite(buf, 1, len, file));
 
     if (opt_direnlenfixed < 10)
-      err += fputc('\0', file);
+      err += '\0' == fputc('\0', file);
     else
     {
-      while (err > 0 && len++ < opt_direnlenfixed)
-        err += fputc('\0', file);
+      while (len++ < opt_direnlenfixed)
+        err += '\0' == fputc('\0', file);
     }
   }  /* for i */
 
-  /* if ((int)err != vd->count_dir_entries_true * 8) */
-  /* if ((int)err != vd->viv_hdr_size_true)
-  {
-    printf("Warning:WriteVivDirectory: File write error\n");
-    return 0;
-  } */
-
   vd->viv_hdr_size_true = (int)ftell(file);
-
-  return 1;
+  return (size_t)ftell(file) == err;
 }
 
 /*
@@ -2189,7 +2173,7 @@ VivDirectory *LIBNFSVIV_GetVivDirectory_FromFile(VivDirectory *vd, FILE *file, c
       fprintf(stderr, "Format error (invalid filesize) %d\n", filesz);
       break;
     }
-    if (!LIBNFSVIV_GetVivHdr(vd, file))
+    if (!LIBNFSVIV_GetVivHeader(vd, file))
       break;
 #ifdef UVT_UNVIVTOOLMODULE
     if (opt_verbose)

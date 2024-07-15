@@ -180,26 +180,38 @@ def test_decode11():
 
 def test_encode1():
     vivfile = script_path / ".out/car_out_encode1.viv"
+    vivfile.unlink(True)
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]  # (7+1) + (14+1) = 23
     for path in infiles:
         assert pathlib.Path(path).is_file()
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
+    viv_info = uvt.get_info(vivfile)
+    # print(viv_info)
+    assert viv_info.get("format") == "BIGF" and viv_info.get("count_dir_entries") == viv_info.get("count_dir_entries_true")
+    assert viv_info.get("count_dir_entries") == len(infiles)
 
 def test_encode2():
     print('Test2: infiles = [ "in/LICENSE", "invalid_path", "in/pyproject.toml" ]')
     print("Expected result: skip path that does not exist, encode the rest, return 1", flush=True)
     vivfile = script_path / ".out/car_out_encode2.viv"
+    vivfile.unlink(True)
     infiles = [ "in/LICENSE", "invalid_path", "in/pyproject.toml" ]  # (7+1) + (12+1) + (14+1) = 36
     infiles = [str(script_path / path) for path in infiles]
     for path in infiles:
         assert pathlib.Path(path).exists() or pathlib.Path(path).stem == "invalid_path"
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists()
+    viv_info = uvt.get_info(vivfile)
+    # print(viv_info)
+    assert viv_info.get("format") == "BIGF" and viv_info.get("count_dir_entries") == viv_info.get("count_dir_entries_true")
+    assert viv_info.get("count_dir_entries") == len(infiles) - 1
+
 
 def test_encode3():
     print("Test3: infiles = []")
     vivfile = script_path / ".out/car_out_encode3.viv"
+    vivfile.unlink(True)
     infiles = []
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and len(vivfile.read_bytes()) == 0
@@ -208,6 +220,7 @@ def test_encode4():
     print("Test4: infiles = [infiles, infiles]")
     print("Expected result: TypeError", flush=True)
     vivfile = script_path / ".out/car_out_encode4.viv"
+    vivfile.unlink(True)
     infiles = []
     infiles = [infiles, infiles]
     assert isinstance(infiles, list)
@@ -225,6 +238,7 @@ def test_encode5():
     print('Test5: vivfile = "tests/@二.viv"'.encode())
     print("Expected result: Linux - encode all, return 1")
     vivfile = script_path / ".out/@二_encode5.viv"
+    vivfile.unlink(True)
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]
     for path in infiles:
         assert pathlib.Path(path).is_file()
@@ -235,6 +249,7 @@ def test_encode6():
     print('Test6: infiles = ["in/LICENSE", "in/pyproject.toml", "in"]')
     print("Expected result: encode existing files, skip existing directory, return 1")
     vivfile = script_path / ".out/car_out_encode6.viv"
+    vivfile.unlink(True)
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml"), str(script_path / "in/") ]
     for path in infiles:
         assert pathlib.Path(path).is_file() or pathlib.Path(path).is_dir()
@@ -245,6 +260,7 @@ def test_encode7():
     print('Test7: infiles = ["in/LICENSE", "in/pyproject.toml", "."]')
     print("Expected result: encode existing files, skip existing directory, return 1")
     vivfile = script_path / ".out/car_out_encode7.viv"
+    vivfile.unlink(True)
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml"), str(script_path / "./") ]
     for path in infiles:
         assert pathlib.Path(path).is_file() or pathlib.Path(path).is_dir()
@@ -255,6 +271,7 @@ def test_encode8():
     print('Test8: infiles = ["in/LICENSE", "in/pyproject.toml", "in/ß二", "in/öäü"]'.encode())
     print("Expected result: encode existing files, return 1")
     vivfile = script_path / ".out/car_out_encode8.viv"
+    vivfile.unlink(True)
     infiles = [ "in/LICENSE", "in/pyproject.toml", "in/ß二" ]
     infiles = [str(script_path / path) for path in infiles]
     for path in infiles:
@@ -264,6 +281,7 @@ def test_encode8():
 
 def test_encode9():
     vivfile = script_path / ".out/car_out_encode9.viv"
+    vivfile.unlink(True)
     infiles = ( "in/LICENSE", "in/pyproject.toml" )
     assert isinstance(infiles, tuple)
     try:
@@ -276,6 +294,7 @@ def test_encode9():
 
 def test_encode10():
     vivfile = script_path / ".out/car_out_encode10.viv"
+    vivfile.unlink(True)
     infiles = None
     try:
         uvt.viv(vivfile, infiles)
@@ -297,6 +316,7 @@ def test_encode11():
 
 def test_encode12():
     vivfile = script_path / ".out/car_out_encode12.viv"
+    vivfile.unlink(True)
     infiles = [ "invalid_path", "invalid_path", "invalid_path" ]
     infiles = [str(script_path / path) for path in infiles]
     print(infiles)
@@ -307,6 +327,7 @@ def test_encode12():
 
 def test_encode13():
     vivfile = script_path / ".out/car_out_encode13.viv"
+    vivfile.unlink(True)
     infiles = [ "foo/invalid_path1", "bar/invalid_path2", "in/invalid_path3" ]  # notice no file-ending
     print(infiles)
     for path in infiles:
@@ -316,6 +337,7 @@ def test_encode13():
 
 def test_encode14():
     vivfile = script_path / ".out/car_out_encode14.viv"
+    vivfile.unlink(True)
     infiles = [ "invalid_path", "invalid_path", "invalid_path" ]
     print(script_path, infiles)
     retv = uvt.viv(vivfile, infiles, verbose=1)
@@ -323,6 +345,7 @@ def test_encode14():
 
 def test_encode15():
     vivfile = script_path / ".out/car_out_encode15.viv"
+    vivfile.unlink(True)
     infiles = [ "in/LICENSE", "in/pyproject.toml", "invalid_path" ]  # notice file-ending
     print(script_path, infiles)
     retv = uvt.viv(vivfile, infiles, verbose=1)
@@ -330,6 +353,7 @@ def test_encode15():
 
 def test_encode16():
     vivfile = script_path / ".out/car_out_encode16.viv"
+    vivfile.unlink(True)
     infiles = [ "in/LICENSE", "in/pyproject.toml", ]
     print(script_path, infiles)
     retv = uvt.viv(vivfile, infiles, verbose=1, dry=0)
@@ -338,6 +362,7 @@ def test_encode16():
 def test_encode17():
     """uvt.viv() overwrite existing file"""
     vivfile = script_path / ".out/car_out_encode17.viv"
+    vivfile.unlink(True)
     infiles = [ "invalid" ]
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) == 16
@@ -346,6 +371,10 @@ def test_encode17():
         assert pathlib.Path(path).is_file()
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
+    viv_info = uvt.get_info(vivfile)
+    # print(viv_info)
+    assert viv_info.get("format") == "BIGF" and viv_info.get("count_dir_entries") == viv_info.get("count_dir_entries_true")
+    assert viv_info.get("count_dir_entries") == len(infiles)
 
 
 @pytest.mark.skipif(platform.python_implementation() == "PyPy",

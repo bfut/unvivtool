@@ -27,7 +27,7 @@ DESCRIPTION
     unviv() -- decode and extract archive
     viv() -- encode files in new archive
 
-    unvivtool 2.3 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 2.4 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -142,4 +142,4 @@ FUNCTIONS
         |          When 'viv' cannot be created.
 
 VERSION
-    2.3
+    2.4
