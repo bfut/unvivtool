@@ -214,7 +214,7 @@ def test_encode3():
     vivfile.unlink(True)
     infiles = []
     retv = uvt.viv(vivfile, infiles, verbose=1)
-    assert retv == 1 and len(vivfile.read_bytes()) == 0
+    assert retv == 1 and len(vivfile.read_bytes()) == 16
 
 def test_encode4():
     print("Test4: infiles = [infiles, infiles]")

@@ -27,7 +27,7 @@ DESCRIPTION
     unviv() -- decode and extract archive
     viv() -- encode files in new archive
 
-    unvivtool 2.4 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 2.5 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -58,7 +58,6 @@ FUNCTIONS
         |      Raises
         |      ------
         |      FileNotFoundError
-        |          When 'path' cannot be opened.
         |      MemoryError
         |      Exception
 
@@ -100,7 +99,8 @@ FUNCTIONS
         |      Raises
         |      ------
         |      FileNotFoundError
-        |          When 'viv' cannot be opened.
+        |      MemoryError
+        |      TypeError
 
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", endian=0xE, direnlen=0, fnhex=False, faithful=False)
@@ -139,7 +139,9 @@ FUNCTIONS
         |      Raises
         |      ------
         |      FileNotFoundError
-        |          When 'viv' cannot be created.
+        |      MemoryError
+        |      TypeError
+        |      ValueError
 
 VERSION
-    2.4
+    2.5
