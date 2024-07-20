@@ -71,7 +71,7 @@ char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
     PyErr_SetString(PyExc_TypeError, "Argument is not a string");
     return NULL;
   }
-  const int len = LIBNFSVIV_clamp((int)strlen(p) + 1, 1, UVT_PY_MaxPathLen);
+  const int len = LIBNFSVIV_clamp(UVT_PY_MaxPathLen, 1, (int)strlen(p) + 1);
   dest = (char *)malloc(len * sizeof(*dest));
   if (!dest)
   {
@@ -138,7 +138,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-  retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex);
+  retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 1);
 
   /* handle formats:
 
@@ -679,6 +679,134 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   return retv_obj;
 }
 
+static
+PyObject *replace_entry(PyObject *self, PyObject *args, PyObject *kwargs)
+{
+  int retv = 1;
+  PyObject *retv_obj = NULL;
+
+  char *viv_name = NULL;
+  PyObject *viv_name_obj;
+  char *infile_path = NULL;
+  PyObject *infile_path_obj;
+
+  int request_file_idx = 0;
+  char *request_file_name = NULL;
+  PyObject *request_entry_obj = NULL;
+
+  char *viv_name_out = NULL;
+  PyObject *viv_name_out_obj = NULL;
+  int opt_insert = 0;
+  int opt_replacefilename = 0;
+  int opt_dryrun = 0;
+  int opt_verbose = 0;
+  int opt_direnlenfixed = 0;
+  int opt_filenameshex = 0;
+  int opt_faithfulencode = 0;
+
+  static const char *keywords[] = { "inpath", "infile", "entry",
+                                    "outpath",
+                                    "insert", "replace_filename",
+                                    "dry", "verbose", "direnlen", "fnhex", "faithful", NULL };
+
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&O|$O&ipppipp:viv",
+                                   (char **)keywords,
+                                   PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &infile_path_obj,
+                                   &request_entry_obj,
+
+                                   PyUnicode_FSConverter, &viv_name_out_obj,
+
+                                   &opt_insert,
+                                   &opt_replacefilename,
+                                   &opt_dryrun, &opt_verbose,
+                                   &opt_direnlenfixed, &opt_filenameshex,
+                                   &opt_faithfulencode))
+  {
+    return NULL;
+  }
+
+  viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
+  Py_DECREF(viv_name_obj);
+  if (!viv_name)  return NULL;
+
+  for (;;)
+  {
+    infile_path = __UVT_PyBytes_StringToCString(infile_path, infile_path_obj);
+    Py_DECREF(infile_path_obj);
+    if (!infile_path)  return NULL;
+
+    SCL_printf("UVT viv_name: %s\n", viv_name);
+    SCL_printf("UVT infile_path: %s\n", infile_path);
+
+    /* Get str|integer argument */
+    if (PyUnicode_CheckExact(request_entry_obj))
+    {
+      Py_ssize_t len;
+      const char *p = PyUnicode_AsUTF8AndSize(request_entry_obj, &len);
+      request_file_name = (char *)calloc(LIBNFSVIV_clamp(UVT_PY_MaxPathLen, 1, len + 1) * sizeof(*request_file_name), 1);
+      if (!request_file_name)
+      {
+        PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
+        return NULL;
+      }
+      memcpy(request_file_name, p, len);
+      request_file_name[len] = '\0';
+    }
+    else if (PyLong_CheckExact(request_entry_obj))
+    {
+      request_file_idx = PyLong_AsLong(request_entry_obj);
+    }
+    else
+    {
+      PyErr_SetString(PyExc_TypeError, "Expects integer or string");
+      return NULL;
+    }
+    Py_DECREF(viv_name_obj);
+
+    SCL_printf("UVT request_file_name: %s\n", request_file_name);
+    SCL_printf("UVT request_file_idx: %d\n", request_file_idx);
+
+
+    // if (viv_name_out_obj && PyUnicode_CheckExact(viv_name_out_obj))
+    if (viv_name_out_obj)
+    {
+      viv_name_out = __UVT_PyBytes_StringToCString(viv_name_out, viv_name_out_obj);
+      Py_DECREF(viv_name_out_obj);
+      if (!viv_name_out)  break;
+    }
+    SCL_printf("UVT viv_name_out: %s\n", viv_name_out);
+    SCL_printf("\n");
+
+    retv = LIBNFSVIV_VivUpdate(viv_name, viv_name_out,
+                               request_file_idx, request_file_name,
+                               infile_path,
+                               opt_insert, opt_replacefilename,
+                               opt_dryrun, opt_verbose,
+                               opt_direnlenfixed, opt_filenameshex,
+                               opt_faithfulencode);
+    if (retv == 1)
+      PySys_WriteStdout("Update successful.\n");
+    else
+      PySys_WriteStdout("Update failed.\n");
+
+    retv_obj = Py_BuildValue("i", retv);
+    break;
+  }  /* for (;;) */
+
+  if (viv_name)  free(viv_name);
+  if (viv_name_out)  free(viv_name_out);
+  if (infile_path)  free(infile_path);
+  if (request_file_name)  free(request_file_name);
+
+  // if (!retv)
+  // {
+  //   // Py_XDECREF(retv_obj);
+  //   retv_obj = NULL;
+  // }
+
+  return retv_obj;
+}
+
 /* doc ---------------------------------------------------------------------- */
 
 PyDoc_STRVAR(
@@ -688,6 +816,7 @@ PyDoc_STRVAR(
   "Functions\n"
   "---------\n"
   "get_info() -- get archive header and filenames\n"
+  "replace_entry() -- replace file in archive\n"
   "unviv() -- decode and extract archive\n"
   "viv() -- encode files in new archive\n"
   "\n"
@@ -713,6 +842,50 @@ PyDoc_STRVAR(
   " |          leading/embedding null bytes.\n"
   " |      invalid : bool, optional\n"
   " |          If True, export all directory entries, even if invalid.\n"
+  " |\n"
+  " |      Returns\n"
+  " |      -------\n"
+  " |      header : dictionary\n"
+  " |          The only guaranteed entry is \"format\" with a string or None.\n"
+  " |          Filenames list will be empty if the directory has zero (valid) entries.\n"
+  " |\n"
+  " |      Raises\n"
+  " |      ------\n"
+  " |      FileNotFoundError\n"
+  " |      MemoryError\n"
+  " |      Exception\n"
+);
+
+PyDoc_STRVAR(
+  replace_entry__doc__,
+  " |  replace_entry(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)\n"
+  " |      Return dictionary of archive header info and list of filenames.\n"
+  " |\n"
+  " |      Parameters\n"
+  " |      ----------\n"
+  " |      vivpath : str, os.PathLike object\n"
+  " |          Absolute or relative, path/to/archive.viv\n"
+  " |      inpath : str, os.PathLike object\n"
+  " |          Absolute or relative, path/to/file.ext\n"
+  " |      entry : str, int\n"
+  " |          Name of target entry or 1-based index of target entry.\n"
+  " |      outpath : str, os.PathLike object, optional\n"
+  " |          Absolute or relative, path/to/output_archive.viv\n"
+  " |          If empty, overwrite vivpath.\n"
+  " |      dry : bool, optional\n"
+  " |          If True, perform dry run: run all format checks and print\n"
+  " |          archive contents, do not write to disk.\n"
+  " |      verbose : bool, optional\n"
+  " |          Verbose output.\n"
+  " |      direnlen : int, optional\n"
+  " |          If >= 10, set as fixed archive directory entry length.\n"
+  " |      fnhex : bool, optional\n"
+  " |          If True, interpret filenames as Base16/hexadecimal.\n"
+  " |          Use for non-printable filenames in archive. Keeps\n"
+  " |          leading/embedding null bytes.\n"
+  " |      invalid : bool, optional\n"
+  " |          If True, replace any directory entries, even if invalid.\n"
+  " |          If False, ?\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"
@@ -817,7 +990,9 @@ PyDoc_STRVAR(
 
 static
 PyMethodDef m_methods[] = {
+
   {"get_info", (PyCFunction)(void(*)(void))get_info, METH_VARARGS | METH_KEYWORDS, get_info__doc__},
+  {"replace_entry", (PyCFunction)(void(*)(void))replace_entry, METH_VARARGS | METH_KEYWORDS, replace_entry__doc__},
   {"unviv",  (PyCFunction)(void(*)(void))unviv, METH_VARARGS | METH_KEYWORDS, unviv__doc__},
   {"viv",    (PyCFunction)(void(*)(void))viv, METH_VARARGS | METH_KEYWORDS, viv__doc__},
   {NULL,     NULL}
