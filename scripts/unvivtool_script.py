@@ -105,7 +105,6 @@ def main():
         print(f"#{args.cmd[1:]}#")
         print( " ".join(args.cmd[1:]) ,  pathlib.Path(" ".join(args.cmd[1:]))  )
         if len(args.cmd) > 1:
-            vivfile = pathlib.Path(args.cmd[1])
             vivfile = pathlib.Path(" ".join(args.cmd[1:]))
         else:
             vivfile = pathlib.Path(__file__).parent / "car.viv"  # all paths can be absolute or relative

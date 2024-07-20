@@ -404,7 +404,7 @@ int LIBNFSVIV_DecBase16(char *str)
 {
   const char *ptr = str;
   int i = 0;
-  char buf[LIBNFSVIV_FilenameMaxLen]; /* = {0}; */
+  char buf[LIBNFSVIV_FilenameMaxLen];
   while (*ptr && *ptr + 1 && i < LIBNFSVIV_FilenameMaxLen - 2)  /* buf always ends on nul */
   {
     buf[i] = LIBNFSVIV_hextoint(*ptr) << 4;
@@ -429,7 +429,7 @@ void LIBNFSVIV_EncBase16(char *str, const int min_len)
 {
   const char *ptr = str;
   int i = 0;
-  char buf[LIBNFSVIV_FilenameMaxLen]; /* = {0}; */
+  char buf[LIBNFSVIV_FilenameMaxLen];
   while ((*ptr || i < 2*min_len) && i < LIBNFSVIV_FilenameMaxLen - 2 - 1)  /* buf always ends on nul */
   {
     buf[i] = LIBNFSVIV_inttohex((*ptr & 0xF0) >> 4);
@@ -606,13 +606,14 @@ int LIBNFSVIV_FileCopy(FILE *dest, FILE *src, int len, char *buf, const int bufs
   return len == 0 && err == 1;
 }
 
-/* Assumes (vd) and both, viv_name and outpath are strings.
-
-Invalidates entries whose output path is identical to the archive. */
+/*
+  Invalidates entries whose output path is identical to the archive.
+  Assumes (vd) and both, viv_name and outpath are strings.
+*/
 static
 void LIBNFSVIV_EnsureVivPathNotInVivDirWritePaths(VivDirectory *vd, char *viv_name, const char *outpath, FILE *viv, const size_t viv_sz)
 {
-  char buf[LIBNFSVIV_FilenameMaxLen];  /* = {0}; */
+  char buf[LIBNFSVIV_FilenameMaxLen];
 
   /** Case: viv parentdir != outpath -> return */
   memcpy(buf, viv_name, LIBNFSVIV_min(strlen(viv_name), LIBNFSVIV_FilenameMaxLen - 1));
@@ -654,8 +655,11 @@ static
 int LIBNFSVIV_IncrementFile(const char * const path, int sz, const int verbose)
 {
   int retv = 0;
-  sz = strlen(path);
-  if (0 < sz && sz < LIBNFSVIV_FilenameMaxLen - 32)
+  if (!path)
+    sz = strlen(path);
+  else
+    sz = -1;
+  if (0 < sz && sz < LIBNFSVIV_FilenameMaxLen - 32 && !LIBNFSVIV_IsDir(path))
   {
     char buf[LIBNFSVIV_FilenameMaxLen];
     memcpy(buf, path, sz + 1);
@@ -677,7 +681,7 @@ int LIBNFSVIV_IncrementFile(const char * const path, int sz, const int verbose)
         {
           if (!rename(path, buf))
           {
-            if (verbose)  printf("RenameExistingFile: Renamed existing file '%s' to '%s'\n", path, buf);
+            if (verbose)  printf("IncrementFile: Incremented existing file '%s' to '%s'\n", path, buf);
             retv = 1;
             break;
           }
@@ -685,7 +689,7 @@ int LIBNFSVIV_IncrementFile(const char * const path, int sz, const int verbose)
       }  /* for i */
     }
   }  /* if */
-  if (verbose && !retv)  printf("RenameExistingFile: Cannot rename existing file '%s'\n", path);
+  if (verbose && !retv)  printf("IncrementFile: Cannot increment existing file '%s'\n", path);
   return retv;
 }
 
@@ -890,13 +894,14 @@ int LIBNFSVIV_CircBuf_PeekStrlen(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
   if (rdlen1 < len)
   {
     const int ret = __LIBNFSVIV_CircBuf_strnlen(cb->buf + cb->rd + ofs, rdlen1);
-    /* SCL_debug_printbuf(cb->buf, cb->sz, cb->rd, cb->wr);
+#if 0
+    SCL_debug_printbuf(cb->buf, cb->sz, cb->rd, cb->wr);
     SCL_printf("    circbuf_PeekStrlen(): rdlen1: %d, len: %d\n", rdlen1, len);
-    SCL_printf("    circbuf_PeekStrlen(): stats: len: %d, cb->rd: %d, cb->wr: %d\n", len, cb->rd, cb->wr); */
+    SCL_printf("    circbuf_PeekStrlen(): stats: len: %d, cb->rd: %d, cb->wr: %d\n", len, cb->rd, cb->wr);
+#endif
     return (ret < rdlen1) ? ret : ret + __LIBNFSVIV_CircBuf_strnlen(cb->buf, len - rdlen1);
   }
   return __LIBNFSVIV_CircBuf_strnlen(cb->buf + cb->rd + ofs, len);
-  /* return memchr(cb->buf + cb->rd + ofs, c, len); */
 }
 
 #if defined(UVTUTF8)
@@ -2284,7 +2289,7 @@ int LIBNFSVIV_ValidateVivDirectory(const VivDirectory * const vd)
 
   NB: filelist and *filelist malloc'd sizes are upper-bounded, see libnfsviv.h header
 */
-char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, /* const int filesz,  */const int opt_invalidentries)
+char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, const int opt_invalidentries)
 {
   char **ret = NULL;
   if (LIBNFSVIV_ValidateVivDirectory(vd))  return NULL;
@@ -2376,9 +2381,8 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, /
 /* Wrapper for LIBNFSVIV_VivDirectoryToFileList_FromFile() */
 char **LIBNFSVIV_VivDirectoryToFileList(VivDirectory *vd, char *path, const int opt_invalidentries)
 {
-  /* const int filesz = LIBNFSVIV_GetFilesize(path); */
   FILE *file = path ? fopen(path, "rb") : NULL;
-  char **ret = LIBNFSVIV_VivDirectoryToFileList_FromFile(vd, file, /* filesz,  */opt_invalidentries);
+  char **ret = LIBNFSVIV_VivDirectoryToFileList_FromFile(vd, file, opt_invalidentries);
   if (file)  fclose(file);
   return ret;
 }
@@ -2805,7 +2809,6 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
     if (opt_insert >= 0 && LIBNFSVIV_IsFile(infile_path) && !LIBNFSVIV_IsDir(infile_path))
     {
       VivDirEntr vde_old = vd_old->buffer[request_file_idx - 1];
-      /* VivDirectory vd_temp; */
       VivDirEntr vde_temp;
 
       if (request_file_idx <= 0 || (opt_faithfulencode && request_file_idx > vd->count_dir_entries) || (!opt_faithfulencode && request_file_idx > vd->count_dir_entries_true))
@@ -3192,7 +3195,6 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     /* Get filenames / filepaths for output archive */
     if (opt_insert == 0)
     {
-      int i;
       int len_ = 0;
       char *p;
       if (vd.count_dir_entries != vd_old.count_dir_entries)

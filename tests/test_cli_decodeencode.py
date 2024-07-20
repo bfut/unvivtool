@@ -91,6 +91,7 @@ def test_dir():
         ]), True)
     assert OUTDIR.exists()
     assert True
+    return ret
 
 @pytest.mark.skipif(0, reason="")
 def test_cli_smoketest():

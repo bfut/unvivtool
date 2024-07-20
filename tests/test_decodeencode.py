@@ -421,4 +421,3 @@ if __name__ == "__main__":
     test_encode15()
     test_encode16()
     test_encode17()
-    pass
