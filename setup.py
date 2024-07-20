@@ -141,3 +141,9 @@ setuptools.setup(
     # cmdclass={"build_ext": build_ext},
     zip_safe=False,
 )
+
+import sys
+if sys.version_info.minor >= 13:
+    import sysconfig
+    print(f"sysconfig.get_config_var('Py_GIL_DISABLED') = {sysconfig.get_config_var('Py_GIL_DISABLED')}")
+    print(f"sys._is_gil_enabled() = {sys._is_gil_enabled()}")

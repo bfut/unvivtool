@@ -24,7 +24,7 @@ DESCRIPTION
     Functions
     ---------
     get_info() -- get archive header and filenames
-    replace_entry() -- replace file in archive
+    update() -- replace file in archive
     unviv() -- decode and extract archive
     viv() -- encode files in new archive
 
@@ -49,48 +49,6 @@ FUNCTIONS
         |          leading/embedding null bytes.
         |      invalid : bool, optional
         |          If True, export all directory entries, even if invalid.
-        |
-        |      Returns
-        |      -------
-        |      header : dictionary
-        |          The only guaranteed entry is "format" with a string or None.
-        |          Filenames list will be empty if the directory has zero (valid) entries.
-        |
-        |      Raises
-        |      ------
-        |      FileNotFoundError
-        |      MemoryError
-        |      Exception
-
-    replace_entry(...)
-        |  replace_entry(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)
-        |      Return dictionary of archive header info and list of filenames.
-        |
-        |      Parameters
-        |      ----------
-        |      vivpath : str, os.PathLike object
-        |          Absolute or relative, path/to/archive.viv
-        |      inpath : str, os.PathLike object
-        |          Absolute or relative, path/to/file.ext
-        |      entry : str, int
-        |          Name of target entry or 1-based index of target entry.
-        |      outpath : str, os.PathLike object, optional
-        |          Absolute or relative, path/to/output_archive.viv
-        |          If empty, overwrite vivpath.
-        |      dry : bool, optional
-        |          If True, perform dry run: run all format checks and print
-        |          archive contents, do not write to disk.
-        |      verbose : bool, optional
-        |          Verbose output.
-        |      direnlen : int, optional
-        |          If >= 10, set as fixed archive directory entry length.
-        |      fnhex : bool, optional
-        |          If True, interpret filenames as Base16/hexadecimal.
-        |          Use for non-printable filenames in archive. Keeps
-        |          leading/embedding null bytes.
-        |      invalid : bool, optional
-        |          If True, replace any directory entries, even if invalid.
-        |          If False, ?
         |
         |      Returns
         |      -------
@@ -144,6 +102,48 @@ FUNCTIONS
         |      FileNotFoundError
         |      MemoryError
         |      TypeError
+
+    update(...)
+        |  update(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)
+        |      Return dictionary of archive header info and list of filenames.
+        |
+        |      Parameters
+        |      ----------
+        |      vivpath : str, os.PathLike object
+        |          Absolute or relative, path/to/archive.viv
+        |      inpath : str, os.PathLike object
+        |          Absolute or relative, path/to/file.ext
+        |      entry : str, int
+        |          Name of target entry or 1-based index of target entry.
+        |      outpath : str, os.PathLike object, optional
+        |          Absolute or relative, path/to/output_archive.viv
+        |          If empty, overwrite vivpath.
+        |      dry : bool, optional
+        |          If True, perform dry run: run all format checks and print
+        |          archive contents, do not write to disk.
+        |      verbose : bool, optional
+        |          Verbose output.
+        |      direnlen : int, optional
+        |          If >= 10, set as fixed archive directory entry length.
+        |      fnhex : bool, optional
+        |          If True, interpret filenames as Base16/hexadecimal.
+        |          Use for non-printable filenames in archive. Keeps
+        |          leading/embedding null bytes.
+        |      invalid : bool, optional
+        |          If True, replace any directory entries, even if invalid.
+        |          If False, ?
+        |
+        |      Returns
+        |      -------
+        |      {0, 1}
+        |          1 on success.
+        |
+        |      Raises
+        |      ------
+        |      FileNotFoundError
+        |      MemoryError
+        |      TypeError
+        |      Exception
 
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", endian=0xE, direnlen=0, fnhex=False, faithful=False)

@@ -680,7 +680,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
 }
 
 static
-PyObject *replace_entry(PyObject *self, PyObject *args, PyObject *kwargs)
+PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int retv = 1;
   PyObject *retv_obj = NULL;
@@ -777,13 +777,13 @@ PyObject *replace_entry(PyObject *self, PyObject *args, PyObject *kwargs)
     SCL_printf("UVT viv_name_out: %s\n", viv_name_out);
     SCL_printf("\n");
 
-    retv = LIBNFSVIV_VivUpdate(viv_name, viv_name_out,
-                               request_file_idx, request_file_name,
-                               infile_path,
-                               opt_insert, opt_replacefilename,
-                               opt_dryrun, opt_verbose,
-                               opt_direnlenfixed, opt_filenameshex,
-                               opt_faithfulencode);
+    retv = LIBNFSVIV_Update(viv_name, viv_name_out,
+                            request_file_idx, request_file_name,
+                            infile_path,
+                            opt_insert, opt_replacefilename,
+                            opt_dryrun, opt_verbose,
+                            opt_direnlenfixed, opt_filenameshex,
+                            opt_faithfulencode);
     if (retv == 1)
       PySys_WriteStdout("Update successful.\n");
     else
@@ -798,12 +798,6 @@ PyObject *replace_entry(PyObject *self, PyObject *args, PyObject *kwargs)
   if (infile_path)  free(infile_path);
   if (request_file_name)  free(request_file_name);
 
-  // if (!retv)
-  // {
-  //   // Py_XDECREF(retv_obj);
-  //   retv_obj = NULL;
-  // }
-
   return retv_obj;
 }
 
@@ -816,7 +810,7 @@ PyDoc_STRVAR(
   "Functions\n"
   "---------\n"
   "get_info() -- get archive header and filenames\n"
-  "replace_entry() -- replace file in archive\n"
+  "update() -- replace file in archive\n"
   "unviv() -- decode and extract archive\n"
   "viv() -- encode files in new archive\n"
   "\n"
@@ -857,8 +851,8 @@ PyDoc_STRVAR(
 );
 
 PyDoc_STRVAR(
-  replace_entry__doc__,
-  " |  replace_entry(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)\n"
+  update__doc__,
+  " |  update(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)\n"
   " |      Return dictionary of archive header info and list of filenames.\n"
   " |\n"
   " |      Parameters\n"
@@ -889,14 +883,14 @@ PyDoc_STRVAR(
   " |\n"
   " |      Returns\n"
   " |      -------\n"
-  " |      header : dictionary\n"
-  " |          The only guaranteed entry is \"format\" with a string or None.\n"
-  " |          Filenames list will be empty if the directory has zero (valid) entries.\n"
+  " |      {0, 1}\n"
+  " |          1 on success.\n"
   " |\n"
   " |      Raises\n"
   " |      ------\n"
   " |      FileNotFoundError\n"
   " |      MemoryError\n"
+  " |      TypeError\n"
   " |      Exception\n"
 );
 
@@ -992,7 +986,7 @@ static
 PyMethodDef m_methods[] = {
 
   {"get_info", (PyCFunction)(void(*)(void))get_info, METH_VARARGS | METH_KEYWORDS, get_info__doc__},
-  {"replace_entry", (PyCFunction)(void(*)(void))replace_entry, METH_VARARGS | METH_KEYWORDS, replace_entry__doc__},
+  {"update", (PyCFunction)(void(*)(void))update, METH_VARARGS | METH_KEYWORDS, update__doc__},
   {"unviv",  (PyCFunction)(void(*)(void))unviv, METH_VARARGS | METH_KEYWORDS, unviv__doc__},
   {"viv",    (PyCFunction)(void(*)(void))viv, METH_VARARGS | METH_KEYWORDS, viv__doc__},
   {NULL,     NULL}

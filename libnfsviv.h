@@ -3039,7 +3039,7 @@ int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailI
 
   New archive will be written to temporary path. In case of success, will be copied toviv_name_out_
 */
-int LIBNFSVIV_VivUpdate(char *viv_name, const char * const viv_name_out_,
+int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
                         int request_file_idx, const char *request_file_name,
                         char *infile_path,
                         const int opt_insert, const int opt_replacefilename,
