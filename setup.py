@@ -25,6 +25,8 @@ import platform
 import pathlib
 import re
 import setuptools
+import sys
+import sysconfig
 
 if "UVTVERBOSE" in os.environ:
     print(f'UVTVERBOSE={os.environ["UVTVERBOSE"]}')
@@ -43,6 +45,12 @@ long_description = (SCRIPT_PATH / "./python/README.md").read_text(encoding="utf-
 # os.environ["CC"] = "gcc"
 # os.environ["CC"] = "clang"
 os.environ["PYMEM_MALLOC"] = ""
+if sys.version_info.minor >= 13:
+    if sysconfig.get_config_var("Py_GIL_DISABLED") == 1 and sys._is_gil_enabled() == False:
+        print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
+        print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
+#         os.environ["SCL_DEVMODE"] = "2"
+# print(f'SCL_DEVMODE={os.environ.get("SCL_DEVMODE", 0)}')
 
 extra_compile_args = []
 if "PYMEM_MALLOC" in os.environ:
@@ -142,8 +150,7 @@ setuptools.setup(
     zip_safe=False,
 )
 
-import sys
+
 if sys.version_info.minor >= 13:
-    import sysconfig
     print(f"sysconfig.get_config_var('Py_GIL_DISABLED') = {sysconfig.get_config_var('Py_GIL_DISABLED')}")
     print(f"sys._is_gil_enabled() = {sys._is_gil_enabled()}")

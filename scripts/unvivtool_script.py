@@ -66,13 +66,12 @@ def main():
         outdir = None
         if len(args.cmd) > 1:
             outdir = pathlib.Path(args.cmd[1])
-        if not isinstance(outdir, pathlib.Path) or not outdir.is_dir():
+        if not isinstance(outdir, pathlib.Path):
             outdir = inpath.parent / (inpath.stem + "_" + inpath.suffix[1:])
 
         ptn = time.process_time_ns()
         if uvt.unviv(str(inpath), str(outdir), direnlen=CONFIG["opt_direnlenfixed"], overwrite=CONFIG["opt_overwrite"]):  # extract all files in archive "inpath"
             print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
-
 
 
     # Encode

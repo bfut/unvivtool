@@ -25,7 +25,7 @@
   The API in this header-only library is composed of two parts:
 
   1. LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions
-  2. Data anlysis via
+  2. Data analysis via
     LIBNFSVIV_GetVivVersion*()
     LIBNFSVIV_GetVivDirectory*() - returns struct *VivDirectory, the archive header
     LIBNFSVIV_VivDirectoryToFileList*() - returns char** of filenames listed in the archive header
@@ -58,14 +58,14 @@
   LIBNFSVIV_unviv() handles the following format deviations {with strategy}:
     * Archive header has incorrect filesize {value unused}
     * Archive header has incorrect number of directory entries {check endianness and/or assume large enough value}
-    * Archive header has incorrect number directory length {value unused}
+    * Archive header has incorrect number for directory length {value unused}
     * Archive header has incorrect offset {value unused}
     * At least 1 directory entry has illegal offset or length {skip file}
     * Two directory entries have the same file name (use opt_overwrite == 1) {overwrite or rename existing}
     * Directory entry would overwrite archive on extraction {skip file}
     * Directory entry file name contains non-ASCII UTF8 characters {native support in UVTUTF8-branch}
     * Directory entry file name contains non-printable characters (use opt_filenameshex == 1) {skip file or represent filename in base16}
-    * Directory entry file name is too long {skips file}
+    * Directory entry file name is too long {skip file}
     * Directory entry has fixed length and filename string is followed by large number of nul's (use opt_direnlenfixed == sz) {native support via option opt_direnlenfixed}
 */
 
@@ -2999,6 +2999,8 @@ int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailI
   return copyfile(lpExistingFileName, lpNewFileName, NULL, COPYFILE_DATA | COPYFILE_XATTR) == 0;
 #else
   int retv = 0;
+  FILE *file = fopen(lpNewFileName, "wb");
+  if (file)  fclose(file);
   for (;;)
   {
     if (!lpExistingFileName || !lpNewFileName)  break;
@@ -3124,6 +3126,7 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
 
     printf("Writing to archive: %s\n", viv_name_out);
     SCL_printf("temppath %s\n", temppath);
+
 
     /* Read VivDirectory */
 #ifdef _WIN32
@@ -3353,6 +3356,7 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     fclose(file);
     file = NULL;
 
+#if 0
     if (rename(temppath, viv_name_out))
     {
       if (!LIBNFSVIV_CopyFile(temppath, viv_name_out, 0))
@@ -3361,7 +3365,14 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
         break;
       }
     }
-
+#endif
+#if 1
+    if (!LIBNFSVIV_CopyFile(temppath, viv_name_out, 0))
+      {
+        fprintf(stderr, "VivUpdate: Cannot create '%s'\n", viv_name_out);
+        break;
+      }
+#endif
     retv = 1;
     break;
   }  /* for (;;) */

@@ -43,6 +43,11 @@
 #define realloc PyMem_Realloc
 #define free PyMem_Free
 #endif
+#ifdef PYMEM_RAWMALLOC
+#define malloc PyMem_RawMalloc
+#define realloc PyMem_RawRealloc
+#define free PyMem_RawFree
+#endif
 
 #define SCL_PY_PRINTF  /* native printf */
 #include "../include/SCL/sclpython.h"
@@ -57,6 +62,7 @@
 
 /* util --------------------------------------------------------------------- */
 
+/* Returns new reference or NULL. */
 static
 char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
 {
@@ -105,6 +111,9 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     {0}
   };
   char **filelist = NULL;
+#ifdef Py_GIL_DISABLED
+  PyMutex mutex = {0};
+#endif
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|$pipp:get_info",
@@ -114,6 +123,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
+
+#ifdef Py_GIL_DISABLED
+  PyMutex_Lock(&mutex);
+#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -345,6 +358,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     retv_obj = NULL;
   }
 
+#ifdef Py_GIL_DISABLED
+  PyMutex_Unlock(&mutex);
+#endif
+
   return retv_obj;
 }
 
@@ -368,6 +385,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_verbose = 0;
   int opt_overwrite = 0;
   char *buf_cwd = NULL;
+#ifdef Py_GIL_DISABLED
+  PyMutex mutex = {0};
+#endif
   static const char *keywords[] = { "viv", "dir",
                                     "fileidx", "filename",
                                     "dry", "verbose", "direnlen", "fnhex",
@@ -382,6 +402,10 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
+
+#ifdef Py_GIL_DISABLED
+  PyMutex_Lock(&mutex);
+#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -460,6 +484,10 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   // Py_XDECREF(outpath_obj);  // see above
   // Py_DECREF(viv_name_obj);  // see above
 
+#ifdef Py_GIL_DISABLED
+  PyMutex_Unlock(&mutex);
+#endif
+
   return retv_obj;
 }
 
@@ -487,6 +515,9 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *item = NULL;
   PyObject *bytes = NULL;
   char *ptr = NULL;
+#ifdef Py_GIL_DISABLED
+  PyMutex mutex = {0};
+#endif
   static const char *keywords[] = { "viv", "infiles", "dry", "verbose",
                                     "format", "endian", "direnlen", "fnhex", "faithful", NULL };
 
@@ -500,6 +531,10 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
+
+#ifdef Py_GIL_DISABLED
+  PyMutex_Lock(&mutex);
+#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -676,6 +711,10 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   if (viv_name)  free(viv_name);
   // Py_DECREF(viv_name_obj);  // see above
 
+#ifdef Py_GIL_DISABLED
+  PyMutex_Unlock(&mutex);
+#endif
+
   return retv_obj;
 }
 
@@ -703,7 +742,9 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_faithfulencode = 0;
-
+#ifdef Py_GIL_DISABLED
+  PyMutex mutex = {0};
+#endif
   static const char *keywords[] = { "inpath", "infile", "entry",
                                     "outpath",
                                     "insert", "replace_filename",
@@ -724,6 +765,10 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
+
+#ifdef Py_GIL_DISABLED
+  PyMutex_Lock(&mutex);
+#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -761,11 +806,10 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
       PyErr_SetString(PyExc_TypeError, "Expects integer or string");
       return NULL;
     }
-    Py_DECREF(viv_name_obj);
+    Py_DECREF(request_entry_obj);
 
     SCL_printf("UVT request_file_name: %s\n", request_file_name);
     SCL_printf("UVT request_file_idx: %d\n", request_file_idx);
-
 
     // if (viv_name_out_obj && PyUnicode_CheckExact(viv_name_out_obj))
     if (viv_name_out_obj)
@@ -798,6 +842,10 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   if (infile_path)  free(infile_path);
   if (request_file_name)  free(request_file_name);
 
+#ifdef Py_GIL_DISABLED
+  PyMutex_Unlock(&mutex);
+#endif
+
   return retv_obj;
 }
 
@@ -810,8 +858,8 @@ PyDoc_STRVAR(
   "Functions\n"
   "---------\n"
   "get_info() -- get archive header and filenames\n"
-  "update() -- replace file in archive\n"
   "unviv() -- decode and extract archive\n"
+  "update() -- replace file in archive\n"
   "viv() -- encode files in new archive\n"
   "\n"
   "unvivtool " UVTVERS " " UVTCOPYRIGHT "\n"
@@ -852,20 +900,26 @@ PyDoc_STRVAR(
 
 PyDoc_STRVAR(
   update__doc__,
-  " |  update(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)\n"
-  " |      Return dictionary of archive header info and list of filenames.\n"
+  " |  update(inpath, infile, entry, outpath=None, insert=0, replace_filename=False, dry=False, verbose=False, direnlen=0, fnhex=False, faithful=False)\n"
+  " |      Replace file in archive.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
-  " |      vivpath : str, os.PathLike object\n"
-  " |          Absolute or relative, path/to/archive.viv\n"
   " |      inpath : str, os.PathLike object\n"
+  " |          Absolute or relative, path/to/archive.viv\n"
+  " |      infile : str, os.PathLike object\n"
   " |          Absolute or relative, path/to/file.ext\n"
   " |      entry : str, int\n"
   " |          Name of target entry or 1-based index of target entry.\n"
   " |      outpath : str, os.PathLike object, optional\n"
   " |          Absolute or relative, path/to/output_archive.viv\n"
   " |          If empty, overwrite vivpath.\n"
+  " |      insert : int, optional\n"
+  " |          If  > 0, set as fixed archive directory entry length.\n"
+  " |          If == 0, set as fixed archive directory entry length.\n"
+  " |          If  < 0, set as fixed archive directory entry length.\n"
+  " |      replace_filename : bool, optional\n"
+  " |          If True, and infile is a path/to/file.ext, the entry filename will be changed to file.ext\n"
   " |      dry : bool, optional\n"
   " |          If True, perform dry run: run all format checks and print\n"
   " |          archive contents, do not write to disk.\n"
@@ -876,10 +930,10 @@ PyDoc_STRVAR(
   " |      fnhex : bool, optional\n"
   " |          If True, interpret filenames as Base16/hexadecimal.\n"
   " |          Use for non-printable filenames in archive. Keeps\n"
-  " |          leading/embedding null bytes.\n"
-  " |      invalid : bool, optional\n"
+  " |          leading/embedded null bytes.\n"
+  " |      faithful : bool, optional\n"
+  " |          If False, ignore invalid entries (default behavior).\n"
   " |          If True, replace any directory entries, even if invalid.\n"
-  " |          If False, ?\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"
@@ -1004,11 +1058,14 @@ int unvivtool_exec(PyObject *mod)
 
 /*
   https://github.com/python/cpython/blob/main/Include/moduleobject.h
-  #define Py_mod_exec 2
 */
 static
 PyModuleDef_Slot m_slots[] = {
   {Py_mod_exec, unvivtool_exec},
+#ifdef Py_GIL_DISABLED
+  // {Py_mod_gil, Py_MOD_GIL_USED},  // default even if not specified
+  {Py_mod_gil, Py_MOD_GIL_NOT_USED},  // The module is safe to run without an active GIL.
+#endif
   {0, NULL}
 };
 

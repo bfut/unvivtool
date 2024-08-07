@@ -24,8 +24,8 @@ DESCRIPTION
     Functions
     ---------
     get_info() -- get archive header and filenames
-    update() -- replace file in archive
     unviv() -- decode and extract archive
+    update() -- replace file in archive
     viv() -- encode files in new archive
 
     unvivtool 3.0 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
@@ -104,20 +104,26 @@ FUNCTIONS
         |      TypeError
 
     update(...)
-        |  update(vivpath, inpath, entry, outpath, verbose=False, direnlen=0, fnhex=False, invalid=False)
-        |      Return dictionary of archive header info and list of filenames.
+        |  update(inpath, infile, entry, outpath=None, insert=0, replace_filename=False, dry=False, verbose=False, direnlen=0, fnhex=False, faithful=False)
+        |      Replace file in archive.
         |
         |      Parameters
         |      ----------
-        |      vivpath : str, os.PathLike object
-        |          Absolute or relative, path/to/archive.viv
         |      inpath : str, os.PathLike object
+        |          Absolute or relative, path/to/archive.viv
+        |      infile : str, os.PathLike object
         |          Absolute or relative, path/to/file.ext
         |      entry : str, int
         |          Name of target entry or 1-based index of target entry.
         |      outpath : str, os.PathLike object, optional
         |          Absolute or relative, path/to/output_archive.viv
         |          If empty, overwrite vivpath.
+        |      insert : int, optional
+        |          If  > 0, set as fixed archive directory entry length.
+        |          If == 0, set as fixed archive directory entry length.
+        |          If  < 0, set as fixed archive directory entry length.
+        |      replace_filename : bool, optional
+        |          If True, and infile is a path/to/file.ext, the entry filename will be changed to file.ext
         |      dry : bool, optional
         |          If True, perform dry run: run all format checks and print
         |          archive contents, do not write to disk.
@@ -128,10 +134,10 @@ FUNCTIONS
         |      fnhex : bool, optional
         |          If True, interpret filenames as Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
-        |          leading/embedding null bytes.
-        |      invalid : bool, optional
+        |          leading/embedded null bytes.
+        |      faithful : bool, optional
+        |          If False, ignore invalid entries (default behavior).
         |          If True, replace any directory entries, even if invalid.
-        |          If False, ?
         |
         |      Returns
         |      -------
