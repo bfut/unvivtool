@@ -28,7 +28,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.0 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 3.1 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -193,4 +193,4 @@ FUNCTIONS
         |      ValueError
 
 VERSION
-    3.0
+    3.1

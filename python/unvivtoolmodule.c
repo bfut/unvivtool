@@ -43,11 +43,6 @@
 #define realloc PyMem_Realloc
 #define free PyMem_Free
 #endif
-#ifdef PYMEM_RAWMALLOC
-#define malloc PyMem_RawMalloc
-#define realloc PyMem_RawRealloc
-#define free PyMem_RawFree
-#endif
 
 #define SCL_PY_PRINTF  /* native printf */
 #include "../include/SCL/sclpython.h"

@@ -105,9 +105,6 @@
 #endif
 #endif
 
-#ifndef SCL_DEVMODE
-#define SCL_DEVMODE 0  /* 0: release, 1: development, 2: experimental */
-#endif
 #ifndef SCL_DEBUG
 #define SCL_DEBUG 0  /* 1: dev console output */
 #endif
@@ -122,7 +119,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define SCL_assert(x)
 #endif
 
-#define UVTVERS "3.0"
+#define UVTVERS "3.1"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */

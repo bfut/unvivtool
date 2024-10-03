@@ -42,15 +42,13 @@ print(f"VERSION_INFO={__version__}")
 
 long_description = (SCRIPT_PATH / "./python/README.md").read_text(encoding="utf-8")
 
-# os.environ["CC"] = "gcc"
-# os.environ["CC"] = "clang"
-os.environ["PYMEM_MALLOC"] = ""
+if sys.version_info.minor < 13 or sysconfig.get_config_var("Py_GIL_DISABLED") != 1 or sys._is_gil_enabled() == True:
+    os.environ["PYMEM_MALLOC"] = ""
+
 if sys.version_info.minor >= 13:
     if sysconfig.get_config_var("Py_GIL_DISABLED") == 1 and sys._is_gil_enabled() == False:
         print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
         print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
-#         os.environ["SCL_DEVMODE"] = "2"
-# print(f'SCL_DEVMODE={os.environ.get("SCL_DEVMODE", 0)}')
 
 extra_compile_args = []
 if "PYMEM_MALLOC" in os.environ:
@@ -66,8 +64,8 @@ else:
     extra_compile_args += [
         # debug
         # ("-std=c23"),
-        ("-g"),
-        ("-Og"),
+        # ("-g"),
+        # ("-Og"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
 
         ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden
@@ -149,8 +147,3 @@ setuptools.setup(
     # cmdclass={"build_ext": build_ext},
     zip_safe=False,
 )
-
-
-if sys.version_info.minor >= 13:
-    print(f"sysconfig.get_config_var('Py_GIL_DISABLED') = {sysconfig.get_config_var('Py_GIL_DISABLED')}")
-    print(f"sys._is_gil_enabled() = {sys._is_gil_enabled()}")
