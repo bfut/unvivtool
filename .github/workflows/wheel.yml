@@ -17,10 +17,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v2.21.2
         env:
           CIBW_ARCHS_WINDOWS: "AMD64 x86"
           CIBW_SKIP: pp*
+          CIBW_FREE_THREADED_SUPPORT: 1
         with:
           package-dir: "."
           output-dir:  "./wheelhouse"
