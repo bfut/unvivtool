@@ -28,6 +28,8 @@ import sys
 
 import pytest
 
+UVT_USE_TRACEMALLOC = True
+
 # --------------------------------------
 script_path = pathlib.Path(__file__).parent
 invivfile = script_path / "in/car.viv"
@@ -44,7 +46,7 @@ try:
 except FileExistsError:
     pass
 
-if platform.python_implementation() != "PyPy" and __name__ != "__main__":
+if UVT_USE_TRACEMALLOC and platform.python_implementation() != "PyPy" and __name__ != "__main__":
     import tracemalloc
     # tracemalloc -- BEGIN ------------------------------------
     # tracemalloc.stop()
@@ -59,7 +61,7 @@ if platform.python_implementation() != "PyPy" and __name__ != "__main__":
 
 import unvivtool as uvt
 
-if platform.python_implementation() != "PyPy" and __name__ != "__main__":
+if UVT_USE_TRACEMALLOC and platform.python_implementation() != "PyPy" and __name__ != "__main__":
     # tracemalloc -- BEGIN ------------------------------------
     # Source: https://docs.python.org/3/library/tracemalloc.html
     import linecache
@@ -107,6 +109,8 @@ if platform.python_implementation() != "PyPy" and __name__ != "__main__":
         total = sum(stat.size for stat in top_stats)
         print(f"Total allocated size: {(total / 1024):.1f} KiB ({total})")
     # tracemalloc -- END --------------------------------------
+
+retv = 1
 
 def test_decode1():
     print("Expected result: extract all, return 1")
@@ -366,22 +370,76 @@ def test_encode17():
     infiles = [ "invalid" ]
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) == 16
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+    assert viv_info["size"] == os.path.getsize(vivfile)
+
     infiles = [ str(script_path / "in/LICENSE"), str(script_path / "in/pyproject.toml") ]
     for path in infiles:
         assert pathlib.Path(path).is_file()
     retv = uvt.viv(vivfile, infiles, verbose=1)
     assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
     viv_info = uvt.get_info(vivfile)
-    # print(viv_info)
+    print(viv_info)
+    assert viv_info["size"] == os.path.getsize(vivfile)
+    assert viv_info["__state"] == 14
     assert viv_info.get("format") == "BIGF" and viv_info.get("count_dir_entries") == viv_info.get("count_dir_entries_true")
     assert viv_info.get("count_dir_entries") == len(infiles)
 
+
+def test_update1():
+    print('update1: infiles = ["in/LICENSE", "in/pyproject.toml", "in/ß二", "in/öäü"]'.encode())
+    print("Expected result: encode existing files, update idx=2, return 1")
+    vivfile = script_path / ".out/car_out_update1.viv"
+    vivfile.unlink(True)
+    infiles = [ "in/LICENSE", "in/pyproject.toml", "in/ß二" ]
+    infiles = [str(script_path / path) for path in infiles]
+    for path in infiles:
+        assert pathlib.Path(path).is_file()
+    retv = uvt.viv(vivfile, infiles, verbose=True)
+    assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+
+    # update
+    newfile = script_path / "in/car_out.viv"
+    assert newfile.exists()
+    idx = 2
+    retv = uvt.update(vivfile, newfile, idx, replace_filename=False, verbose=True)
+    assert retv == 1 and vivfile.exists()
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+
+@pytest.mark.xfail(sys.platform.startswith("win"),
+                   reason="encoding issues on Windows...")
+def test_update2():
+    print("Expected result: encode existing files, update idx=1, return 1")
+    vivfile = script_path / ".out/car_out_update2.viv"
+    vivfile.unlink(True)
+    infiles = [ "in/LICENSE", "in/pyproject.toml", "in/ß二" ]
+    infiles = [str(script_path / path) for path in infiles]
+    for path in infiles:
+        assert pathlib.Path(path).is_file()
+    retv = uvt.viv(vivfile, infiles, verbose=True)
+    assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+
+    # update
+    newfile = script_path / "in/öäü"
+    assert newfile.exists()
+    idx = 1
+    retv = uvt.update(vivfile, newfile, idx, replace_filename=True, verbose=True)
+    assert retv == 1 and vivfile.exists()
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
 
 @pytest.mark.skipif(platform.python_implementation() == "PyPy",
                    reason="'pypy-3.8' no tracemalloc")
 @pytest.mark.xfail(sys.platform != "linux",
                    reason="encoding issues on Windows...")
 def test_tracemalloc1():
+    if not UVT_USE_TRACEMALLOC:  return
     # tracemalloc -- BEGIN ------------------------------------
     # tracemalloc.stop()
     second_size, second_peak = tracemalloc.get_traced_memory()
@@ -421,3 +479,4 @@ if __name__ == "__main__":
     test_encode15()
     test_encode16()
     test_encode17()
+    test_update1()

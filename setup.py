@@ -44,8 +44,7 @@ long_description = (SCRIPT_PATH / "./python/README.md").read_text(encoding="utf-
 
 if sys.version_info.minor < 13 or sysconfig.get_config_var("Py_GIL_DISABLED") != 1 or sys._is_gil_enabled() == True:
     os.environ["PYMEM_MALLOC"] = ""
-
-if sys.version_info.minor >= 13:
+elif sys.version_info.minor >= 13:
     if sysconfig.get_config_var("Py_GIL_DISABLED") == 1 and sys._is_gil_enabled() == False:
         print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
         print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
@@ -116,16 +115,20 @@ else:
             ("-D_GNU_SOURCE"),
         ]
 
+define_macros = [
+    ("VERSION_INFO", __version__),
+    # ("SCL_DEVMODE", os.environ.get("SCL_DEVMODE", 0)),  # 0 if key not set
+    # ("SCL_DEBUG", os.environ.get("SCL_DEBUG", 0)),  # 0 if key not set
+    # defined in unvivtoolmodule.c # ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
+]
+print(f'SCL_DEBUG={os.environ.get("SCL_DEBUG", "not set")}')
+if "SCL_DEBUG" in os.environ:
+    define_macros += [ ("SCL_DEBUG", os.environ.get("SCL_DEBUG")) ]
 ext_modules = [
     setuptools.Extension(
         name="unvivtool",
         sources=sorted(["./python/unvivtoolmodule.c"]),
-        define_macros=[
-            ("VERSION_INFO", __version__),
-            # ("SCL_DEVMODE", os.environ.get("SCL_DEVMODE", 0)),  # 0 if key not set
-            # ("SCL_DEBUG", os.environ.get("SCL_DEBUG", 0)),  # 0 if key not set
-            # defined in unvivtoolmodule.c # ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
-        ],
+        define_macros=define_macros,
         extra_compile_args=extra_compile_args,
     )
 ]

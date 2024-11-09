@@ -106,9 +106,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     {0}
   };
   char **filelist = NULL;
-#ifdef Py_GIL_DISABLED
-  PyMutex mutex = {0};
-#endif
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|$pipp:get_info",
@@ -118,10 +115,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
-
-#ifdef Py_GIL_DISABLED
-  PyMutex_Lock(&mutex);
-#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -307,7 +300,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
         PyObject *tmp2 = Py_BuildValue("i", vd.buffer[i].filesize);
         PyObject *tmp3 = Py_BuildValue("i", vd.buffer[i].filename_len_);
         PyObject *tmp4 = Py_BuildValue("i", vd.buffer[i].filename_ofs_);
-        PyObject *tmp5 = Py_BuildValue("i", LIBNFSVIV_GetBitmapValue(vd.validity_bitmap, i));
+        PyObject *tmp5 = Py_BuildValue("i", SCL_BITMAP_IsSet(vd.bitmap, i));
         if (!tmp1 || !tmp2 || !tmp3 || !tmp4 || !tmp5)
         {
           PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
@@ -324,7 +317,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_sizes", list_filesize);
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_lens", list_fn_len_);
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_ofs", list_fn_ofs_);
-      retv &= 0 == PyDict_SetItemString(retv_obj, "validity_bitmap", list_validity);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "bitmap", list_validity);
 
       if (!retv)
       {
@@ -353,10 +346,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     retv_obj = NULL;
   }
 
-#ifdef Py_GIL_DISABLED
-  PyMutex_Unlock(&mutex);
-#endif
-
   return retv_obj;
 }
 
@@ -380,9 +369,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_verbose = 0;
   int opt_overwrite = 0;
   char *buf_cwd = NULL;
-#ifdef Py_GIL_DISABLED
-  PyMutex mutex = {0};
-#endif
   static const char *keywords[] = { "viv", "dir",
                                     "fileidx", "filename",
                                     "dry", "verbose", "direnlen", "fnhex",
@@ -397,10 +383,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
-
-#ifdef Py_GIL_DISABLED
-  PyMutex_Lock(&mutex);
-#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -479,10 +461,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   // Py_XDECREF(outpath_obj);  // see above
   // Py_DECREF(viv_name_obj);  // see above
 
-#ifdef Py_GIL_DISABLED
-  PyMutex_Unlock(&mutex);
-#endif
-
   return retv_obj;
 }
 
@@ -510,9 +488,6 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *item = NULL;
   PyObject *bytes = NULL;
   char *ptr = NULL;
-#ifdef Py_GIL_DISABLED
-  PyMutex mutex = {0};
-#endif
   static const char *keywords[] = { "viv", "infiles", "dry", "verbose",
                                     "format", "endian", "direnlen", "fnhex", "faithful", NULL };
 
@@ -526,10 +501,6 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
-
-#ifdef Py_GIL_DISABLED
-  PyMutex_Lock(&mutex);
-#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -706,10 +677,6 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   if (viv_name)  free(viv_name);
   // Py_DECREF(viv_name_obj);  // see above
 
-#ifdef Py_GIL_DISABLED
-  PyMutex_Unlock(&mutex);
-#endif
-
   return retv_obj;
 }
 
@@ -737,9 +704,6 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_faithfulencode = 0;
-#ifdef Py_GIL_DISABLED
-  PyMutex mutex = {0};
-#endif
   static const char *keywords[] = { "inpath", "infile", "entry",
                                     "outpath",
                                     "insert", "replace_filename",
@@ -760,10 +724,6 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   {
     return NULL;
   }
-
-#ifdef Py_GIL_DISABLED
-  PyMutex_Lock(&mutex);
-#endif
 
   viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
   Py_DECREF(viv_name_obj);
@@ -836,10 +796,6 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   if (viv_name_out)  free(viv_name_out);
   if (infile_path)  free(infile_path);
   if (request_file_name)  free(request_file_name);
-
-#ifdef Py_GIL_DISABLED
-  PyMutex_Unlock(&mutex);
-#endif
 
   return retv_obj;
 }

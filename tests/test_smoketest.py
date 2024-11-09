@@ -32,6 +32,12 @@ def test_has_attribute_version():
         print(f'hasattr(uvt, "__version__")={hasattr(uvt, "__version__")}')
     assert hasattr(uvt, "__version__")
 
+    import sys
+    if sys.version_info.minor >= 13:
+        import sysconfig
+        print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
+        print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
+
 if __name__ == "__main__":
     print(uvt.__version__)
     test_has_attribute_version()

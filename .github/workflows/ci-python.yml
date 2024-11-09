@@ -1,7 +1,7 @@
 name: ci-python
 
 env:
-  SCL_DEBUG: 1
+  SCL_DEBUG: 0
 
 on:
   [push, pull_request]
@@ -32,7 +32,6 @@ jobs:
       shell: bash
       run: |
         export SCL_DEBUG=${{ env.SCL_DEBUG }}
-        export PYMEM_MALLOC=""
         python -m pip install --verbose .
 
     - name: "Print unvivtool.__version__, help"

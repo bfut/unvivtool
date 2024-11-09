@@ -266,6 +266,7 @@ int main(int argc, char **argv)
       if (!out_dir)  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
       else
       {
+        out_dir[0] = '\0';
         for (i = 2; i < argc; ++i)  /* out_dir from args */
         {
           if (argv[i][0] != '-' && strcmp(argv[i], viv_name))
