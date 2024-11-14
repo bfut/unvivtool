@@ -109,7 +109,7 @@
 #define SCL_DEBUG 0  /* 1: dev console output */
 #endif
 
-#if defined(SCL_DEBUG) && SCL_DEBUG > 0
+#if SCL_DEBUG > 0
 #include <assert.h>
 #define SCL_printf printf
 #define SCL_assert assert
@@ -119,7 +119,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define SCL_assert(x)
 #endif
 
-#define UVTVERS "3.2"
+#define UVTVERS "3.3"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */
@@ -130,7 +130,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define LIBNFSVIV_max(x,y) ((x)<(y)?(y):(x))
 #define LIBNFSVIV_min(x,y) ((x)<(y)?(x):(y))
 #define LIBNFSVIV_clamp(x,minv,maxv) ((maxv)<(minv)||(x)<(minv)?(minv):((x)>(maxv)?(maxv):(x)))
-#define LIBNFSVIV_ceil(x,y) ((x)/(y)+((x)%(y))!=0)  /* ceil(x/y) for x>=0,y>0 */
+#define LIBNFSVIV_ceil(x,y) ((x)/(y)+((x)%(y)!=0))  /* ceil(x/y) for x>=0,y>0 */
 #endif
 
 #if !defined(PATH_MAX) && !defined(_WIN32)
@@ -233,11 +233,15 @@ char SCL_BITMAP_IsSet(const char *bitmap, const int idx)
 static
 void *LIBNFSVIV_CallocBitmapVivDirectory(VivDirectory *vd)
 {
-  SCL_printf("LIBNFSVIV_CallocBitmapVivDirectory: length %d (case2: %d)\n", vd->length, vd->length >= 0 && vd->length <= (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8);
+#if SCL_DEBUG > 0
+  printf("LIBNFSVIV_CallocBitmapVivDirectory: length %d (case2: %d)\n", vd->length, vd->length >= 0 && vd->length <= (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8);
+#endif
   if (vd->length <= (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8)
   {
     char *p = vd->__padding + 1;
-    SCL_printf("LIBNFSVIV_CallocBitmapVivDirectory %p %p\n", p, vd->__padding);
+#if SCL_DEBUG > 0
+    printf("LIBNFSVIV_CallocBitmapVivDirectory %p %p\n", p, vd->__padding);
+#endif
     memset(p, 0, sizeof(vd->__padding) - 1);
     return p;
   }
@@ -264,7 +268,9 @@ VivDirectory *LIBNFSVIV_VivDirectory_Init(VivDirectory *vd, const int len)
 {
   if (len < 0 || len > LIBNFSVIV_DirEntrMax)  return NULL;
   vd->length = len + LIBNFSVIV_ceil(len, 2);  /* 2*sizeof(VivDirEntr) == 32 */
-  SCL_printf("LIBNFSVIV_VivDirectory_Init: vd->length: %d, len: %d\n", vd->length, len);
+#if SCL_DEBUG != 0
+  printf("LIBNFSVIV_VivDirectory_Init: vd->length: %d, len: %d\n", vd->length, len);
+#endif
   vd->bitmap = (char *)LIBNFSVIV_CallocBitmapVivDirectory(vd);
   if (!vd->bitmap)  return NULL;
   vd->buffer = (VivDirEntr *)calloc(vd->length * sizeof(*vd->buffer), 1);
@@ -2211,6 +2217,7 @@ VivDirectory *LIBNFSVIV_GetVivDirectory_FromFile(VivDirectory *vd, FILE *file, c
 #endif
     LIBNFSVIV_FixVivHeader(vd, filesz);
     if (!LIBNFSVIV_CheckVivHeader(vd, filesz))  break;
+    SCL_printf("LIBNFSVIV_GetVivDirectory_FromFile:\n");
     if (!LIBNFSVIV_ReadVivDirectory(vd, filesz, file, opt_verbose, opt_direnlenfixed, opt_filenameshex))  break;
     if (!LIBNFSVIV_CheckVivDirectory(vd, filesz))
     {
@@ -2939,18 +2946,14 @@ int LIBNFSVIV_GetTempPath(const int bufsz, char *buf)
     return -1;
 
 #if __APPLE__ || _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
-#if SCL_DEBUG > 0
-#warning has mkdtemp()
-#endif
+SCL_printf("has mkdtemp()\n");
   if ((int)strlen(buf) + 8 > bufsz)  return -1;
   buf[strlen(buf) + 6] = '\0';
   memset(buf + strlen(buf), 'X', 6);
   if (!mkdtemp(buf))  return -1;
   sprintf(buf + strlen(buf), "/");
 #else  /* non-Windows non-Python C89 fallback, assumes that last 6 characters are digits. quietly bail on failures */
-#if SCL_DEBUG > 0
-#warning using tmpnam(), missing mkdtemp()
-#endif
+SCL_printf("using tmpnam(), missing mkdtemp()\n");
 for (;;)
 {
   char temp[LIBNFSVIV_FilenameMaxLen];
@@ -2986,14 +2989,16 @@ for (;;)
 static
 int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailIfExists)
 {
-  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
 #ifdef _WIN32
+  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
   return (int)CopyFile(lpExistingFileName, lpNewFileName, bFailIfExists);  /* CopyFile() !0 on success */
 #elif defined(__APPLE__)
+  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
   return copyfile(lpExistingFileName, lpNewFileName, NULL, COPYFILE_DATA | COPYFILE_XATTR | ((bFailIfExists) ? COPYFILE_EXCL : 0) | COPYFILE_NOFOLLOW) == 0;
 #else
   int retv = 0;
   FILE *file = fopen(lpNewFileName, "wb");
+  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
   if (file)  fclose(file);
   for (;;)
   {

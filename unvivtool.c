@@ -34,10 +34,6 @@
 #define SCL_DEBUG 0
 #include "./libnfsviv.h"
 
-#if SCL_DEBUG > 0
-#include <assert.h>
-#endif
-
 static
 void Usage(void)
 {
