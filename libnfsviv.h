@@ -105,6 +105,17 @@
 #endif
 #endif
 
+#if defined(_WIN32)  /* for LIBNFSVIV_CopyFile() */
+#include <windows.h>  /* CopyFile() */
+#elif defined(__APPLE__)
+#include <copyfile.h>  /* copyfile() */
+#elif !defined(_WIN32) && !defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/sendfile.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #ifndef SCL_DEBUG
 #define SCL_DEBUG 0  /* 1: dev console output */
 #endif
@@ -119,7 +130,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define SCL_assert(x)
 #endif
 
-#define UVTVERS "3.3"
+#define UVTVERS "3.4"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */
@@ -575,12 +586,121 @@ char *LIBNFSVIV_GetFullPathName(char *src, char *dst)
 }
 #endif
 
+
+static
+int LIBNFSVIV_HasWritePermission(const char *path)
+{
+#ifdef _WIN32
+  struct _stat sb;
+  return !!path && !_stat(path, &sb) && (sb.st_mode & _S_IWRITE) ? 1 : 0;
+#else
+  struct stat sb;
+  return !!path && !stat(path, &sb) && (sb.st_mode & S_IWUSR) ? 1 : 0;
+#endif
+}
+
+
+/* buf will hold "/path/to/temp/". Returns strlen() > 0 on success. */
+static
+int LIBNFSVIV_GetTempPath(const int bufsz, char *buf)
+{
+#ifdef _WIN32
+  const int ret = (int)GetTempPath(bufsz, buf);
+  if (ret > 0)  LIBNFSVIV_BkwdToFwdSlash(buf);
+  return ret;
+#else
+  if (!buf)  return -1;
+  buf[0] = '\0';
+  if (LIBNFSVIV_IsDir("/tmp/") && LIBNFSVIV_HasWritePermission("/tmp/"))
+    sprintf(buf, "/tmp/");
+  else if (LIBNFSVIV_IsDir("/usr/tmp/") && LIBNFSVIV_HasWritePermission("/usr/tmp/"))
+    sprintf(buf, "/usr/tmp/");
+  else if (LIBNFSVIV_IsDir("/var/tmp/") && LIBNFSVIV_HasWritePermission("/var/tmp/"))
+    sprintf(buf, "/var/tmp/");
+  /* else if (strlen(buf) < 1 && !getcwd(buf, bufsz) && sprintf(buf + strlen(buf), "/") != 1)  return -1; */
+  else
+    return -1;
+
+#if __APPLE__ || _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
+SCL_printf("has mkdtemp()\n");
+  if ((int)strlen(buf) + 8 > bufsz)  return -1;
+  buf[strlen(buf) + 6] = '\0';
+  memset(buf + strlen(buf), 'X', 6);
+  if (!mkdtemp(buf))  return -1;
+  sprintf(buf + strlen(buf), "/");
+#else  /* non-Windows non-Python C89 fallback, assumes that last 6 characters are digits. quietly bail on failures */
+SCL_printf("using tmpnam(), missing mkdtemp()\n");
+for (;;)
+{
+  char temp[LIBNFSVIV_FilenameMaxLen];
+  char *p_;
+  if (!tmpnam(temp))  break;
+  p_ = strrchr(temp, '/');
+  if (!p_)  break;
+  p_[strlen(p_)] = '\0';
+  if ((int)strlen(buf) + (int)strlen(p_) > bufsz)  break;
+  sprintf(buf + strlen(buf), "%s", p_);
+  if (strlen(p_) > 0)  sprintf(buf + strlen(buf), "/");
+  break;
+}
+#endif
+  SCL_printf("LIBNFSVIV_GetTempPath: %s\n", buf);
+
+  return (int)strlen(buf);
+#endif
+}
+
+/* Returns !0 on success, 0 on failure. */
+static
+int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailIfExists)
+{
+#ifdef _WIN32
+  return (int)CopyFile(lpExistingFileName, lpNewFileName, bFailIfExists);  /* CopyFile() !0 on success */
+#elif defined(__APPLE__)
+  return copyfile(lpExistingFileName, lpNewFileName, NULL, COPYFILE_DATA | COPYFILE_XATTR | ((bFailIfExists) ? COPYFILE_EXCL : 0) | COPYFILE_NOFOLLOW) == 0;
+#else
+  int retv = 0;
+  FILE *file = fopen(lpNewFileName, "wb");
+  if (file)  fclose(file);
+  for (;;)
+  {
+    if (!lpExistingFileName || !lpNewFileName)  break;
+    if (!LIBNFSVIV_IsDir(lpExistingFileName) && !LIBNFSVIV_IsDir(lpNewFileName))
+    {
+      int fd_in, fd_out;
+      struct stat sb;
+      off_t offset = 0;
+      fd_in = open(lpExistingFileName, O_RDONLY);
+      if (fd_in < 0)  break;
+      if (fstat(fd_in, &sb) < 0)
+      {
+        close(fd_in);
+        break;
+      }
+      if (!bFailIfExists)
+        fd_out = open(lpNewFileName, O_WRONLY | O_CREAT, sb.st_mode);
+      else
+        fd_out = open(lpNewFileName, O_WRONLY | O_CREAT | O_EXCL, sb.st_mode);
+      if (fd_out >= 0)
+      {
+        if (sendfile(fd_out, fd_in, &offset, sb.st_size) == (int)sb.st_size)  /* sendfile() bytes on success, -1 on failure */
+          retv = (int)sb.st_size;
+        close(fd_out);
+      }
+      close(fd_in);
+    }
+    break;
+  }  /* for (;;) */
+  return retv;
+#endif
+}
+
 /*
   Write len bytes from infile to outfile. Returns 1 on success, 0 on failure.
   Assumes (dst) and (src) and (buf).
 */
 static
-int LIBNFSVIV_FileCopy(FILE *dest, FILE *src, int len, char *buf, const int bufsz)
+int LIBNFSVIV_FileCopyData(FILE *dest, FILE *src, int len, char *buf, const int bufsz)
 {
   int err = 1;
   int chunk;
@@ -735,19 +855,19 @@ int LIBNFSVIV_CircBuf_addFromFile(LIBNFSVIV_CircBuf *cb, FILE *file, const int f
   {
     written += (int)fread(cb->buf + cb->wr, 1, wrlen1, file);
     written += (int)fread(cb->buf, 1, len - wrlen1, file);
-    SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+    /* SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
     if (written != len)  return -1;
     cb->wr = len - wrlen1;
   }
   else
   {
     written += (int)fread(cb->buf + cb->wr, 1, len, file);
-    SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+    /* SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
     if (written != len)  return -1;
     cb->wr += len;
   }
   cb->wr %= cb->sz;
-  SCL_printf("!   circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+  /* SCL_printf("!   circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
   return written;
 }
 
@@ -765,7 +885,7 @@ int LIBNFSVIV_CircBuf_Peek(LIBNFSVIV_CircBuf *cb, void *dest, const int ofs, int
   int rdlen1 = cb->sz - cb->rd - ofs;
   if (len < 0 || ofs < 0 || !cb->buf)  return 0;
   if (len > cb->sz)  len = cb->sz - ofs;
-#if SCL_DEBUG > 0
+#if SCL_DEBUG > 1
   if (rdlen1 < 0)  SCL_printf("    circbuf_Peek(): rdlen1: %d, len: %d\n", rdlen1, len);
   SCL_assert(rdlen1 >= 0);
   if (rdlen1 < 0)  return 0;  /* Wstringop-overflow */
@@ -814,7 +934,7 @@ int LIBNFSVIV_CircBuf_Get(LIBNFSVIV_CircBuf *cb, void *buf, const int ofs, int l
   return read;
 }
 
-#if SCL_DEBUG > 0
+#if SCL_DEBUG > 2
 static
 unsigned char *LIBNFSVIV_CircBuf_PeekPtr(const LIBNFSVIV_CircBuf * const cb, int ofs)
 {
@@ -844,11 +964,11 @@ void *LIBNFSVIV_CircBuf_memchr(const LIBNFSVIV_CircBuf * const cb, int c, int of
     if (rdofs > cb->sz)  rdofs -= cb->sz;
     len -= ofs;
     rdlen1 = cb->sz - rdofs;
-    SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d\n", rdofs, ofs, rdlen1, len);
+    /* SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d\n", rdofs, ofs, rdlen1, len); */
     if (rdlen1 < len)  /* r2e */
     {
       void *p = memchr(cb->buf + rdofs, c, rdlen1);
-      SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d,  p:'%p'\n", rdofs, ofs, rdlen1, len, p);
+      /* SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d,  p:'%p'\n", rdofs, ofs, rdlen1, len, p); */
       return p ? p : memchr(cb->buf, c, len - rdlen1);
     }
     return memchr(cb->buf + rdofs, c, len);
@@ -913,7 +1033,7 @@ int LIBNFSVIV_CircBuf_PeekIsUTF8(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
   len -= ofs;
   if (len < 0)  return 0;
   s = cb->buf + cb->rd + ofs;
-  SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len);
+  /* SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
   if (rdlen1 < len)
   {
     while (!(state == UTF8_REJECT) && (pos < rdlen1) && *s)
@@ -921,7 +1041,7 @@ int LIBNFSVIV_CircBuf_PeekIsUTF8(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
       DFA_decode(&state, &codepoint, *s++);
       ++pos;
     }
-    SCL_printf(":   CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len);
+    /* SCL_printf(":   CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
     if (pos < rdlen1)  return pos * (state == UTF8_ACCEPT);
     s = cb->buf;
     while (!(state == UTF8_REJECT) && (pos < len - rdlen1) && *s)
@@ -938,7 +1058,7 @@ int LIBNFSVIV_CircBuf_PeekIsUTF8(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
       ++pos;
     }
   }
-  SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len);
+  /* SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
   return pos * (state == UTF8_ACCEPT);
 }
 #else
@@ -1533,8 +1653,10 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
 
         lefttoread = LIBNFSVIV_CircBuf_lefttoread(&cbuf);  /* zero if (cb->rd == cb->wr) */
         lefttoread = lefttoread > 0 ? lefttoread : (int)sizeof(buf);
+#if 0
         SCL_printf("  cbuf stats: buf %p, !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", cbuf.buf, !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("  memchr: %p\n", LIBNFSVIV_CircBuf_memchr(&cbuf, '\0', 8, lefttoread));
+#endif
         /* SCL_debug_printbuf(cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr); */
       }
 
@@ -1566,17 +1688,17 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
       vd->buffer[i].filename_len_ = 0;
 
       valid &= 4 == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].offset, 0, 4);
-      SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
+      /* SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf)); */
       valid &= 4 == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].filesize, 0, 4);
-      SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
+      /* SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf)); */
       vd->buffer[i].offset   = LIBNFSVIV_SwapEndian(vd->buffer[i].offset);
       vd->buffer[i].filesize = LIBNFSVIV_SwapEndian(vd->buffer[i].filesize);
-      SCL_printf("valid: %d\n", valid);
+      /* SCL_printf("valid: %d\n", valid); */
 
       vd->viv_hdr_size_true += 0x08;
       vd->buffer[i].filename_ofs_ = vd->viv_hdr_size_true;
 
-#if 0 && SCL_DEBUG > 0
+#if SCL_DEBUG > 2
       {
         unsigned char * const ptr = LIBNFSVIV_CircBuf_PeekPtr(&cbuf, 0);
         SCL_printf("ptr: %p\n", ptr);
@@ -1602,11 +1724,13 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         vd->buffer[i].filename_len_ = len;
         ++len;
         LIBNFSVIV_CircBuf_Fwd(&cbuf, len);
+#if 0
         SCL_printf("len: %d (0x%x)\n", len, len);
         SCL_printf(":  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("vd: offset: 0x%x\n", vd->buffer[i].offset);
         SCL_printf("vd: filesize: 0x%x\n", vd->buffer[i].filesize);
         SCL_printf("vd->buffer[i] stats: filename_ofs_ 0x%x, filename_len_ 0x%x (next 0x%x)\n", vd->buffer[i].filename_ofs_, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_);
+#endif
         if (!isprint(tmp_UTF8) && (len < 2))
 #else
         /* End if filename is not printable string
@@ -1629,11 +1753,13 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         vd->buffer[i].filename_len_ = len;
         ++len;
         LIBNFSVIV_CircBuf_Fwd(&cbuf, len);
+#if 0
         SCL_printf("len: %d (0x%x)\n", len, len);
         SCL_printf(":  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("vd: offset: 0x%x\n", vd->buffer[i].offset);
         SCL_printf("vd: filesize: 0x%x\n", vd->buffer[i].filesize);
         SCL_printf("vd->buffer[i] stats: filename_ofs_ 0x%x, filename_len_ 0x%x (next 0x%x)\n", vd->buffer[i].filename_ofs_, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_);
+#endif
       }
 
       vd->viv_hdr_size_true += len;
@@ -1799,7 +1925,7 @@ int LIBNFSVIV_VivExtractFile(const VivDirEntr * const vde, FILE *infile,
   /* Extract */
   memset(buf, 0, sizeof(buf));
   fseek(infile, vde->offset, SEEK_SET);
-  retv &= LIBNFSVIV_FileCopy(outfile, infile, vde->filesize, buf, (int)sizeof(buf));
+  retv &= LIBNFSVIV_FileCopyData(outfile, infile, vde->filesize, buf, (int)sizeof(buf));
   fclose(outfile);
   return retv;
 }
@@ -1862,13 +1988,11 @@ int LIBNFSVIV_SetVivDirHeader(VivDirectory *vd,
     return 0;
   }
 
-  SCL_printf("SetVivDirHeader: LIBNFSVIV_VivDirectory_Init(vd, %d)\n", count_infiles);
   if (!LIBNFSVIV_VivDirectory_Init(vd, count_infiles))
   {
     fprintf(stderr, "SetVivDirHeader: Cannot allocate memory\n");
     return 0;
   }
-  SCL_printf("SetVivDirHeader: vd->length: %d\n", vd->length);
 
   curr_offset = 16;
   vd->filesize = 0;
@@ -2094,7 +2218,7 @@ int LIBNFSVIV_VivWriteFile(FILE *dest, FILE *src, const char * const infile_path
     return -1;
   }
   fseek(src, LIBNFSVIV_max(0, infile_ofs), SEEK_SET);
-  retv &= LIBNFSVIV_FileCopy(dest, src, len, buf, (int)sizeof(buf));
+  retv &= LIBNFSVIV_FileCopyData(dest, src, len, buf, (int)sizeof(buf));
   if (infile_path)  fclose(src);
   return (retv) ? (int)ftell(dest) : -1;
 }
@@ -2217,7 +2341,6 @@ VivDirectory *LIBNFSVIV_GetVivDirectory_FromFile(VivDirectory *vd, FILE *file, c
 #endif
     LIBNFSVIV_FixVivHeader(vd, filesz);
     if (!LIBNFSVIV_CheckVivHeader(vd, filesz))  break;
-    SCL_printf("LIBNFSVIV_GetVivDirectory_FromFile:\n");
     if (!LIBNFSVIV_ReadVivDirectory(vd, filesz, file, opt_verbose, opt_direnlenfixed, opt_filenameshex))  break;
     if (!LIBNFSVIV_CheckVivDirectory(vd, filesz))
     {
@@ -2909,131 +3032,6 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
 
   return retv;
 }
-
-
-static
-int LIBNFSVIV_HasWritePermission(const char *path)
-{
-#ifdef _WIN32
-  struct _stat sb;
-  return !!path && !_stat(path, &sb) && (sb.st_mode & _S_IWRITE) ? 1 : 0;
-#else
-  struct stat sb;
-  return !!path && !stat(path, &sb) && (sb.st_mode & S_IWUSR) ? 1 : 0;
-#endif
-}
-
-
-/* buf will hold "/path/to/temp/". Returns strlen() > 0 on success. */
-static
-int LIBNFSVIV_GetTempPath(const int bufsz, char *buf)
-{
-#ifdef _WIN32
-  const int ret = (int)GetTempPath(bufsz, buf);
-  if (ret > 0)  LIBNFSVIV_BkwdToFwdSlash(buf);
-  return ret;
-#else
-  if (!buf)  return -1;
-  buf[0] = '\0';
-  if (LIBNFSVIV_IsDir("/tmp/") && LIBNFSVIV_HasWritePermission("/tmp/"))
-    sprintf(buf, "/tmp/");
-  else if (LIBNFSVIV_IsDir("/usr/tmp/") && LIBNFSVIV_HasWritePermission("/usr/tmp/"))
-    sprintf(buf, "/usr/tmp/");
-  else if (LIBNFSVIV_IsDir("/var/tmp/") && LIBNFSVIV_HasWritePermission("/var/tmp/"))
-    sprintf(buf, "/var/tmp/");
-  /* else if (strlen(buf) < 1 && !getcwd(buf, bufsz) && sprintf(buf + strlen(buf), "/") != 1)  return -1; */
-  else
-    return -1;
-
-#if __APPLE__ || _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
-SCL_printf("has mkdtemp()\n");
-  if ((int)strlen(buf) + 8 > bufsz)  return -1;
-  buf[strlen(buf) + 6] = '\0';
-  memset(buf + strlen(buf), 'X', 6);
-  if (!mkdtemp(buf))  return -1;
-  sprintf(buf + strlen(buf), "/");
-#else  /* non-Windows non-Python C89 fallback, assumes that last 6 characters are digits. quietly bail on failures */
-SCL_printf("using tmpnam(), missing mkdtemp()\n");
-for (;;)
-{
-  char temp[LIBNFSVIV_FilenameMaxLen];
-  char *p_;
-  if (!tmpnam(temp))  break;
-  p_ = strrchr(temp, '/');
-  if (!p_)  break;
-  p_[strlen(p_)] = '\0';
-  if ((int)strlen(buf) + (int)strlen(p_) > bufsz)  break;
-  sprintf(buf + strlen(buf), "%s", p_);
-  if (strlen(p_) > 0)  sprintf(buf + strlen(buf), "/");
-  break;
-}
-#endif
-  SCL_printf("LIBNFSVIV_GetTempPath: %s\n", buf);
-
-  return (int)strlen(buf);
-#endif
-}
-
-
-#if defined(_WIN32)
-#include <windows.h>
-#elif defined(__APPLE__)
-#include <copyfile.h>
-#elif !defined(_WIN32) && !defined(__APPLE__)
-#include <fcntl.h>
-#include <sys/sendfile.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#endif
-/* Returns !0 on success, 0 on failure. */
-static
-int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailIfExists)
-{
-#ifdef _WIN32
-  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
-  return (int)CopyFile(lpExistingFileName, lpNewFileName, bFailIfExists);  /* CopyFile() !0 on success */
-#elif defined(__APPLE__)
-  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
-  return copyfile(lpExistingFileName, lpNewFileName, NULL, COPYFILE_DATA | COPYFILE_XATTR | ((bFailIfExists) ? COPYFILE_EXCL : 0) | COPYFILE_NOFOLLOW) == 0;
-#else
-  int retv = 0;
-  FILE *file = fopen(lpNewFileName, "wb");
-  SCL_printf("CopyFile: %s -> %s (bFailIfExists: %d)\n", lpExistingFileName, lpNewFileName, bFailIfExists);
-  if (file)  fclose(file);
-  for (;;)
-  {
-    if (!lpExistingFileName || !lpNewFileName)  break;
-    if (!LIBNFSVIV_IsDir(lpExistingFileName) && !LIBNFSVIV_IsDir(lpNewFileName))
-    {
-      int fd_in, fd_out;
-      struct stat sb;
-      off_t offset = 0;
-      fd_in = open(lpExistingFileName, O_RDONLY);
-      if (fd_in < 0)  break;
-      if (fstat(fd_in, &sb) < 0)
-      {
-        close(fd_in);
-        break;
-      }
-      if (!bFailIfExists)
-        fd_out = open(lpNewFileName, O_WRONLY | O_CREAT, sb.st_mode);
-      else
-        fd_out = open(lpNewFileName, O_WRONLY | O_CREAT | O_EXCL, sb.st_mode);
-      if (fd_out >= 0)
-      {
-        if (sendfile(fd_out, fd_in, &offset, sb.st_size) == (int)sb.st_size)  /* sendfile() bytes on success, -1 on failure */
-          retv = (int)sb.st_size;
-        close(fd_out);
-      }
-      close(fd_in);
-    }
-    break;
-  }  /* for (;;) */
-  return retv;
-#endif
-}
-
-
 
 /*
   Assumes viv_name is buffer of length >= 4096.

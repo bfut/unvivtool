@@ -318,6 +318,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_lens", list_fn_len_);
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_ofs", list_fn_ofs_);
       retv &= 0 == PyDict_SetItemString(retv_obj, "bitmap", list_validity);
+      retv &= 0 == PyDict_SetItemString(retv_obj, "validity_bitmap", list_validity);  /* DEPRECATED as of unvivtool 3.2 */
 
       if (!retv)
       {
