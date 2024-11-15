@@ -74,7 +74,7 @@ jobs:
         arch: ${{ matrix.arch }}
     - name: Compile
       run: |
-        cl.exe /W4 /utf-8 /O2 /TC unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe
+        cl.exe /W4 /utf-8 /O2 /TC unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe /wd4267 /wd4996
         dir
     - name: Store executable
       uses: actions/upload-artifact@v4

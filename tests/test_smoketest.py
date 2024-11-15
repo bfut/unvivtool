@@ -37,10 +37,3 @@ def test_has_attribute_version():
         import sysconfig
         print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
         print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
-
-if __name__ == "__main__":
-    print(uvt.__version__)
-    test_has_attribute_version()
-    help(uvt.unviv)
-    print(uvt.unviv)
-    print(flush=True)

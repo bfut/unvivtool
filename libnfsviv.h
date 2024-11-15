@@ -130,7 +130,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define SCL_assert(x)
 #endif
 
-#define UVTVERS "3.4"
+#define UVTVERS "3.5"
 #define UVTCOPYRIGHT "Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */
@@ -1341,10 +1341,16 @@ void LIBNFSVIV_PrintStatsEnc(VivDirectory * const vd,
 
       /* avoid printing non-UTF8 / non-printable string */
 #ifdef _WIN32
-      sz = GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen);  /* transform short paths that contain tilde (~) */
-      if (!sz || sz > sizeof(buf))  buf[0] = '\0';
-      ++sz;
-      ptr = buf;
+      sz = (size_t)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
+      if (sz >= 2 && sz < sizeof(buf) - 1)
+      {
+        ptr = buf;
+      }
+      else
+      {
+        sz = strlen(infiles_paths[i]) + 1;
+        ptr = infiles_paths[i];
+      }
 #else
       sz = strlen(infiles_paths[i]) + 1;
       ptr = infiles_paths[i];
@@ -2040,7 +2046,10 @@ int LIBNFSVIV_SetVivDirHeader(VivDirectory *vd,
 #ifdef _WIN32
     len_filename = (int)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
     if (len_filename < 2 || len_filename > LIBNFSVIV_FilenameMaxLen)
-      printf("Warning:SetVivDirHeader: Cannot get long path name for file '%s' (len_filename=%d)\n", infiles_paths[i], (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1);
+    {
+      printf("Warning:UpdateVivDirectory: Cannot get long path name for file '%s': %d (len_filename=%d)\n", infiles_paths[i], len_filename, (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1);
+      len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1;
+    }
     else
       len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(buf)) + 1;
 #else
@@ -2151,8 +2160,14 @@ int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
     len = (int)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen);
     if (strlen(infiles_paths[i]) > 0 && (len == 0 || len > LIBNFSVIV_FilenameMaxLen))
     {
-      printf("Warning:WriteVivDirectory: Cannot get long path name for file '%s' (len=%d)\n", infiles_paths[i], (int)strlen(infiles_paths[i]));
-      break;
+      printf("Warning:WriteVivDirectory: Cannot get long path name for file '%s': %d (len=%d)\n", infiles_paths[i], len, (int)strlen(infiles_paths[i]));
+      len = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i]));
+      if (len > LIBNFSVIV_FilenameMaxLen - 1)
+      {
+        fprintf(stderr, "WriteVivDirectory: infile basename length incompatible (%d)\n", len);
+        return 0;
+      }
+      memcpy(buf, LIBNFSVIV_GetPathBasename(infiles_paths[i]), len + 1);
     }
     buf[len] = '\0';
     {
@@ -2935,12 +2950,12 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
 
       if (request_file_idx <= 0 || (opt_faithfulencode && request_file_idx > vd->count_dir_entries) || (!opt_faithfulencode && request_file_idx > vd->count_dir_entries_true))
       {
-        fprintf(stderr, "VivReplaceEntry: Requested idx (%d) out of bounds (1-based index)\n", request_file_idx);
+        fprintf(stderr, "UpdateVivDirectory: Requested idx (%d) out of bounds (1-based index)\n", request_file_idx);
         break;
       }
       if (SCL_BITMAP_IsSet(vd->bitmap, request_file_idx - 1) != 1)
       {
-        fprintf(stderr, "VivReplaceEntry: Requested idx (%d) is invalid entry\n", request_file_idx);
+        fprintf(stderr, "UpdateVivDirectory: Requested idx (%d) is invalid entry\n", request_file_idx);
         break;
       }
 
@@ -2958,7 +2973,10 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
 #ifdef _WIN32
         len_filename = (int)GetLongPathName(infile_path, buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
         if (len_filename < 2 || len_filename > LIBNFSVIV_FilenameMaxLen)
-          printf("Warning:SetVivDirHeader: Cannot get long path name for file '%s' (len_filename=%d)\n", infile_path, (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1);
+        {
+          printf("Warning:UpdateVivDirectory: Cannot get long path name for file '%s': %d (len_filename=%d)\n", infile_path, len_filename, (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1);
+          len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1;
+        }
         else
           len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(buf)) + 1;
 #else

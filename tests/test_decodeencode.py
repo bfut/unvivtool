@@ -459,24 +459,3 @@ def test_tracemalloc1():
     # windows second_size=425980 second_peak=1859260 Python 3.11
     # windows second_size=333462 second_peak=1827646 Python 3.12
     assert second_size < 350000 and second_peak < 400000
-
-if __name__ == "__main__":
-    print(uvt.__version__)
-    test_encode1()
-    test_encode2()
-    test_encode3()
-    test_encode4()
-    test_encode5()
-    test_encode6()
-    test_encode7()
-    test_encode8()
-    test_encode9()
-    test_encode10()
-    test_encode11()
-    test_encode12()
-    test_encode13()
-    test_encode14()
-    test_encode15()
-    test_encode16()
-    test_encode17()
-    test_update1()
