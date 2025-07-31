@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
 #
 # Portions copyright, see each source file for more information.
 #
@@ -27,9 +27,6 @@ import re
 import setuptools
 import sys
 import sysconfig
-
-if "UVTVERBOSE" in os.environ:
-    print(f'UVTVERBOSE={os.environ["UVTVERBOSE"]}')
 
 SCRIPT_PATH = pathlib.Path(__file__).parent.resolve()
 os.chdir(SCRIPT_PATH)
@@ -65,6 +62,7 @@ else:
         # ("-std=c23"),
         # ("-g"),
         # ("-Og"),
+        # ("-O3"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
 
         ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden

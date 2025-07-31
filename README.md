@@ -1,6 +1,7 @@
 # unvivtool
 unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
-unvivtool is available as command-line interface, and as Python extension module.
+The decoder is a single pass buffered reader.
+unvivtool is available as command-line interface and as Python extension module.
 It is based on a dependency-free header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
@@ -11,6 +12,7 @@ unvivtool is designed to validate and recover data as much as possible.
 Developers can drop-in and use, the encoder/decoder and some data analysis functions from ``libnfsviv.h``.
 
 ## Features
+* memory usage typically peaks below 20 kB even for large archives; worst case ~25 MB
 * decode and encode archive
 * validate archive
 * decode entire archive
@@ -23,11 +25,11 @@ Developers can drop-in and use, the encoder/decoder and some data analysis funct
 * option: support non-printable filenames in archive (Base16 representation)
 * option: decode/encode with set fixed directory entry length
 * Win98 compatibility
-* memory usage typically peaks below 20 kB even for large archives; worst case ~25 MB
 
 ## File format
 The supported formats are called ``BIGF``, ``BIGH``, and ``BIG4`` (equals first 4 bytes).<br/>
 Typical file extensions are ``.VIV`` and ``.BIG``.<br/>
+All three are variants of each other and extend ``EA IFF-85``.<br/>
 Archives can be arbitrarily large and can contain arbitrarily many entries.
 
 ## Installation / Documentation
@@ -36,7 +38,7 @@ Python extension module: [/python/README.md](/python/README.md)
 
 ## References
 The canonical BIGF format description was taken from [1].
-Fixed directory entry length and format deviations, own work.
+Fixed directory entry length and format deviations, original work.
 
 [1] D. Auroux et al. [_The unofficial Need For Speed III file format specifications - Version 1.0_](/references/unofficial_nfs3_file_specs_10.txt) [1998]
 

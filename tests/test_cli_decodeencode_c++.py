@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
 
 # Portions copyright, see each source file for more information.
 
@@ -91,7 +91,7 @@ def test_dir():
         ]), True)
     assert OUTDIR.exists()
     assert True
-    return ret
+
 
 @pytest.mark.skipif(0, reason="")
 def test_cli_smoketest():
@@ -155,28 +155,28 @@ Decoder successful.
     outv = \
 """Printing archive directory:
 
-   id Valid       Offset          Gap         Size Len FnOf  Name
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-                       0                        55           header
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-    1     1           55            0        35149   7   18  LICENSE
-    2     1        35204            0          103  14   28  pyproject.toml
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-                   35307                     35252           2 files
+   id Valid       Offset          Gap         Size Len  FnOf  Name
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+                       0                        55            header
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+    1     1           55            0        35149   7    18  LICENSE
+    2     1        35204            0          103  14    28  pyproject.toml
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+                   35307                     35252            2 files
 Number extracted: 2
 Decoder successful.
 """
     poutv = \
 """Printing archive directory:
 
-   id Valid       Offset          Gap         Size Len FnOf  Name
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-                       0                        55           header
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-    1     1           55            0        35149   7   18  LICENSE
-    2     1        35204            0          103  14   28  pyproject.toml
- ---- ----- ------------ ------------ ------------ --- ----  -----------------------
-                   35307                     35252           2 files
+   id Valid       Offset          Gap         Size Len  FnOf  Name
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+                       0                        55            header
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+    1     1           55            0        35149   7    18  LICENSE
+    2     1        35204            0          103  14    28  pyproject.toml
+ ---- ----- ------------ ------------ ------------ --- -----  -----------------------
+                   35307                     35252            2 files
 End dry run
 Decoder successful.
 """

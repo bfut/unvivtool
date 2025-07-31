@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
 
@@ -99,12 +99,11 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_invalidentries = 0;  /* export info for invalid entries */
-  VivDirectory vd = {
-    {0}, 0, 0, 0,
-    0, 0,
-    0, 0, NULL, NULL,
-    {0}
-  };
+#ifdef __cplusplus
+  VivDirectory vd = {};
+#else
+  VivDirectory vd = {0};
+#endif
   char **filelist = NULL;
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
 
@@ -131,6 +130,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   SCL_printf("UVT opt_direnlenfixed: %d\n", opt_direnlenfixed);
   SCL_printf("UVT opt_filenameshex: %d\n", opt_filenameshex);
   SCL_printf("UVT opt_invalidentries: %d\n", opt_invalidentries);
+  SCL_printf("UVT LIBNFSVIV_IsFile: %d\n", LIBNFSVIV_IsFile(viv_name));
   const int viv_format = LIBNFSVIV_GetVivVersion_FromPath(viv_name);
   SCL_printf("UVT viv_format: %d\n", viv_format);
   if (!viv_format)
@@ -144,13 +144,13 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   /* handle formats:
 
     BIGF BIGH BIG4: "<format>", full dictionary
-    refpack'd BIGF BIGH BIG4: "REFPACK_<format>", othw. empty dictionary
+    0x8000FBC0: "C0FB", full dictionary
     invalid utf8/printable: Py_None, othw. empty dictionary
     invalid non-printable: Py_None, othw. empty dictionary
     null: Py_None, othw. empty dictionary
   */
 
-  /* Handle: Valid file but is not uncompressed BIGF BIGH BIG4; returns {format: None|"string" } */
+  /* Handle: Valid file but is not BIGF BIGH BIG4 C0FB; returns {format: None|"string" } */
   if (retv == 0 && viv_format < 0)
   {
     retv_obj = PyDict_New();
@@ -160,33 +160,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       return NULL;
     }
 
-    switch (viv_format)
-    {
-      case -7:
-        if (0 == PyDict_SetItemString(retv_obj, "format", PyUnicode_FromString("REFPACK_BIGF")))
-          return retv_obj;
-        break;
-      case -8:
-        if (0 == PyDict_SetItemString(retv_obj, "format", PyUnicode_FromString("REFPACK_BIGH")))
-          return retv_obj;
-        break;
-      case -4:
-        if (0 == PyDict_SetItemString(retv_obj, "format", PyUnicode_FromString("REFPACK_BIG4")))
-          return retv_obj;
-        break;
-      default:  /* valid file of unknown format */
-        {
-#if defined(UVTUTF8)
-          const char *fmt_s = (LIBNFSVIV_IsUTF8String(vd.format, 4, 0) == 4) ? vd.format : NULL;
-#else
-          const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4, 4) == 4) ? vd.format : NULL;
-#endif
-          PyObject *fmt_ = fmt_s ? PyUnicode_FromStringAndSize(fmt_s, 4) : Py_NewRef(Py_None);
-          if (0 == PyDict_SetItemString(retv_obj, "format", fmt_))
-            return retv_obj;
-        }
-        break;
-    }
+    const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4, 0) == 4) ? vd.format : NULL;
+    PyObject *fmt_ = fmt_s ? PyUnicode_FromStringAndSize(fmt_s, 4) : Py_NewRef(Py_None);
+    if (0 == PyDict_SetItemString(retv_obj, "format", fmt_))
+      return retv_obj;
 
     Py_XDECREF(retv_obj);
     retv_obj = NULL;
@@ -262,7 +239,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       PyObject *item_;
       if (!local_opt_filenameshex)
       {
-        if (LIBNFSVIV_IsUTF8String(filelist[i], vd.buffer[i].filename_len_, 0) == vd.buffer[i].filename_len_)
+        if (LIBNFSVIV_IsPrintString(filelist[i], vd.buffer[i].filename_len_, 0) == vd.buffer[i].filename_len_)
           item_ = PyUnicode_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
         else
           item_ = Py_NewRef(Py_None);
@@ -318,7 +295,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_lens", list_fn_len_);
       retv &= 0 == PyDict_SetItemString(retv_obj, "files_fn_ofs", list_fn_ofs_);
       retv &= 0 == PyDict_SetItemString(retv_obj, "bitmap", list_validity);
-      retv &= 0 == PyDict_SetItemString(retv_obj, "validity_bitmap", list_validity);  /* DEPRECATED as of unvivtool 3.2 */
+      retv &= 0 == PyDict_SetItemString(retv_obj, "validity_bitmap", list_validity);  /* DEPRECATED, available through unvivtool 3.99 */
 
       if (!retv)
       {
@@ -333,13 +310,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  if (filelist)
-  {
-    if (*filelist)  free(*filelist);
-    free(filelist);
-  }
+  if (filelist)  free(*filelist);
+  free(filelist);
   LIBNFSVIV_FreeVivDirectory(&vd);
-  if (viv_name)  free(viv_name);
+  free(viv_name);
   if (!retv)
   {
     Py_XDECREF(retv_obj);
@@ -455,9 +429,9 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  if (buf_cwd)  free(buf_cwd);
-  if (outpath)  free(outpath);
-  if (viv_name)  free(viv_name);
+  free(buf_cwd);
+  free(outpath);
+  free(viv_name);
   Py_XDECREF(request_file_name_obj);
   // Py_XDECREF(outpath_obj);  // see above
   // Py_DECREF(viv_name_obj);  // see above
@@ -670,12 +644,9 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     }  /* for (;;) */
   }  /* if (retv_obj) */
 
-  if (infiles_paths)
-  {
-    if (*infiles_paths)  free(*infiles_paths);
-    free(infiles_paths);
-  }
-  if (viv_name)  free(viv_name);
+  if (infiles_paths)  free(*infiles_paths);
+  free(infiles_paths);
+  free(viv_name);
   // Py_DECREF(viv_name_obj);  // see above
 
   return retv_obj;
@@ -780,7 +751,7 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
     retv = LIBNFSVIV_Update(viv_name, viv_name_out,
                             request_file_idx, request_file_name,
                             infile_path,
-                            opt_insert, opt_replacefilename,
+                            /* opt_insert */ 0, opt_replacefilename,
                             opt_dryrun, opt_verbose,
                             opt_direnlenfixed, opt_filenameshex,
                             opt_faithfulencode);
@@ -793,10 +764,10 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  if (viv_name)  free(viv_name);
-  if (viv_name_out)  free(viv_name_out);
-  if (infile_path)  free(infile_path);
-  if (request_file_name)  free(request_file_name);
+  free(viv_name);
+  free(viv_name_out);
+  free(infile_path);
+  free(request_file_name);
 
   return retv_obj;
 }
@@ -805,7 +776,7 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
 
 PyDoc_STRVAR(
   m_doc,
-  "simple BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)\n"
+  "BIGF BIGH BIG4 0x8000FBC0 decoder/encoder (commonly known as VIV/BIG)\n"
   "\n"
   "Functions\n"
   "---------\n"
@@ -867,9 +838,9 @@ PyDoc_STRVAR(
   " |          Absolute or relative, path/to/output_archive.viv\n"
   " |          If empty, overwrite vivpath.\n"
   " |      insert : int, optional\n"
-  " |          If  > 0, set as fixed archive directory entry length.\n"
-  " |          If == 0, set as fixed archive directory entry length.\n"
-  " |          If  < 0, set as fixed archive directory entry length.\n"
+  /* " |          If  > 0, insert file at specified index.\n" */
+  " |          If == 0, replace specified file.\n"
+  /* " |          If  < 0, remove file at specified index.\n" */
   " |      replace_filename : bool, optional\n"
   " |          If True, and infile is a path/to/file.ext, the entry filename will be changed to file.ext\n"
   " |      dry : bool, optional\n"
@@ -903,7 +874,7 @@ PyDoc_STRVAR(
 PyDoc_STRVAR(
   unviv__doc__,
   " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
-  " |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.\n"
+  " |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, and 0x8000FBC0.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
@@ -946,7 +917,7 @@ PyDoc_STRVAR(
 PyDoc_STRVAR(
   viv__doc__,
   " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", endian=0xE, direnlen=0, fnhex=False, faithful=False)\n"
-  " |      Encode files to new archive in BIGF, BIGH or BIG4 format.\n"
+  " |      Encode files to new archive in BIGF, BIGH, BIG4, or 0x8000FBC0 format.\n"
   " |      Skips given input paths that cannot be opened.\n"
   " |\n"
   " |      Parameters\n"
@@ -961,7 +932,7 @@ PyDoc_STRVAR(
   " |      verbose : bool\n"
   " |          If True, print archive contents.\n"
   " |      format : str, optional\n"
-  " |          Expects \"BIGF\", \"BIGH\" or \"BIG4\".\n"
+  " |          Expects \"BIGF\", \"BIGH\", \"BIG4\" or \"C0FB\".\n"
   " |      endian : int, char, optional\n"
   " |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.\n"
   " |          Only use for rare occurences where BIGF has to be 0xC.\n"

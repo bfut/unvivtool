@@ -96,7 +96,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ "3.12" ]
+        python-version: [ "3.13" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
@@ -135,7 +135,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ macos-latest ]
-        python-version: [ "3.12" ]
+        python-version: [ "3.13" ]
         std: [ "", "_c++" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
@@ -171,7 +171,7 @@ jobs:
       matrix:
         os: [ windows-latest ]
         arch: [ x86, x64 ]
-        python-version: [ "3.12" ]
+        python-version: [ "3.13" ]
 
     name: Test ${{ matrix.os }} ${{ matrix.arch }} (python-${{ matrix.python-version }})
     steps:

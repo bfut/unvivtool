@@ -10,7 +10,7 @@ A ready to use decoder/encoder script can be found here: [https://github.com/bfu
 ## Installation
 Requires Python 3.10+
 ```
-python -m pip install unvivtool
+python -m pip install -U unvivtool
 ```
 
 ## Documentation
@@ -18,7 +18,7 @@ python -m pip install unvivtool
 Help on module unvivtool:
 
 NAME
-    unvivtool - simple BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)
+    unvivtool - BIGF BIGH BIG4 0x8000FBC0 decoder/encoder (commonly known as VIV/BIG)
 
 DESCRIPTION
     Functions
@@ -28,7 +28,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.5 Copyright (C) 2020-2024 Benjamin Futasz (GPLv3+)
+    unvivtool 3.7 Copyright (C) 2020-2025 Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -64,7 +64,7 @@ FUNCTIONS
 
     unviv(...)
         |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
-        |      Decode and extract archive. Accepts BIGF, BIGH, and BIG4.
+        |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, and 0x8000FBC0.
         |
         |      Parameters
         |      ----------
@@ -119,9 +119,7 @@ FUNCTIONS
         |          Absolute or relative, path/to/output_archive.viv
         |          If empty, overwrite vivpath.
         |      insert : int, optional
-        |          If  > 0, set as fixed archive directory entry length.
-        |          If == 0, set as fixed archive directory entry length.
-        |          If  < 0, set as fixed archive directory entry length.
+        |          If == 0, replace specified file.
         |      replace_filename : bool, optional
         |          If True, and infile is a path/to/file.ext, the entry filename will be changed to file.ext
         |      dry : bool, optional
@@ -153,7 +151,7 @@ FUNCTIONS
 
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", endian=0xE, direnlen=0, fnhex=False, faithful=False)
-        |      Encode files to new archive in BIGF, BIGH or BIG4 format.
+        |      Encode files to new archive in BIGF, BIGH, BIG4, or 0x8000FBC0 format.
         |      Skips given input paths that cannot be opened.
         |
         |      Parameters
@@ -168,7 +166,7 @@ FUNCTIONS
         |      verbose : bool
         |          If True, print archive contents.
         |      format : str, optional
-        |          Expects "BIGF", "BIGH" or "BIG4".
+        |          Expects "BIGF", "BIGH", "BIG4" or "C0FB".
         |      endian : int, char, optional
         |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.
         |          Only use for rare occurences where BIGF has to be 0xC.
@@ -193,4 +191,4 @@ FUNCTIONS
         |      ValueError
 
 VERSION
-    3.5
+    3.7

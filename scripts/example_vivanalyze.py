@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
 #
 # Portions copyright, see each source file for more information.
 #

@@ -1,6 +1,6 @@
 /*
   unvivtool.c - VIV/BIG decoder/encoder CLI
-  unvivtool Copyright (C) 2020-2024 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
 
@@ -31,7 +31,9 @@
 #endif
 
 #define UVTUTF8
+#ifndef SCL_DEBUG
 #define SCL_DEBUG 0
+#endif
 #include "./libnfsviv.h"
 
 static
@@ -52,7 +54,7 @@ void Usage(void)
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -x           decode/encode to/from filenames in base16/heXadecimal\n"
-         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH' or 'BIG4' (w/o quotes)\n"
+         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4' or 'C0FB' (w/o quotes)\n"
          "  -p           Print archive contents, do not write to disk (dry run)\n");
   printf("  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
          "  -v           print archive contents, Verbose\n");
@@ -344,13 +346,15 @@ int main(int argc, char **argv)
             if (strlen(ptr) + 1 != 5
                 && (strncmp(opt_requestfmt, "BIGF", 5)
                     && strncmp(opt_requestfmt, "BIGH", 5)
-                    && strncmp(opt_requestfmt, "BIG4", 5)))
+                    && strncmp(opt_requestfmt, "BIG4", 5)
+                    && strncmp(opt_requestfmt, "C0FB", 5)))
             {
               Usage();
               retv = -1;
               break;
             }
             printf("Requested format: %.4s\n", opt_requestfmt);
+            if (!strncmp(opt_requestfmt, "C0FB", 5))  *(unsigned int *)opt_requestfmt = 0x8000FBC0;
           }
         }  /* (sz > 2) */
         if (!strcmp(argv[i], "-aot"))  { opt_overwrite = 1; }
@@ -409,9 +413,9 @@ int main(int argc, char **argv)
     retv = -1;
   }
 
-  if (out_dir)  free(out_dir);
-  if (infiles_paths_sz > 0)  free(infiles_paths);
-  if (request_file_name)  free(request_file_name);
+  free(out_dir);
+  if (infiles_paths_sz > 0)  free(infiles_paths);  /* only malloc'd if (infiles_paths_sz > 0) */
+  free(request_file_name);
 
   return retv;
 }
