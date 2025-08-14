@@ -22,7 +22,13 @@
 */
 
 /*
-  The API in this header-only library is composed of two parts:
+  Compiling:
+    * little endian, 32-bit|64-bit, sizeof(int)=sizeof(float)=4
+    * Win98+ (MSVC 6.0+), Linux, macOS
+    * non-Win32 requires _GNU_SOURCE #define'd for realpath()
+    * optionally #define UVTUTF8 for the UVTUTF8 branch (decoder supports utf8-filenames within archive header), forces dfa.h dependency
+
+    The API in this header-only library is composed of two parts:
 
   1. LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions
   2. Data analysis via
@@ -30,17 +36,11 @@
     LIBNFSVIV_GetVivDirectory*() - returns struct *VivDirectory, the archive header
     LIBNFSVIV_VivDirectoryToFileList*() - returns char** of filenames listed in the archive header
 
-  The decoder performs a single pass buffered read of the archive header.
+  The decoder performs a single pass buffered read of the archive header only.
   The encoder allows archiving in user-determined order.
   All functions are designed to be safe (and fast).
   A known BIGF variation with fixed directory entry length and non-printable
   filenames is supported in a first.
-
-  Compiling:
-    * little endian, 32-bit|64-bit, sizeof(int)=sizeof(float)=4
-    * Win98+ (MSVC 6.0+), Linux, macOS
-    * non-Win32 requires _GNU_SOURCE #define'd for realpath()
-    * optionally #define UVTUTF8 for the UVTUTF8 branch (decoder supports utf8-filenames within archive header), forces dfa.h dependency
 
   Supported formats:
   BIGF, BIGF, BIG4, 0xFBC0
@@ -2639,16 +2639,13 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
   int retv = 0;
   FILE *file = NULL;
   int viv_filesize;
-#ifdef __cplusplus
-  VivDirectory vd = {};
-#else
-  VivDirectory vd = {0};
-#endif
+  VivDirectory vd;
   int i = 0;
   int count_extracted = 0;
   char *wenc_buf = NULL;
   FILE *wenc_f = NULL;
   const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
+  memset(&vd, 0, sizeof(vd));
 
   SCL_printf(
     "request_file_idx %d\n"
@@ -2826,7 +2823,7 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
     fprintf(wenc_f, "\n");
     fclose(wenc_f);
   }
-  /* if (wenc_buf)  free(wenc_buf); */  /* already free'd */
+  /* free(wenc_buf); */  /* already free'd */
   LIBNFSVIV_FreeVivDirectory(&vd);
   if (file)  fclose(file);
 
@@ -2849,11 +2846,8 @@ int LIBNFSVIV_Viv(const char * const viv_name,
   FILE *file = NULL;
   int filesz = -1;
   int count_archived = 0;
-#ifdef __cplusplus
-  VivDirectory vd = {};
-#else
-  VivDirectory vd = {0};
-#endif
+  VivDirectory vd;
+  memset(&vd, 0, sizeof(vd));
 
   SCL_printf("count_infiles %d\n"
   "opt_dryrun %d\n"
@@ -3148,18 +3142,15 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
   FILE *file_out = NULL;
   int count_infiles;
   char **infiles_paths = NULL;
-#ifdef __cplusplus
-  VivDirectory vd = {};
-  VivDirectory vd_old = {};
-#else
-  VivDirectory vd = {0};
-  VivDirectory vd_old = {0};
-#endif
+  VivDirectory vd;
+  VivDirectory vd_old;
   const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
   char *temppath = NULL;
   char *viv_name_out = NULL;  /* temporary archive */
   int i;
   int count_archived = 0;
+  memset(&vd, 0, sizeof(vd));
+  memset(&vd_old, 0, sizeof(vd_old));
 
   SCL_printf("viv_name %s\n", viv_name);
   SCL_printf("viv_name_out_ %s\n", viv_name_out_);
@@ -3430,11 +3421,6 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
       LIBNFSVIV_PrintStatsDec(&vd, file_out, 0, NULL, opt_direnlenfixed, local_opt_filenameshex);
     }
 
-    fclose(file_out);
-    file_out = NULL;
-    fclose(file);
-    file = NULL;
-
     if (!LIBNFSVIV_CopyFile(temppath, viv_name_out, 0))
       {
         fprintf(stderr, "VivUpdate: Cannot create '%s'\n", viv_name_out);
@@ -3444,11 +3430,8 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     break;
   }  /* for (;;) */
 
-  if (infiles_paths)
-  {
-    if (*infiles_paths)  free(*infiles_paths);
-    free(infiles_paths);
-  }
+  if (infiles_paths)  free(*infiles_paths);
+  free(infiles_paths);
   LIBNFSVIV_FreeVivDirectory(&vd_old);
   LIBNFSVIV_FreeVivDirectory(&vd);
   if (file_out)  fclose(file_out);

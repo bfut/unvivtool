@@ -99,13 +99,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_invalidentries = 0;  /* export info for invalid entries */
-#ifdef __cplusplus
-  VivDirectory vd = {};
-#else
-  VivDirectory vd = {0};
-#endif
+  VivDirectory vd;
   char **filelist = NULL;
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
+  memset(&vd, 0, sizeof(vd));
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|$pipp:get_info",
                                    (char **)keywords,
