@@ -1,8 +1,9 @@
 # unvivtool - Python extension module
-unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
+unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
 
 Purported VIV/BIG archives can contain faulty or manipulated header information.
 unvivtool is designed to validate and recover data as much as possible.
+The decoder performs a single pass buffered read of the archive header only; content extraction is optional.
 
 ## Usage
 A ready to use decoder/encoder script can be found here: [https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py](https://github.com/bfut/unvivtool/blob/main/scripts/unvivtool_script.py)
@@ -18,7 +19,7 @@ python -m pip install -U unvivtool
 Help on module unvivtool:
 
 NAME
-    unvivtool - BIGF BIGH BIG4 0x8000FBC0 decoder/encoder (commonly known as VIV/BIG)
+    unvivtool - BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)
 
 DESCRIPTION
     Functions
@@ -28,7 +29,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.7 Copyright (C) 2020-2025 Benjamin Futasz (GPLv3+)
+    unvivtool 3.8 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -64,7 +65,7 @@ FUNCTIONS
 
     unviv(...)
         |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)
-        |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, and 0x8000FBC0.
+        |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, 0x8000FBC0, and wwww.
         |
         |      Parameters
         |      ----------
@@ -151,7 +152,7 @@ FUNCTIONS
 
     viv(...)
         |  viv(viv, infiles, dry=False, verbose=False, format="BIGF", endian=0xE, direnlen=0, fnhex=False, faithful=False)
-        |      Encode files to new archive in BIGF, BIGH, BIG4, or 0x8000FBC0 format.
+        |      Encode files to new archive in BIGF, BIGH, BIG4, 0x8000FBC0 or wwww format.
         |      Skips given input paths that cannot be opened.
         |
         |      Parameters
@@ -166,10 +167,10 @@ FUNCTIONS
         |      verbose : bool
         |          If True, print archive contents.
         |      format : str, optional
-        |          Expects "BIGF", "BIGH", "BIG4" or "C0FB".
+        |          Expects "BIGF", "BIGH", "BIG4", "C0FB" or "wwww" .
         |      endian : int, char, optional
         |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.
-        |          Only use for rare occurences where BIGF has to be 0xC.
+        |          Only use for the rare occurence where BIGF has to be 0xC.
         |      direnlen : int, optional
         |          If >= 10, set as fixed archive directory entry length.
         |      fnhex : bool, optional
@@ -189,6 +190,4 @@ FUNCTIONS
         |      MemoryError
         |      TypeError
         |      ValueError
-
-VERSION
-    3.7
+```

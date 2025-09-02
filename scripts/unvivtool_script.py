@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 #
 # Portions copyright, see each source file for more information.
 #
@@ -32,7 +32,7 @@ USAGE
     python unvivtool_script.py </path/to/archive.viv>|</path/to/archive.big>
 
 REQUIRES
-    python -m pip install unvivtool
+    python -m pip install -U unvivtool
         this installs unvivtool <https://github.com/bfut/unvivtool>
 """
 import argparse

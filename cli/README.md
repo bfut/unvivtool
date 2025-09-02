@@ -1,5 +1,5 @@
 # unvivtool - command-line interface
-unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
+unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
 
 Purported VIV/BIG archives can contain faulty or manipulated header information.
 unvivtool is designed to validate and recover data as much as possible.
@@ -16,7 +16,7 @@ cd unvivtool
 gcc -std=c89 -D_GNU_SOURCE -fPIE -pie -O2 unvivtool.c -o unvivtool
 ```
 ### Compiling for Windows
-Requires MSVC.
+Requires MSVC 6.0 or later.
 ```
 git clone https://github.com/bfut/unvivtool
 cd unvivtool
@@ -83,7 +83,7 @@ Options:
   -i<N>        decode file at 1-based Index <N>
   -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
   -x           decode/encode to/from filenames in base16/heXadecimal
-  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4' or 'C0FB' (w/o quotes)
+  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)
   -p           Print archive contents, do not write to disk (dry run)
   -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
   -v           print archive contents, Verbose

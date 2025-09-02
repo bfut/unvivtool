@@ -185,6 +185,10 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.arch }}
+    - name: "ls -lga"
+      shell: bash
+      run: |
+        ls -lga ./tests/in
     - name: "pytest"
       shell: bash
       run: |

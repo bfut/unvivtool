@@ -1,6 +1,6 @@
 /*
   unvivtool.c - VIV/BIG decoder/encoder CLI
-  unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
 
@@ -30,10 +30,11 @@
 #include <windows.h>  /* GetModuleFileNameA */
 #endif
 
-#define UVTUTF8
 #ifndef SCL_DEBUG
 #define SCL_DEBUG 0
 #endif
+#define UVTUTF8
+#define UVTWWWW
 #include "./libnfsviv.h"
 
 static
@@ -54,15 +55,16 @@ void Usage(void)
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -x           decode/encode to/from filenames in base16/heXadecimal\n"
-         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4' or 'C0FB' (w/o quotes)\n"
-         "  -p           Print archive contents, do not write to disk (dry run)\n");
-  printf("  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
+         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)\n");
+  printf("  -p           Print archive contents, do not write to disk (dry run)\n"
+         "  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
          "  -v           print archive contents, Verbose\n");
   fflush(stdout);
 }
 
 #ifdef _WIN32
 /* Should be safe enough with sz >= 256 * 4 */
+static
 void UVT_GetExePath(char *buf, const size_t sz)
 {
   if (GetModuleFileName(NULL, buf, sz) > 1)
@@ -70,6 +72,7 @@ void UVT_GetExePath(char *buf, const size_t sz)
 }
 #else
 /* Assumes sizeof(buf) >= 4096 */
+static
 void UVT_GetExePath(char *buf)
 {
   char *ptr = realpath("/proc/self/exe", buf);
@@ -77,67 +80,60 @@ void UVT_GetExePath(char *buf)
 }
 #endif
 
-void UVT_CreateWENCFile(int *retv, const int argc, char **argv, const char *viv_name)
+static
+int UVT_CreateWENCFile(const int argc, char **argv, const char *viv_name)
 {
   char buf_[LIBNFSVIV_FilenameMaxLen];
-  FILE *file_ = NULL;
-  int i;
-  memcpy(buf_, viv_name, LIBNFSVIV_min(strlen(viv_name) + 1, sizeof(buf_)));
-  if (!LIBNFSVIV_AppendFileEnding(buf_, sizeof(buf_), LIBNFSVIV_WENCFileEnding))
+  if (LIBNFSVIV_GetWENCPath(viv_name, buf_, sizeof(buf_)))
   {
-    fprintf(stderr, "Cannot use option '-we'\n");
-    *retv = -1;
-    return;
-  }
-  file_ = fopen(buf_, "w");
-  if (!file_)
-  {
-    fprintf(stderr, "Cannot create '%s' (option -we)\n", buf_);
-    *retv = -1;
-    return;
-  }
-  printf("Writing re-Encoding command to '%s' (option -we)\n", buf_);
-  buf_[0] = '\0';
-  #ifdef _WIN32
-  UVT_GetExePath(buf_, sizeof(buf_));
-  #else
-  UVT_GetExePath(buf_);
-  #endif
-  if (buf_[0])
-  {
-    fprintf(file_, "%s ", buf_);
-    fprintf(file_, "e ");
-    for (i = 2; i < argc; ++i)
+    FILE *file_ = fopen(buf_, "w");
+    if (file_)
     {
-      const size_t sz = strlen(argv[i]);
-      if (argv[i][0] == '-'
-          && strcmp(argv[i], "-we")
-          && (sz > 2 && (strncmp(argv[i], "-i", 2) || strncmp(argv[i], "-f", 2)))
-          && (sz > 4 && (strncmp(argv[i], "-fmt", 4))))
-        fprintf(file_, "%s ", argv[i]);
-    }
-    fflush(file_);
-  }
-  else  *retv = -1;
-  fclose(file_);
+      printf("Writing re-Encoding command to '%s' (option -we)\n", buf_);
+
+      buf_[0] = '\0';
+      #ifdef _WIN32
+      UVT_GetExePath(buf_, sizeof(buf_));
+      #else
+      UVT_GetExePath(buf_);
+      #endif
+      if (!!buf_[0])
+      {
+        int i;
+        fprintf(file_, "%s ", buf_);
+        fprintf(file_, "e ");
+        for (i = 2; i < argc; i++)
+        {
+          const size_t sz = strlen(argv[i]);
+          if (argv[i][0] == '-'
+              && strcmp(argv[i], "-we")
+              && (sz > 2 && (strncmp(argv[i], "-i", 2) || strncmp(argv[i], "-f", 2)))
+              && (sz > 4 && (strncmp(argv[i], "-fmt", 4))))
+            fprintf(file_, "%s ", argv[i]);
+        }
+        fflush(file_);
+      }
+      fclose(file_);
+      return 0;
+    }  /* if (file_) */
+    else  fprintf(stderr, "Cannot create '%s' (option -we)\n", buf_);
+  }  /* if (LIBNFSVIV_GetWENCPath ... */
+  else  fprintf(stderr, "Cannot use option '-we'\n");
+  return -1;
 }
 
+static
 void UVT_RemoveWENCFile(const char *viv_name)
 {
   char buf_[LIBNFSVIV_FilenameMaxLen];
-  memcpy(buf_, viv_name, LIBNFSVIV_min(strlen(viv_name) + 1, sizeof(buf_)));
-  if (!LIBNFSVIV_AppendFileEnding(buf_, sizeof(buf_), LIBNFSVIV_WENCFileEnding))
-  {
+  if (!LIBNFSVIV_GetWENCPath(viv_name, buf_, sizeof(buf_)) || remove(buf_) != 0)
     fprintf(stderr, "Cannot remove re-Encoding file\n");
-    return;
-  }
-  remove(buf_);
 }
 
 int main(int argc, char **argv)
 {
   int retv = 0;
-  char viv_name[LIBNFSVIV_FilenameMaxLen];
+  char viv_name[LIBNFSVIV_FilenameMaxLen] = {0};  /* init's to {0} */
   char *out_dir = NULL;
   char **infiles_paths = NULL;
   size_t infiles_paths_sz = 0;
@@ -155,13 +151,8 @@ int main(int argc, char **argv)
   int opt_overwrite = 0;
   int i;
 
-  SCL_assert(sizeof(VivDirEntr) == 16);
-  SCL_assert(sizeof(VivDirectory) == 64);
-#if defined(_WIN64) || defined(__LP64__) || defined(_M_X64) || defined(__x86_64__)
-  SCL_assert(sizeof(LIBNFSVIV_CircBuf) == 24);
-#else
-  SCL_assert(sizeof(LIBNFSVIV_CircBuf) == 16);
-#endif
+  SCL_assert(sizeof(UVT_DirEntr) == 16);
+  SCL_assert(sizeof(UVT_Directory) == 64);
 
   printf("unvivtool " UVTVERS " - " UVTCOPYRIGHT " "
   #ifdef __cplusplus
@@ -170,19 +161,26 @@ int main(int argc, char **argv)
   #ifndef UVTUTF8
          "|no-UTF8"
   #endif
+  #ifndef UVTWWWW
+         "|no-wwww"
+  #endif
   #if SCL_DEBUG > 0
          "|debug"
   #endif
+#if 1
          "\n\n");
-
+#else
+         "|BufferSize:%d"
+         "|FilenameMaxLen:%d"
+         "\n\n",
+         LIBNFSVIV_BufferSize, LIBNFSVIV_FilenameMaxLen);
+#endif
 
   if (argc < 2)
   {
     Usage();
     return 0;
   }
-
-  viv_name[0] = '\0';
 
   /** Drag-and-drop mode
     always: argv[1] used to copy/derive viv_name
@@ -197,28 +195,26 @@ int main(int argc, char **argv)
   */
   if (strlen(argv[1]) > 1)
   {
-    memcpy(viv_name, argv[1], LIBNFSVIV_min(strlen(argv[1]) + 1, sizeof(viv_name) - 6));  /* leave 5 bytes for ".viv" */
-    viv_name[sizeof(viv_name) - 6] = '\0';
+    char *viv_name_ptr = (char *)LIBNFSVIV_memccpy(viv_name, argv[1], '\0', sizeof(viv_name) - sizeof(".viv"));  /* leave 5 bytes for ".viv" */
 
-    if (/* LIBNFSVIV_IsFile(viv_name) && */ LIBNFSVIV_GetVivVersion_FromPath(viv_name) > 0)  /* decoder */
+    if (viv_name_ptr && /* LIBNFSVIV_IsFile(viv_name) && */ LIBNFSVIV_GetVivVersion_FromPath(viv_name) > 0)  /* decoder */
     {
       out_dir = (char *)calloc(LIBNFSVIV_FilenameMaxLen * sizeof(*out_dir), 1);
-      if (!out_dir)
+      if (out_dir && LIBNFSVIV_memccpy(out_dir, argv[1], '\0', LIBNFSVIV_FilenameMaxLen))
       {
-        fprintf(stderr, "unvivtool: Memory allocation failed.\n");
-        retv = -1;
+        LIBNFSVIV_GetParentDir(out_dir);
       }
       else
       {
-        memcpy(out_dir, argv[1], LIBNFSVIV_min(strlen(argv[1]), LIBNFSVIV_FilenameMaxLen - 1));
-        LIBNFSVIV_GetParentDir(out_dir);
+        fprintf(stderr, "unvivtool: Cannot get parent directory of input file\n");
+        retv = -1;
       }
     }
-    else if (LIBNFSVIV_IsFile(viv_name) && !LIBNFSVIV_IsDir(viv_name))  /* encoder */
+    else if (viv_name_ptr && LIBNFSVIV_IsFile(viv_name) && !LIBNFSVIV_IsDir(viv_name))  /* encoder */
     {
-      if (!LIBNFSVIV_AppendFileEnding(viv_name, sizeof(viv_name), ".viv"))
+      if (!LIBNFSVIV_memccpy(viv_name_ptr, ".viv", '\0', sizeof(".viv")))
       {
-        fprintf(stderr, "Unviv: Cannot append extension '.viv' to '%s'\n", viv_name);
+        fprintf(stderr, "unvivtool: Cannot append extension '.viv' to '%s'\n", viv_name);
         retv = -1;
       }
       infiles_paths_sz = 0;  /* not malloc'd */
@@ -246,14 +242,10 @@ int main(int argc, char **argv)
   */
   else if (argc >= 3 && (argv[1][0] == 'd' || argv[1][0] == 'e'))
   {
-    for (i = 2; i < argc; ++i)
+    for (i = 2; i < argc; i++)
     {
-      if (argv[i][0] != '-')
-      {
-        memcpy(viv_name, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, sizeof(viv_name)));
-        viv_name[sizeof(viv_name) - 1] = '\0';
+      if (argv[i][0] != '-' && LIBNFSVIV_memccpy(viv_name, argv[i], '\0', sizeof(viv_name)))  /* look for viv_name in args, skipping options */
         break;
-      }
     }
     if (viv_name[0] == '\0')  { Usage(); retv = -1; }
 
@@ -261,35 +253,30 @@ int main(int argc, char **argv)
     if (retv == 0 && argv[1][0] == 'd')
     {
       out_dir = (char *)malloc(LIBNFSVIV_FilenameMaxLen * sizeof(*out_dir));
-      if (!out_dir)  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
-      else
+      if (out_dir)
       {
         out_dir[0] = '\0';
-        for (i = 2; i < argc; ++i)  /* out_dir from args */
+        for (i = 2; i < argc; i++)  /* look for out_dir in args, but avoid viv_name */
         {
-          if (argv[i][0] != '-' && strcmp(argv[i], viv_name))
-          {
-            memcpy(out_dir, argv[i], LIBNFSVIV_min(strlen(argv[i]) + 1, LIBNFSVIV_FilenameMaxLen));
+          if (argv[i][0] != '-' && strcmp(argv[i], viv_name) && LIBNFSVIV_memccpy(out_dir, argv[i], '\0', LIBNFSVIV_FilenameMaxLen))
             break;
-          }
         }
-        if (out_dir[0] == '\0')  /*out_dir as parent dir of viv_name */
+        if (out_dir[0] == '\0' && LIBNFSVIV_memccpy(out_dir, viv_name, '\0', LIBNFSVIV_FilenameMaxLen))  /*out_dir as parent dir of viv_name */
         {
-          memcpy(out_dir, viv_name, strlen(viv_name) + 1);
           LIBNFSVIV_GetParentDir(out_dir);
         }
       }
+      else  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
     }  /* if 'd' */
     /* Encode: get input files paths */
     else if (retv == 0 && argv[1][0] == 'e')
     {
       infiles_paths = (char **)calloc((argc - 3) * sizeof(*infiles_paths), 1);
       infiles_paths_sz = (argc - 3) * sizeof(*infiles_paths);
-      if (!infiles_paths)  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
-      else
+      if (infiles_paths)
       {
         count_infiles = 0;
-        for (i = 3; i < argc; ++i)
+        for (i = 3; i < argc; i++)
         {
           if (argv[i][0] != '-' && strcmp(argv[i], viv_name))
           {
@@ -298,18 +285,19 @@ int main(int argc, char **argv)
           }
         }
       }
+      else  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
     }  /* if 'e' */
 
     /** Get options
     */
-    for (i = 2; i < argc && retv == 0; ++i)
+    for (i = 2; i < argc && retv == 0; i++)
     {
       if (argv[i][0] == '-')
       {
         const int sz = (int)strlen(argv[i]);
         if (sz > 2)  /* only consider sufficiently long candidates */
         {
-          const char *ptr = argv[i];
+          char *ptr = argv[i];
           if (sz > 4 && !strncmp(argv[i], "-dnl", 4))  /* fixed directory length (clamped) */
           {
             ptr += 4;
@@ -325,16 +313,18 @@ int main(int argc, char **argv)
           }
           else if (/* sz > 2 && */ argv[1][0] == 'd' && !strncmp(argv[i], "-f", 2))  /* decode: request filename (overrides file idx request) */
           {
+            int ptr_len;
             ptr += 2;
-            if (strlen(ptr) + 1 > LIBNFSVIV_FilenameMaxLen / 2)
+            ptr_len = LIBNFSVIV_IsPrintString(ptr, sz - 2);
+            if ((ptr_len != sz - 2) || (ptr_len + 1 > LIBNFSVIV_FilenameMaxLen / 2))
             {
-              fprintf(stderr, "Requested filename too long (max %d): len %d\n", LIBNFSVIV_FilenameMaxLen / 2, (int)strlen(ptr) + 1);
+              fprintf(stderr, "unvivtool: Requested filename is invalid (max %d): len %d\n", LIBNFSVIV_FilenameMaxLen / 2, ptr_len + 1);
               retv = -1;
               break;
             }
-            request_file_name = (char *)malloc((strlen(ptr) + 1) * sizeof(*request_file_name));
+            request_file_name = (char *)malloc((ptr_len + 1) * sizeof(*request_file_name));
             if (!request_file_name)  { retv = -1; fprintf(stderr, "unvivtool: Memory allocation failed.\n"); break; }
-            memcpy(request_file_name, ptr, strlen(ptr) + 1);
+            memcpy(request_file_name, ptr, ptr_len + 1);
             printf("Requested file: %s\n", request_file_name);
             if (request_file_idx > 0)  printf("Overriding requested file index: %d\n", request_file_idx);
             request_file_idx = 0;  /* override option -i */
@@ -342,19 +332,17 @@ int main(int argc, char **argv)
           else if (sz >= 4 && argv[1][0] == 'e' && !strncmp(argv[i], "-fmt", 4))  /* encode: request encoding format */
           {
             ptr += 4;
-            memcpy(opt_requestfmt, ptr, LIBNFSVIV_min(strlen(ptr) + 1, 5));
-            if (strlen(ptr) + 1 != 5
-                && (strncmp(opt_requestfmt, "BIGF", 5)
-                    && strncmp(opt_requestfmt, "BIGH", 5)
-                    && strncmp(opt_requestfmt, "BIG4", 5)
-                    && strncmp(opt_requestfmt, "C0FB", 5)))
+            LIBNFSVIV_memccpy(opt_requestfmt, ptr, '\0', sizeof(opt_requestfmt));
+            opt_requestfmt[4] = '\0';
+            if (!strcmp(opt_requestfmt, "C0FB"))  SCL_seri_uint(opt_requestfmt, 0x8000FBC0);
+            if (LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt) > 0)
+              printf("Requested format: %.4s\n", SCL_deseri_uint(opt_requestfmt) != 0x8000FBC0 ? opt_requestfmt : "C0FB");
+            else
             {
               Usage();
               retv = -1;
               break;
             }
-            printf("Requested format: %.4s\n", opt_requestfmt);
-            if (!strncmp(opt_requestfmt, "C0FB", 5))  *(unsigned int *)opt_requestfmt = 0x8000FBC0;
           }
         }  /* (sz > 2) */
         if (!strcmp(argv[i], "-aot"))  { opt_overwrite = 1; }
@@ -368,7 +356,7 @@ int main(int argc, char **argv)
   }  /* command mode */
 
   if (retv == 0 && argv[1][0] == 'd' && opt_wenccommand && !opt_dryrun)
-    UVT_CreateWENCFile(&retv, argc, argv, viv_name);
+    retv = UVT_CreateWENCFile(argc, argv, viv_name);
 
   /** Decoder
   */

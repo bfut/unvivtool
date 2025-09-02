@@ -1,6 +1,6 @@
 /*
   libnfsviv.h - BIGF BIGH BIG4 0xFBC0 decoder/encoder (commonly known as VIV/BIG)
-  unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
 
@@ -23,8 +23,7 @@
 
 /*
   Compiling:
-    * little endian, 32-bit|64-bit, sizeof(int)=sizeof(float)=4
-    * Win98+ (MSVC 6.0+), Linux, macOS
+    * Win98+ (MSVC 6.0+)|Linux|macOS, little endian, 32-bit|64-bit, sizeof(int)=sizeof(float)=4
     * non-Win32 requires _GNU_SOURCE #define'd for realpath()
     * optionally #define UVTUTF8 for the UVTUTF8 branch (decoder supports utf8-filenames within archive header), forces dfa.h dependency
 
@@ -33,17 +32,15 @@
   1. LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions
   2. Data analysis via
     LIBNFSVIV_GetVivVersion*()
-    LIBNFSVIV_GetVivDirectory*() - returns struct *VivDirectory, the archive header
+    LIBNFSVIV_GetVivDirectory*() - returns struct *UVT_Directory, the archive header
     LIBNFSVIV_VivDirectoryToFileList*() - returns char** of filenames listed in the archive header
 
   The decoder performs a single pass buffered read of the archive header only.
   The encoder allows archiving in user-determined order.
-  All functions are designed to be safe (and fast).
-  A known BIGF variation with fixed directory entry length and non-printable
-  filenames is supported in a first.
+  A known BIGF variation with fixed directory entry length and non-printable filenames is supported in a first.
 
   Supported formats:
-  BIGF, BIGF, BIG4, 0xFBC0
+    BIGF, BIGF, BIG4, 0xFBC0, wwww
 
   BIGF theoretical limits, assuming signed int:
     min header len:          16         0x10
@@ -52,7 +49,7 @@
     min dir entries count:   0
     max dir entries count:   214748363  0x0ccccccb
 
-  BIGF BIGH headers usually contain big-endian numeric values.
+  BIGF BIGH 0xFBC0 headers usually contain big-endian numeric values.
 
   Special cases:
     archive header can have filesize encoded in little endian
@@ -88,59 +85,86 @@
 #include <sys/types.h>
 
 #ifdef _WIN32
-#include <windows.h>  /* GetFullPathNameA, GetLongPathNameA */
-#include <direct.h>
-#ifndef chdir
-#define chdir _chdir
-#endif
-#ifndef mkdir
-#define mkdir(a,b) _mkdir(a)
-#endif
-#ifndef stat
-#define stat _stat
-#endif
-#ifndef S_IFDIR
-#define S_IFDIR _S_IFDIR
-#endif
-#ifndef S_IFREG
-#define S_IFREG _S_IFREG
-#endif
-#ifndef S_IFMT
-#define S_IFMT _S_IFMT
-#endif
+  #include <windows.h>  /* GetFullPathNameA, GetLongPathNameA */
+  #include <direct.h>
+  #ifndef chdir
+  #define chdir _chdir
+  #endif
+  #ifndef getcwd
+  #define getcwd _getcwd
+  #endif
+  #ifndef mkdir
+  #define mkdir(a,b) _mkdir(a)
+  #endif
+  #ifndef stat
+  #define stat _stat
+  #endif
+  #ifndef S_IFDIR
+  #define S_IFDIR _S_IFDIR
+  #endif
+  #ifndef S_IFREG
+  #define S_IFREG _S_IFREG
+  #endif
+  #ifndef S_IFMT
+  #define S_IFMT _S_IFMT
+  #endif
 #else
-#include <unistd.h>
-#if defined(__STDC__)
-#include <dirent.h>
+  #include <unistd.h>
+    #if defined(__STDC__)
+    #include <dirent.h>
+    #endif
+#endif
+
+#if 1
+#ifdef _WIN32  /* for LIBNFSVIV_GetVivVersion_FromPath() */
+  #include <io.h>
+  #include <fcntl.h>
+  #ifndef open
+  #define open _open
+  #endif
+  #ifndef read
+  #define read _read
+  #endif
+  #ifndef close
+  #define close _close
+  #endif
+  #ifndef O_RDONLY
+  #define O_RDONLY _O_RDONLY
+  #endif
 #endif
 #endif
 
 #if defined(_WIN32)  /* for LIBNFSVIV_CopyFile() */
-#include <windows.h>  /* CopyFile() */
+  #include <windows.h>  /* CopyFile() */
 #elif defined(__APPLE__)
-#include <copyfile.h>  /* copyfile() */
-#elif !defined(_WIN32) && !defined(__APPLE__)
-#include <fcntl.h>
-#include <sys/sendfile.h>  /* sendfile() */
-#include <sys/stat.h>
-#include <unistd.h>
+  #include <copyfile.h>  /* copyfile() */
+  #include <fcntl.h>  /* open() */
+  #include <unistd.h>  /* read(), close() */
+#else
+  #include <fcntl.h>
+  #include <sys/sendfile.h>  /* sendfile() */
+  #include <sys/stat.h>
+  #include <unistd.h>
 #endif
 
 #if SCL_DEBUG > 0
-#include <assert.h>
-#define SCL_printf printf
-#define SCL_assert assert
+  #include <assert.h>
+  #define SCL_printf printf
+  #define SCL_assert assert
 #else
-/* #define SCL_printf(format, ...) { } */  /* C89-incompatible */
-static void SCL_printf(const char *format, ...) { (void)format; }
-#define SCL_assert(x)
+  /* #define SCL_printf(format, ...) { } */  /* C89-incompatible */
+  static void SCL_printf(const char *format, ...) { (void)format; }
+  #define SCL_assert(x)
 #endif
 
-#define UVTVERS "3.7"
-#define UVTCOPYRIGHT "Copyright (C) 2020-2025 Benjamin Futasz (GPLv3+)"
+#define UVTVERS "3.8"
+#define UVTCOPYRIGHT "Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */
 #include "./include/dfa.h"
+#endif
+#ifndef UVTWWWW  /* optional branch: 'wwww' file format support */
+#define UVTWWWW
 #endif
 
 #ifndef LIBNFSVIV_max
@@ -153,7 +177,8 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define LIBNFSVIV_clamp(x,minv,maxv) ((maxv)<(minv)||(x)<(minv)?(minv):((x)>(maxv)?(maxv):(x)))
 #endif
 #ifndef LIBNFSVIV_ceil
-#define LIBNFSVIV_ceil(x,y) ((x)/(y)+((x)%(y)!=0))  /* ceil(x/y) for x>=0,y>0 */
+#define LIBNFSVIV_ceil(x,y) (((x)-1)/(y)+1)  /* ceil(x/y) for x,y > 0; use ceil0() for x=0 */
+#define LIBNFSVIV_ceil0(x,y) (((x)+(y)-1)/(y))  /* ceil(x/y) for x>=0,y>0 */
 #endif
 
 #if !defined(PATH_MAX) && !defined(_WIN32)
@@ -169,7 +194,7 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define LIBNFSVIV_DirEntrMax 1572864  /* (LIBNFSVIV_ceil( ((1024 << 10) * 24), 16)) */
 
 
-#define LIBNFSVIV_CircBuf_Size LIBNFSVIV_BufferSize + 16
+#define LIBNFSVIV_CircBuf_Size LIBNFSVIV_BufferSize  /* must be at least 16 */
 /* #define LIBNFSVIV_CircBuf_Size 0x10 + 16 */
 
 #define LIBNFSVIV_WENCFileEnding ".txt"
@@ -180,14 +205,24 @@ static void SCL_printf(const char *format, ...) { (void)format; }
 #define LIBNFSVIV_extern extern "C"
 #endif
 
-#ifndef __cplusplus
-typedef struct VivDirEntr VivDirEntr;
-typedef struct VivDirectory VivDirectory;
+#if defined(_MSC_VER)
+#define SCL_UNUSED __pragma(warning(suppress:4100 4101))
+#elif __cplusplus >= 201703L
+#define SCL_UNUSED [[maybe_unused]]
+#elif defined(__GNUC__) || defined(__clang__)
+#define SCL_UNUSED __attribute__((unused))
+#else
+#define SCL_UNUSED
 #endif
 
-struct VivDirEntr {
+#ifndef __cplusplus
+typedef struct UVT_DirEntr UVT_DirEntr;
+typedef struct UVT_Directory UVT_Directory;
+#endif
+
+struct UVT_DirEntr {
   int offset;
-  int filesize;
+  int e_filesize;
   int filename_ofs_;
   int filename_len_;  /* string length without nul */
 };
@@ -197,9 +232,9 @@ struct VivDirEntr {
 #else
 #define LIBNFSVIV_VivDirectoryPaddingSize 20
 #endif
-struct VivDirectory {
-  char format[4];  /* BIGF, BIGH, BIG4 or 0xFBC0 */
-  int filesize;
+struct UVT_Directory {
+  char format[4];  /* BIGF, BIGH, BIG4 or 0x8000FBC0 */
+  int h_filesize;
   int count_dir_entries;  /* per header */
   int header_size;  /* per header. includes VIV directory*/
 
@@ -209,7 +244,7 @@ struct VivDirectory {
   int length;  /* length of buffer */
   int null_count;
   char *bitmap;  /* len >= ceil(length/8) */
-  VivDirEntr *buffer;
+  UVT_DirEntr *buffer;
 
   /*
     keep 64 byte aligned;
@@ -219,9 +254,20 @@ struct VivDirectory {
   char __padding[LIBNFSVIV_VivDirectoryPaddingSize];
 };
 
-/* util --------------------------------------------------------------------- */
-LIBNFSVIV_extern int LIBNFSVIV_GetVivVersion_FromBuf(const char * const buf);
+#if LIBNFSVIV_CircBuf_Size < 16
+#error "LIBNFSVIV_CircBuf_Size must be at least 16"
+#endif
+#if LIBNFSVIV_VivDirectoryPaddingSize < 1
+#error "LIBNFSVIV_VivDirectoryPaddingSize must be greater than 0"
+#endif
+
+/* api -------------------------------------------------------------------------------------------------------------- */
+
 LIBNFSVIV_extern const char *LIBNFSVIV_GetVivVersionString(const char * buf);
+LIBNFSVIV_extern int LIBNFSVIV_GetVivVersion_FromBuf(const char * const buf);
+
+/* util ------------------------------------------------------------------------------------------------------------- */
+/* util: BIGF --------------------------------------------------------------- */
 
 /* fixed length entries with all-printable names are not known to exist */
 static
@@ -238,6 +284,8 @@ int LIBNFSVIV_Clamp_opt_direnlenfixed(int opt_direnlenfixed, const int opt_verbo
   if (opt_verbose && temp_ != opt_direnlenfixed)  printf("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1);
   return opt_direnlenfixed;
 }
+
+/* util: SCL_BITMAP --------------------------------------------------------- */
 
 static
 void SCL_BITMAP_Set(char *bitmap, const int idx)
@@ -257,18 +305,14 @@ char SCL_BITMAP_IsSet(const char *bitmap, const int idx)
   return (bitmap[idx >> 3] >> (idx & 7)) & 1;
 }
 
+/* util: UVT_Directory ------------------------------------------------------ */
+
 static
-void *LIBNFSVIV_CallocBitmapVivDirectory(VivDirectory *vd)
+void *LIBNFSVIV_UVT_DirectoryCallocBitmap(UVT_Directory *vd)
 {
-#if SCL_DEBUG > 0
-  printf("LIBNFSVIV_CallocBitmapVivDirectory: length %d (case2: %d)\n", vd->length, vd->length >= 0 && vd->length <= (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8);
-#endif
   if (vd->length <= (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8)
   {
     char *p = vd->__padding + 1;
-#if SCL_DEBUG > 0
-    printf("LIBNFSVIV_CallocBitmapVivDirectory %p %p\n", p, vd->__padding);
-#endif
     memset(p, 0, sizeof(vd->__padding) - 1);
     return p;
   }
@@ -277,30 +321,28 @@ void *LIBNFSVIV_CallocBitmapVivDirectory(VivDirectory *vd)
 }
 
 static
-void LIBNFSVIV_FreeBitmapVivDirectory(VivDirectory *vd)
+void LIBNFSVIV_UVT_DirectoryFreeBitmap(UVT_Directory *vd)
 {
   if (vd->length > (LIBNFSVIV_VivDirectoryPaddingSize - 1) * 8)  free(vd->bitmap);
 }
 
 /* free's buffer and bitmap */
 static
-void LIBNFSVIV_FreeVivDirectory(VivDirectory *vd)
+void LIBNFSVIV_UVT_DirectoryRelease(UVT_Directory *vd)
 {
   free(vd->buffer);
-  LIBNFSVIV_FreeBitmapVivDirectory(vd);
+  LIBNFSVIV_UVT_DirectoryFreeBitmap(vd);
 }
 
+
 static
-VivDirectory *LIBNFSVIV_VivDirectory_Init(VivDirectory *vd, const int len)
+UVT_Directory *LIBNFSVIV_UVT_DirectoryInit(UVT_Directory *vd, const int len)
 {
   if (len < 0 || len > LIBNFSVIV_DirEntrMax)  return NULL;
-  vd->length = 2 * LIBNFSVIV_ceil(len, 2);  /* 2*sizeof(VivDirEntr) == 32 */
-#if SCL_DEBUG != 0
-  printf("LIBNFSVIV_VivDirectory_Init: vd->length: %d, len: %d\n", vd->length, len);
-#endif
-  vd->bitmap = (char *)LIBNFSVIV_CallocBitmapVivDirectory(vd);
+  vd->length = 2 * LIBNFSVIV_ceil0(len, 2);  /* 2*sizeof(UVT_DirEntr) == 32 */
+  vd->bitmap = (char *)LIBNFSVIV_UVT_DirectoryCallocBitmap(vd);
   if (!vd->bitmap)  return NULL;
-  vd->buffer = (VivDirEntr *)calloc(vd->length * sizeof(*vd->buffer), 1);
+  vd->buffer = (UVT_DirEntr *)calloc(vd->length * sizeof(*vd->buffer), 1);
   if (!vd->buffer)
   {
     free(vd->bitmap);
@@ -309,52 +351,107 @@ VivDirectory *LIBNFSVIV_VivDirectory_Init(VivDirectory *vd, const int len)
   return vd;
 }
 
-#if defined(UVTUTF8)
-/* Returns UTF8 length without nul. If __s is not nul-terminated, call with nul_terminate=0 */
+/* util: misc --------------------------------------------------------------- */
+
+SCL_UNUSED static
+unsigned int SCL_deseri_uint(const void *src)
+{
+  unsigned int val;
+  memcpy(&val, src, sizeof(val));
+  return val;
+}
+
+SCL_UNUSED static
+void SCL_seri_uint(void *dest, const unsigned int val)
+{
+  memcpy(dest, &val, sizeof(val));
+}
+
+#if __STDC_VERSION__ >= 202311L || POSIX_C_SOURCE >= 200809L || _XOPEN_SOURCE >= 700 || _BSD_SOURCE || _SVID_SOURCE || _DEFAULT_SOURCE
+#define LIBNFSVIV_memccpy(dest, src, c, count) memccpy(dest, src, c, count)
+#else
+/*
+  Returns pointer to byte after (c) in (dest), or NULL if (c) not found in first (count) bytes.
+
+  Assumes (dest) and (src) do not overlap.
+  Assumes dest is large enough to hold count bytes.
+
+  Does not zero-pad the destination array.
+*/
 static
-int LIBNFSVIV_IsPrintString(void *__s, const size_t max_len, const char nul_terminate)
+void *LIBNFSVIV_memccpy(void* dest, const void* src, int c, size_t count)
+{
+  unsigned char* d = (unsigned char*)dest;
+  const unsigned char* s = (const unsigned char*)src;
+  size_t i;
+  for (i = 0; i < count; i++)
+  {
+    *d++ = *s;
+    if (*s++ == (unsigned char)c)  return d;
+  }
+  return NULL;
+}
+#endif
+
+#if defined(UVTUTF8)
+/* Returns UTF8 length without nul. */
+static
+int LIBNFSVIV_IsPrintString(const void *__s, const size_t max_len)
 {
   unsigned char *s = (unsigned char *)__s;
   size_t pos = 0;
   unsigned int codepoint, state = 0;
   if (!__s)  return 0;
-  while (!(state == UTF8_REJECT) && (pos < max_len) && *s)
+  while ((*s != 0) && !(state == UTF8_REJECT) && (pos < max_len))
   {
     DFA_decode(&state, &codepoint, *s++);
     ++pos;
   }
-  SCL_printf("    IsPrintString: pos = %d, max_len = %d, state = %d (UTF8_ACCEPT %d); return=%d\n", (int)pos, (int)max_len, (int)state, UTF8_ACCEPT, (int)(pos * (!nul_terminate || (pos < max_len)) * (state == UTF8_ACCEPT)));
-  return (int)pos * (!nul_terminate || (pos < max_len)) * (state == UTF8_ACCEPT);
+  return (int)pos * (pos <= max_len) * (state == UTF8_ACCEPT);
 }
 #else
-/* Returns isprint length without nul. If __s is not nul-terminated, set nul_terminate=0 */
+/* Returns isprint() length without nul. */
+#define SCL_ISPRINT_REJECT 0
 static
-int LIBNFSVIV_IsPrintString(void *__s, const size_t max_len, const char nul_terminate)
+int LIBNFSVIV_IsPrintString(const void *__s, const size_t max_len)
 {
   unsigned char *s = (unsigned char *)__s;
   size_t pos = 0;
+  int state = 1;
   if (!__s)  return 0;
-  while ((pos < max_len) && *s)
+  while ((*s != 0) && !(state == SCL_ISPRINT_REJECT) && (pos < max_len))
   {
-    if (!isprint(*s++))
-      pos = max_len;
+    state = isprint(*s++);
     ++pos;
   }
-  return pos * (!nul_terminate || (pos < max_len));
+  return (int)pos * (pos <= max_len) * (state != SCL_ISPRINT_REJECT);
 }
+#undef SCL_ISPRINT_REJECT
 #endif
 
 static
 int LIBNFSVIV_SwapEndian(const int y)
 {
-  unsigned int x;
-  int z;
-  memcpy(&x, &y, sizeof(x));
-  x = ((x >> 24) & 0x000000ff) | ((x << 24) & 0xff000000) |
-      ((x << 8) & 0xff0000) | ((x >> 8) & 0x00ff00);
-  memcpy(&z, &x, sizeof(x));
-  return z;
+  unsigned int x = y;
+  x = ((x >> 24) & 0x000000ff) | ((x << 24) & 0xff000000)
+     | ((x >> 8) & 0x0000ff00) | ((x << 8) & 0x00ff0000);
+  return x;
 }
+
+#if 0
+/* Assumes (b) and sz divisible by 2. */
+SCL_UNUSED static
+void SCL_SwapEndian(unsigned char *b, const int sz)
+{
+  int i;
+  for (i = 0; i < sz / 2; i++)
+  {
+    const unsigned char t = b[i];
+    b[i] = b[sz - i - 1];
+    b[sz - i - 1] = t;
+  }
+}
+#endif
 
 /* Assumes (buf) and (bufsz > 1). Returns len == strlen(buf) on success, otherwise -1.*/
 static
@@ -370,17 +467,6 @@ int LIBNFSVIV_FreadToStr(char *buf, const int bufsz, const int ofs, int len, FIL
   return -1;
 }
 
-/* Assumes src_len is length without nul. */
-static
-void *LIBNFSVIV_memcpyToString(void *dest, const void *src,
-                               const int dest_len, const int src_len)
-{
-  if (dest_len < 1 || src_len < 0)  return NULL;
-  memcpy(dest, src, LIBNFSVIV_min(src_len, dest_len));
-  ((unsigned char *)dest)[LIBNFSVIV_min(src_len, dest_len - 1)] = '\0';
-  return dest;
-}
-
 /* Assumes input \in 0123456ABCDEFabcdef */
 static
 int LIBNFSVIV_hextoint(const char in)
@@ -391,7 +477,7 @@ int LIBNFSVIV_hextoint(const char in)
   return 0;
 }
 
-/* Assumes (0x0 <= in <= 0xF). Returns upper-case hexadecimal. */
+/* Assumes (0x00 <= in <= 0x0F). Returns upper-case hexadecimal. */
 static
 char LIBNFSVIV_inttohex(const int in)
 {
@@ -415,10 +501,10 @@ int LIBNFSVIV_DecBase16(char *str)
   char buf[LIBNFSVIV_FilenameMaxLen];
   while (*ptr && *ptr + 1 && i < LIBNFSVIV_FilenameMaxLen - 2)  /* buf always ends on nul */
   {
-    buf[i] = LIBNFSVIV_hextoint(*ptr) << 4;
+    buf[i] = (unsigned int)LIBNFSVIV_hextoint(*ptr) << 4;
     buf[i] += LIBNFSVIV_hextoint(*(ptr + 1));
     ptr += 2;
-    ++i;
+    i++;
   }
   buf[i] = '\0';
   memcpy(str, buf, i + 1);
@@ -473,6 +559,52 @@ char *LIBNFSVIV_GetPathBasename(char *filename)
   else
     return filename;
 }
+
+/*
+  On success, returns strlen() > 0.
+  filename is not changed; except on Windows, converts '\\' to '/' and transforms short paths that contain tilde (~) to long paths.
+
+  For buf, you can use the same buffer you used for the filename parameter.
+  On Windows, assumes (buf) and buf is at least bufsz bytes long, with bufsz > 1.
+  Elsewhere, (buf) and bufsz are ignored.
+
+  startptr is updated to point to the start of the basename, within filename (or buf on Windows).
+  If startptr is NULL, it is ignored.
+*/
+static
+#ifdef _WIN32
+int LIBNFSVIV_GetPathBasename2(char *filename, char **startptr, char *buf, const int bufsz)
+{
+  char *sptr;
+  /*
+    GetLongPathName() transforms short paths that contain tilde (~)
+    GetLongPathName() returns 0 on error, otherwise strlen().
+  */
+  int len = (int)GetLongPathName(filename, buf, bufsz);
+  if (len >= 1 && len < bufsz - 1)
+  {
+    sptr = LIBNFSVIV_GetPathBasename(buf);
+    len = (int)strlen(sptr);
+  }
+  else
+  {
+    printf("Warning:GetPathBasename2: Cannot get long path name for file '%s': %d (strlen=%d)\n", filename, len, (int)strlen(LIBNFSVIV_GetPathBasename(filename)));
+    sptr = LIBNFSVIV_GetPathBasename(filename);
+    len = (int)strlen(LIBNFSVIV_GetPathBasename(sptr));
+  }
+  if (startptr)  *startptr = sptr;
+  return len;
+}
+#else
+int LIBNFSVIV_GetPathBasename2(char * filename, char **startptr, char *_, const int __)
+{
+  char *sptr = LIBNFSVIV_GetPathBasename(filename);
+  (void)_;
+  (void)__;
+  if (startptr)  *startptr = sptr;
+  return (int)strlen(LIBNFSVIV_GetPathBasename(sptr));
+}
+#endif
 
 /* Returns -1 on error. Allows (path==NULL). */
 static
@@ -560,7 +692,6 @@ char *LIBNFSVIV_GetFullPathName(char *src, char *dest, const size_t nBufferLengt
     char buf[LIBNFSVIV_FilenameMaxLen];
     len = (size_t)GetFullPathName(src, LIBNFSVIV_FilenameMaxLen, buf, lpFilePart);  /* returns length without nul */
     if (len == 0 || len >= LIBNFSVIV_FilenameMaxLen)
-
       src[0] = '\0';
     else
     {
@@ -613,19 +744,6 @@ char *LIBNFSVIV_GetFullPathName(char *src, char *dest, const size_t _, char **__
 }
 #endif
 
-/* Assumes (dest) && (ending). Returns 1 if dest + ending fits in dest, 0 otherwise. */
-int LIBNFSVIV_AppendFileEnding(char *dest, const size_t dest_sz, const char *ending)
-{
-  const size_t ofs = strlen(dest);
-  const size_t ending_sz = strlen(ending);
-  if (ofs + ending_sz < dest_sz)
-  {
-    memcpy(dest + ofs, ending, ending_sz + 1);
-    return 1;
-  }
-  return 0;
-}
-
 static
 int LIBNFSVIV_HasWritePermission(const char *path)
 {
@@ -661,27 +779,27 @@ int LIBNFSVIV_GetTempPath(const int bufsz, char *buf)
     return -1;
 
 #if __APPLE__ || _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
-SCL_printf("has mkdtemp()\n");
+  SCL_printf("has mkdtemp()\n");
   if ((int)strlen(buf) + 8 > bufsz)  return -1;
   buf[strlen(buf) + 6] = '\0';
   memset(buf + strlen(buf), 'X', 6);
   if (!mkdtemp(buf))  return -1;
   sprintf(buf + strlen(buf), "/");
-#else  /* non-Windows non-Python C89 fallback, assumes that last 6 characters are digits. quietly bail on failures */
-SCL_printf("using tmpnam(), missing mkdtemp()\n");
-for (;;)
-{
-  char temp[LIBNFSVIV_FilenameMaxLen];
-  char *p_;
-  if (!tmpnam(temp))  break;
-  p_ = strrchr(temp, '/');
-  if (!p_)  break;
-  p_[strlen(p_)] = '\0';
-  if ((int)strlen(buf) + (int)strlen(p_) > bufsz)  break;
-  sprintf(buf + strlen(buf), "%s", p_);
-  if (strlen(p_) > 0)  sprintf(buf + strlen(buf), "/");
-  break;
-}
+#else  /* non-Windows non-POSIX non-Python C89 fallback, assumes that last 6 characters are digits. quietly bail on failures */
+  SCL_printf("using tmpnam(), missing mkdtemp()\n");
+  for (;;)
+  {
+    char temp[LIBNFSVIV_FilenameMaxLen];
+    char *p_;
+    if (!tmpnam(temp))  break;
+    p_ = strrchr(temp, '/');
+    if (!p_)  break;
+    p_[strlen(p_)] = '\0';
+    if ((int)strlen(buf) + (int)strlen(p_) > bufsz)  break;
+    sprintf(buf + strlen(buf), "%s", p_);
+    if (strlen(p_) > 0)  sprintf(buf + strlen(buf), "/");
+    break;
+  }
 #endif
   SCL_printf("LIBNFSVIV_GetTempPath: %s\n", buf);
 
@@ -699,8 +817,6 @@ int LIBNFSVIV_CopyFile(char *lpExistingFileName, char *lpNewFileName, int bFailI
   return copyfile(lpExistingFileName, lpNewFileName, NULL, COPYFILE_DATA | COPYFILE_XATTR | ((bFailIfExists) ? COPYFILE_EXCL : 0) | COPYFILE_NOFOLLOW) == 0;
 #else
   int retv = 0;
-  FILE *file = fopen(lpNewFileName, "wb");
-  if (file)  fclose(file);
   for (;;)
   {
     if (!lpExistingFileName || !lpNewFileName)  break;
@@ -765,13 +881,13 @@ int LIBNFSVIV_FileCopyData(FILE *dest, FILE *src, int len, char *buf, const int 
   Assumes (vd) and both, viv_name and outpath are strings.
 */
 static
-void LIBNFSVIV_EnsureVivPathNotInVivDirWritePaths(VivDirectory *vd, char *viv_name, const char *outpath, FILE *viv, const size_t viv_sz)
+void LIBNFSVIV_EnsureArchiveNotInUVT_DirectoryWritePaths(UVT_Directory *vd, char *viv_name, const char *outpath, FILE *viv, const size_t viv_sz)
 {
   char buf[LIBNFSVIV_FilenameMaxLen];
 
   /** Case: viv parentdir != outpath -> return */
-  memcpy(buf, viv_name, LIBNFSVIV_min(strlen(viv_name), LIBNFSVIV_FilenameMaxLen - 1));
-  buf[LIBNFSVIV_min(strlen(viv_name), LIBNFSVIV_FilenameMaxLen - 1)] = '\0';
+  LIBNFSVIV_memccpy(buf, viv_name, '\0', LIBNFSVIV_FilenameMaxLen);
+  buf[LIBNFSVIV_FilenameMaxLen - 1] = '\0';
   LIBNFSVIV_GetParentDir(buf);
   if (strcmp(buf, outpath))
     return;
@@ -784,70 +900,102 @@ void LIBNFSVIV_EnsureVivPathNotInVivDirWritePaths(VivDirectory *vd, char *viv_na
     char *viv_basename = LIBNFSVIV_GetPathBasename(viv_name);
     int chunk_size;
     int i;
-    for (i = 0; i < vd->count_dir_entries_true; ++i)
+    for (i = 0; i < vd->count_dir_entries_true; i++)
     {
       fseek(viv, vd->buffer[i].filename_ofs_, SEEK_SET);
       chunk_size = LIBNFSVIV_min(viv_sz - vd->buffer[i].filename_ofs_, LIBNFSVIV_FilenameMaxLen);
-      if (fread(buf, 1, chunk_size, viv) != (size_t)chunk_size)  { fprintf(stderr, "EnsureVivPathNotInVivDirWritePaths: File read error (strcmp)\n"); break; }
+      if (fread(buf, 1, chunk_size, viv) != (size_t)chunk_size)
+      {
+        fprintf(stderr, "EnsureArchiveNotInUVT_DirectoryWritePaths: File read error\n");
+        break;
+      }
       if (SCL_BITMAP_IsSet(vd->bitmap, i) == 1 && !strcmp(buf, viv_basename))
       {
         SCL_BITMAP_Unset(vd->bitmap, i);
         ++vd->null_count;
-        printf("Warning:EnsureVivPathNotInVivDirWritePaths: Skip file '%s' (%d) (would overwrite this archive)\n", buf, i);
+        printf("Warning:EnsureArchiveNotInUVT_DirectoryWritePaths: Skip file '%s' (%d) (would overwrite this archive)\n", buf, i);
       }
     }
   }
 }
 
 /*
-  Rename "path/to/existing/file.ext" to "path/to/existing/file_N.ext" with N in 0..999
+  Renames "path/to/existing/file.ext" to "path/to/existing/file_N.ext" with N in 0..999
 
   Returns 0 on failure, !0 on success.
-  Assumes path is string, sz is size of path buffer.
+  Assumes (path) and path is string, sz is size of path buffer.
+
+  Expects path is printable.
+  Expects path is not a directory path and does not end on '/' (or '\\' on Windows).
 */
 static
-int LIBNFSVIV_IncrementFile(const char * const path, int sz, const int verbose)
+int LIBNFSVIV_IncrementFile(char *path, size_t sz, const int verbose)
 {
   int retv = 0;
-  if (!path)
-    sz = strlen(path);
-  else
-    sz = -1;
-  if (0 < sz && sz < LIBNFSVIV_FilenameMaxLen - 32 && !LIBNFSVIV_IsDir(path))
+  const size_t len = (int)strlen(path);
+  if (LIBNFSVIV_IsPrintString(path, sz) == (int)len)
   {
-    char buf[LIBNFSVIV_FilenameMaxLen];
-    memcpy(buf, path, sz + 1);
+    if (len < LIBNFSVIV_FilenameMaxLen - 32)
     {
-      int i;
-      const char *ext = strrchr(path, '.');
-      char *p = strrchr(buf, '.');  /* end of stem */
-      if (p)
-        p[0] = '\0';
-      else
+      char buf[LIBNFSVIV_FilenameMaxLen];
+      char *ptr = (char *)LIBNFSVIV_memccpy(buf, path, '\0', LIBNFSVIV_FilenameMaxLen);
+      char *safety_ = strrchr(buf, '/');
+#ifdef _WIN32
+      safety_ = safety_ ? LIBNFSVIV_max(safety_, strrchr(buf, '\\')) : strrchr(buf, '\\');  /* can be NULL */
+#endif
+      if (ptr && ptr != buf && (ptr < buf + sizeof(buf)) && !LIBNFSVIV_IsDir(path) && (safety_ != ptr - 1))
       {
-        p = buf + sz;
-        ext = path + sz;  /* no extension, hence we need '\0' */
-      }
-      for (i = 0; i < 1000; ++i)
-      {
-        sprintf(p, "_%d%s", i, ext);
-        if (!LIBNFSVIV_IsFile(buf))
+        /*
+          handle extension if any
+          safety_ ensures '.' is in filename not i path; does not truncate path/dirname./to/no_ext to path/dirname._N/to/no_ext
+        */
+        const char *ext = strrchr(path, '.');
+        ptr = strrchr(buf, '.');  /* end of stem */
+        if (!safety_ || ptr > safety_)
         {
-          if (!rename(path, buf))
+          int i;
+          if (ptr)
+            ptr[0] = '\0';
+          else
           {
-            if (verbose)  printf("IncrementFile: Incremented existing file '%s' to '%s'\n", path, buf);
-            retv = 1;
-            break;
+            ptr = buf + len;
+            ext = path + len;  /* no extension, hence we need '\0' */
           }
-        }
-      }  /* for i */
+          for (i = 0; i < 1000; i++)
+          {
+            sprintf(ptr, "_%d%s", i, ext);  /* cannot overflow 32 bytes */
+            if (!LIBNFSVIV_IsFile(buf))
+            {
+              if (!rename(path, buf))
+              {
+                if (verbose)  printf("IncrementFile: Incremented existing file '%s' to '%s'\n", path, buf);
+                retv = 1;
+                break;
+              }
+            }
+          }  /* for i */
+        }  /* if (!safety_ ... */
+      }  /* if */
     }
-  }  /* if */
-  if (verbose && !retv)  printf("IncrementFile: Cannot increment existing file '%s'\n", path);
+    if (verbose && !retv)  printf("IncrementFile: Cannot increment existing file '%s'\n", path);
+  }
+  else if (verbose)  printf("IncrementFile: Filename contains non-printable characters\n");
   return retv;
 }
 
-/* CircBuf ------------------------------------------------------------------ */
+/*  Copies path to buf, appends extension to buf. Returns NULL on error.
+  Assumes path is not a directory (does not end on '/' or '\\'). */
+static
+char *LIBNFSVIV_GetWENCPath(const char *path, char *buf, const size_t bufsz)
+{
+  char *ptr = (char *)LIBNFSVIV_memccpy(buf, path, '\0', bufsz);
+  if (!ptr || (ptr > buf + bufsz - sizeof(LIBNFSVIV_WENCFileEnding)))
+    return NULL;
+  memcpy(ptr - 1, LIBNFSVIV_WENCFileEnding, sizeof(LIBNFSVIV_WENCFileEnding));
+  return buf;
+}
+
+/* util: CircBuf ---------------------------------------------------------------------------------------------------- */
 
 /*
   struct LIBNFSVIV_CircBuf and LIBNFSVIV_CircBuf_* functions are derived from
@@ -874,12 +1022,14 @@ int LIBNFSVIV_CircBuf_lefttoread(const LIBNFSVIV_CircBuf * const cb)
   return d + cb->sz;
 }
 
+#if SCL_DEBUG > 0
 /* ignores wr */
 static
 int LIBNFSVIV_CircBuf_readtoend(const LIBNFSVIV_CircBuf * const cb)
 {
   return cb->sz - cb->rd;
 }
+#endif
 
 /* len is NOT upper-bounded by EOF */
 static
@@ -888,25 +1038,31 @@ int LIBNFSVIV_CircBuf_addFromFile(LIBNFSVIV_CircBuf *cb, FILE *file, const int f
   int written = 0;
   int wrlen1 = cb->sz - cb->wr;
   if (len < 0 || !cb->buf)  return -1;
-  if (len > filesz)  len = filesz/*  - (int)ftell(file) */;
+  if (len > filesz)  len = filesz  /* - (int)ftell(file) */;
   if (len > cb->sz)  len = cb->sz;
   if (wrlen1 < len)
   {
     written += (int)fread(cb->buf + cb->wr, 1, wrlen1, file);
     written += (int)fread(cb->buf, 1, len - wrlen1, file);
-    /* SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
+#if SCL_DEBUG >= 3
+    SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+#endif
     if (written != len)  return -1;
     cb->wr = len - wrlen1;
   }
   else
   {
     written += (int)fread(cb->buf + cb->wr, 1, len, file);
-    /* SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
+#if SCL_DEBUG >= 3
+    SCL_printf("    circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+#endif
     if (written != len)  return -1;
     cb->wr += len;
   }
   cb->wr %= cb->sz;
-  /* SCL_printf("!   circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr); */
+#if SCL_DEBUG >= 3
+  SCL_printf("!   circbuf_addFromFile() stats: len: %d, written: %d, cb->wr: %d\n", len, written, cb->wr);
+#endif
   return written;
 }
 
@@ -942,6 +1098,7 @@ int LIBNFSVIV_CircBuf_Peek(LIBNFSVIV_CircBuf *cb, void *dest, const int ofs, int
 }
 
 #if SCL_DEBUG > 0
+static
 void SCL_debug_printbuf(void *buf, int sz, int readat, int writeat)
 {
   int l = sz;
@@ -991,7 +1148,6 @@ unsigned char *LIBNFSVIV_CircBuf_PeekPtr(const LIBNFSVIV_CircBuf * const cb, int
 static
 void *LIBNFSVIV_CircBuf_memchr(const LIBNFSVIV_CircBuf * const cb, int c, int ofs, int len)
 {
-#if 1
   if (len <= 0)  return NULL;
   if (!cb->buf || cb->sz <= 0) return NULL;
   if (ofs > cb->sz)  { fprintf(stderr, "warning ofs\n"); return NULL; } /* ofs %= cb->sz; */  /* really an error */
@@ -1003,31 +1159,13 @@ void *LIBNFSVIV_CircBuf_memchr(const LIBNFSVIV_CircBuf * const cb, int c, int of
     if (rdofs > cb->sz)  rdofs -= cb->sz;
     len -= ofs;
     rdlen1 = cb->sz - rdofs;
-    /* SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d\n", rdofs, ofs, rdlen1, len); */
     if (rdlen1 < len)  /* r2e */
     {
       void *p = memchr(cb->buf + rdofs, c, rdlen1);
-      /* SCL_printf("    circbuf_memchr(): rdofs: %d, ofs: %d, rdlen1: %d, len: %d,  p:'%p'\n", rdofs, ofs, rdlen1, len, p); */
       return p ? p : memchr(cb->buf, c, len - rdlen1);
     }
     return memchr(cb->buf + rdofs, c, len);
   }
-#elif 0
-  {
-    int rdlen1 = cb->rd + ofs + len;
-    if (rdlen1 > cb->sz)  rdlen1 -= cb->sz;
-    ofs -= cb->sz - cb->rd;
-    len -= ofs;
-    SCL_printf("    circbuf_memchr(): ofs: %d, rdlen1: %d, len: %d\n", ofs, rdlen1, len);
-    if (rdlen1 < len)
-    {
-      void *p = memchr(cb->buf + cb->rd + ofs, c, rdlen1);
-      SCL_printf("    circbuf_memchr(): p:'%p', ofs: %d, rdlen1: %d, len: %d\n", p, ofs, rdlen1, len);
-      return p ? p : memchr(cb->buf /* + ofs - rdlen1 */, c, len - rdlen1);
-    }
-    return memchr(cb->buf + cb->rd + ofs, c, len);
-  }
-#endif
 }
 
 static
@@ -1072,7 +1210,6 @@ int LIBNFSVIV_CircBuf_PeekIsPrint(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
   len -= ofs;
   if (len < 0)  return 0;
   s = cb->buf + cb->rd + ofs;
-  /* SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
   if (rdlen1 < len)
   {
     while (!(state == UTF8_REJECT) && (pos < rdlen1) && *s)
@@ -1080,7 +1217,6 @@ int LIBNFSVIV_CircBuf_PeekIsPrint(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
       DFA_decode(&state, &codepoint, *s++);
       ++pos;
     }
-    /* SCL_printf(":   CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
     if (pos < rdlen1)  return pos * (state == UTF8_ACCEPT);
     s = cb->buf;
     while (!(state == UTF8_REJECT) && (pos < len - rdlen1) && *s)
@@ -1097,7 +1233,6 @@ int LIBNFSVIV_CircBuf_PeekIsPrint(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
       ++pos;
     }
   }
-  /* SCL_printf("    CircBuf_PeekIsUTF8(): pos: %d,, rdlen1: %d, len: %d\n", pos, rdlen1, len); */
   return pos * (state == UTF8_ACCEPT);
 }
 #else
@@ -1140,33 +1275,33 @@ int LIBNFSVIV_CircBuf_PeekIsPrint(LIBNFSVIV_CircBuf *cb, const int ofs, int len)
 }
 #endif
 
-/* stats -------------------------------------------------------------------- */
+/* stats ------------------------------------------------------------------------------------------------------------ */
 
 /*
   Sums clamped filename sizes plus nul's.
 */
 static
-int LIBNFSVIV_SumVivDirectoryFilenameSizes(const VivDirectory * const vd, const int opt_invalidentries)
+int LIBNFSVIV_UVT_DirectorySumFilenameSizes(const UVT_Directory * const vd, const int opt_invalidentries)
 {
   int sz = 0;
   int i;
-  for (i = 0; i < vd->count_dir_entries; ++i)
+  for (i = 0; i < vd->count_dir_entries; i++)
   {
     if (!opt_invalidentries && SCL_BITMAP_IsSet(vd->bitmap, i) == 0)
       continue;
     sz += LIBNFSVIV_clamp(vd->buffer[i].filename_len_, 0, LIBNFSVIV_FilenameMaxLen - 1);
     ++sz;  /* nul */
   }
-  SCL_printf("LIBNFSVIV_SumVivDirectoryFilenameSizes: %d  (opt_invalidentries: %d)\n", sz, opt_invalidentries);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySumFilenameSizes: %d  (opt_invalidentries: %d)\n", sz, opt_invalidentries);
   return sz;
 }
 
 static
-void LIBNFSVIV_PrintVivDirEntr(const VivDirectory * const vd, const int opt_invalidentries)
+void LIBNFSVIV_UVT_DirEntrPrint(const UVT_Directory * const vd, const int opt_invalidentries)
 {
   int i;
   int cnt;
-  printf("PrintVivDirEntr\n");
+  printf("UVT_DirEntrPrint\n");
 
   printf("vd->count_dir_entries: %d\n", vd->count_dir_entries);
   printf("vd->count_dir_entries_true: %d\n", vd->count_dir_entries_true);
@@ -1174,11 +1309,11 @@ void LIBNFSVIV_PrintVivDirEntr(const VivDirectory * const vd, const int opt_inva
   printf("vd->null_count: %d\n", vd->null_count);
   printf("vd->header_size: %d\n", vd->header_size);
   printf("vd->viv_hdr_size_true: %d\n", vd->viv_hdr_size_true);
-  printf("vd->filesize: %d\n", vd->filesize);
-  printf("vd valid filenames strings size: %d\n", LIBNFSVIV_SumVivDirectoryFilenameSizes(vd, 0));
-  printf("vd filenames strings size: %d\n", LIBNFSVIV_SumVivDirectoryFilenameSizes(vd, opt_invalidentries));
+  printf("vd->h_filesize: %d\n", vd->h_filesize);
+  printf("vd valid filenames strings size: %d\n", LIBNFSVIV_UVT_DirectorySumFilenameSizes(vd, 0));
+  printf("vd filenames strings size: %d\n", LIBNFSVIV_UVT_DirectorySumFilenameSizes(vd, opt_invalidentries));
   printf("i     valid? offset          filesize        filename_ofs_        filename_len_\n");
-  for (i = 0, cnt = 0; i < LIBNFSVIV_min(vd->length, 4096) && cnt < vd->count_dir_entries; ++i)
+  for (i = 0, cnt = 0; i < LIBNFSVIV_min(vd->length, 4096) && cnt < vd->count_dir_entries; i++)
   {
     cnt += SCL_BITMAP_IsSet(vd->bitmap, i);
     if (!SCL_BITMAP_IsSet(vd->bitmap, i))
@@ -1186,34 +1321,30 @@ void LIBNFSVIV_PrintVivDirEntr(const VivDirectory * const vd, const int opt_inva
     printf("%2d     %d     %d (0x%x)   %d (0x%x)       %d (0x%x)       %d (nul: 0x%x)\n",
            i, SCL_BITMAP_IsSet(vd->bitmap, i),
            vd->buffer[i].offset, vd->buffer[i].offset,
-           vd->buffer[i].filesize, vd->buffer[i].filesize,
+           vd->buffer[i].e_filesize, vd->buffer[i].e_filesize,
            vd->buffer[i].filename_ofs_, vd->buffer[i].filename_ofs_,
            vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_ - 1);
   }
 }
 
 static
-void __LIBNFSVIV_PrintVivDirectoryStats_Header(VivDirectory * const vd)
+void __LIBNFSVIV_UVT_DirectoryPrintStats_Header(UVT_Directory * const vd, const int iswwww)
 {
-  printf("File format (header) = %.4s\n", LIBNFSVIV_IsPrintString(vd->format, 4, 0) == 4 ? vd->format : (*(unsigned int *)vd->format == 0x8000FBC0 ? "C0FB" : "...."));
-  printf("Archive Size (header) = %d (0x%x)\n", vd->filesize, vd->filesize);
+  printf("File format (header) = %.4s\n", LIBNFSVIV_GetVivVersion_FromBuf(vd->format) > 0 ? LIBNFSVIV_GetVivVersionString(vd->format) : "....");
+  if (!iswwww)  printf("Archive Size (header) = %d (0x%x)\n", vd->h_filesize, vd->h_filesize);
   printf("Directory Entries (header) = %d\n", vd->count_dir_entries);
-  printf("Header Size (header) = %d (0x%x)\n", vd->header_size, vd->header_size);
+  if (!iswwww)  printf("Header Size (header) = %d (0x%x)\n", vd->header_size, vd->header_size);
 }
 
 static
-void __LIBNFSVIV_PrintVivDirectoryStats_Parsed(VivDirectory * const vd)
+void __LIBNFSVIV_UVT_DirectoryPrintStats_Parsed(UVT_Directory * const vd)
 {
   {
     int fsz = vd->viv_hdr_size_true;
     int i;
-    for (i = 0; i < vd->count_dir_entries; ++i)
+    for (i = 0; i < vd->count_dir_entries; i++)
     {
-      if (SCL_BITMAP_IsSet(vd->bitmap, i))
-      {
-        fsz += vd->buffer[i].filesize;
-
-      }
+      if (SCL_BITMAP_IsSet(vd->bitmap, i))  fsz += vd->buffer[i].e_filesize;
     }
     printf("Archive Size (parsed) = %d (0x%x)\n", fsz, fsz);
   }
@@ -1222,46 +1353,31 @@ void __LIBNFSVIV_PrintVivDirectoryStats_Parsed(VivDirectory * const vd)
   printf("Endianness (parsed) = 0x%x\n", vd->__padding[0]);
 }
 
-/* Upon return, file always points to end of stream. */
+/**
+  Assumes *file is associated with a file with size viv_filesize.
+*/
 static
-void LIBNFSVIV_PrintStatsDec(VivDirectory * const vd, FILE *file,
+void LIBNFSVIV_PrintStatsDec(UVT_Directory * const vd, FILE *file, const int viv_filesize,
                              const int request_file_idx, const char * const request_file_name,
                              const int opt_direnlenfixed, const int opt_filenameshex)
 {
   int i;
   int gap;
   int contents_size = 0;
-  int bufsize;
-  unsigned char *buf;
-  char filename[LIBNFSVIV_FilenameMaxLen] = {0};
-  int filenamemaxlen = LIBNFSVIV_FilenameMaxLen;
   size_t sz;
-  int viv_filesize;
   const char iswwww = memcmp(vd->format, "wwww", 4) ? 0 : 1;
-  fseek(file, 0, SEEK_END);
-  viv_filesize = (int)ftell(file);
+  char *filename = NULL;
 
-  if (opt_direnlenfixed >= 10)
-    filenamemaxlen = LIBNFSVIV_min(filenamemaxlen, opt_direnlenfixed - 0x08);
-
-  if (vd->count_dir_entries_true > 0 && !iswwww)
-    bufsize = LIBNFSVIV_min(viv_filesize, vd->viv_hdr_size_true);
-  else
-    bufsize = LIBNFSVIV_min(viv_filesize, (1 << 22) + 1);;
-  printf("bufsize = %d (0x%x)\n", bufsize, bufsize);
-
-  if (bufsize > (1 << 22))
-  {
-    printf("Header purports to be greater than 4MB\n");
-    return;
-  }
-  else if (bufsize < 16)
+  if (LIBNFSVIV_min(viv_filesize, vd->viv_hdr_size_true) < 16)
   {
     printf("Empty file\n");
     return;
   }
 
-  SCL_printf("Buffer = %d\n", LIBNFSVIV_BufferSize);
+  printf("Invalid Entries = %d\n", vd->null_count);
+  printf("Buffer = %d\n", LIBNFSVIV_BufferSize);
+  if (opt_direnlenfixed >= 10)
+    printf("Fixed directory entry length: %d\n", opt_direnlenfixed);
   printf("Filenames as hex: %d\n", opt_filenameshex);
   if (request_file_idx)
     printf("Requested file idx = %d\n", request_file_idx);
@@ -1270,30 +1386,20 @@ void LIBNFSVIV_PrintStatsDec(VivDirectory * const vd, FILE *file,
 
   if (vd->count_dir_entries_true > 0)
   {
-    buf = (unsigned char *)malloc(bufsize * sizeof(*buf));
-    if (!buf)
+    filename = (char *)malloc(LIBNFSVIV_BufferSize);
+    if (!filename)
     {
       fprintf(stderr, "Cannot allocate memory\n");
       return;
     }
 
-    for (i = 0; i < vd->count_dir_entries_true; ++i)
+    for (i = 0; i < vd->count_dir_entries_true; i++)
     {
-      if (SCL_BITMAP_IsSet(vd->bitmap, i))  contents_size += vd->buffer[i].filesize;
-    }
-
-    /* Parse entire header */
-    fseek(file, 0, SEEK_SET);
-    if (fread(buf, 1, bufsize, file) != (size_t)bufsize)
-    {
-      fprintf(stderr, "File read error (print stats)\n");
-      free(buf);
-      fseek(file, 0, SEEK_END);
-      return;
+      if (SCL_BITMAP_IsSet(vd->bitmap, i))  contents_size += vd->buffer[i].e_filesize;
     }
 
 #if SCL_DEBUG > 0
-    if (opt_direnlenfixed >= 10)  assert(vd->viv_hdr_size_true == 0x10 + vd->count_dir_entries_true * opt_direnlenfixed);
+    if (opt_direnlenfixed >= 10)  SCL_assert(vd->viv_hdr_size_true == 0x10 + vd->count_dir_entries_true * opt_direnlenfixed);
 #endif
 
     printf("\nPrinting archive directory:\n"
@@ -1303,53 +1409,64 @@ void LIBNFSVIV_PrintStatsDec(VivDirectory * const vd, FILE *file,
     printf("                       0                %10d            header\n"
            " ---- ----- ------------ ------------ ------------ --- -----  -----------------------\n", vd->viv_hdr_size_true);
 
-    for (i = 0; i < LIBNFSVIV_min(vd->count_dir_entries_true, LIBNFSVIV_DirEntrMax); ++i)
+    for (i = 0; i < LIBNFSVIV_min(vd->count_dir_entries_true + vd->null_count, LIBNFSVIV_DirEntrMax); i++)
     {
-      if (i > 0)  gap = vd->buffer[i].offset - vd->buffer[i - 1].offset - vd->buffer[i - 1].filesize;
-      else if (iswwww)  gap = vd->buffer[0].offset - (8 + 4*vd->count_dir_entries_true);
+      if (i > 0)  gap = vd->buffer[i].offset - vd->buffer[i - 1].offset - vd->buffer[i - 1].e_filesize;
+      else if (iswwww)  gap = vd->buffer[0].offset - (8 + 4 * vd->count_dir_entries_true);
       else  gap = vd->buffer[0].offset - vd->viv_hdr_size_true;
 
-      /* integrity check... */
-      if (vd->buffer[i].filename_ofs_ < 0 || vd->buffer[i].filename_len_ < 0 || vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_ > bufsize)
+      printf(" %4d     %d   %10d   %10d   %10d %3d %5x  ", i + 1, SCL_BITMAP_IsSet(vd->bitmap, i), vd->buffer[i].offset, gap, vd->buffer[i].e_filesize, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_);
+      /*
+        avoid printing non-printable string
+        filename buffer is always nul-terminated
+      */
+      if (SCL_BITMAP_IsSet(vd->bitmap, i))
       {
-        fprintf(stderr, "invalid VivDirectory (entry %d)\n", i);
-        break;
+        fseek(file, vd->buffer[i].filename_ofs_, SEEK_SET);
+        if (fread(filename, 1, LIBNFSVIV_min(vd->buffer[i].filename_len_, LIBNFSVIV_BufferSize - 1), file) != (size_t)vd->buffer[i].filename_len_)
+        {
+          fprintf(stderr, "File read error (print stats)\n");
+          free(filename);
+          return;
+        }
+        filename[vd->buffer[i].filename_len_] = '\0';
+        if (opt_filenameshex)  LIBNFSVIV_EncBase16(filename, vd->buffer[i].filename_len_);
+        sz = strlen(filename);
+        if (opt_filenameshex || LIBNFSVIV_IsPrintString(filename, LIBNFSVIV_BufferSize) == (int)sz)
+          printf("%.*s", (int)sz, filename);
+        else
+        {
+          LIBNFSVIV_EncBase16(filename, vd->buffer[i].filename_len_);
+          printf("%s %s", filename, "<non-printable>");
+        }
       }
-
-      LIBNFSVIV_memcpyToString(filename, buf + vd->buffer[i].filename_ofs_, sizeof(filename), vd->buffer[i].filename_len_);
-      if (opt_filenameshex)
-        LIBNFSVIV_EncBase16(filename, vd->buffer[i].filename_len_);
-      /* avoid printing non-UTF8 / non-printable string */
-      sz = strlen(filename) + 1;
-      printf(" %4d     %d   %10d   %10d   %10d %3d %5x  %s \n", i + 1, SCL_BITMAP_IsSet(vd->bitmap, i), vd->buffer[i].offset, gap, vd->buffer[i].filesize, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_, (opt_filenameshex || /* SCL_BITMAP_IsSet(vd->bitmap, i) || */ LIBNFSVIV_IsPrintString(buf + vd->buffer[i].filename_ofs_, sz, !iswwww) > 0) ? filename : "<non-printable>");
+      printf("\n");
+#ifndef UVT_UNVIVTOOLMODULE
+      fflush(stdout);
+#endif
     }  /* for i */
 
     printf(" ---- ----- ------------ ------------ ------------ --- -----  -----------------------\n"
-           "              %10d                %10d            %d files\n", vd->buffer[vd->count_dir_entries_true - 1].offset + vd->buffer[vd->count_dir_entries_true - 1].filesize, contents_size, vd->count_dir_entries_true);
+           "              %10d                %10d            %d files\n", vd->buffer[vd->count_dir_entries_true - 1].offset + vd->buffer[vd->count_dir_entries_true - 1].e_filesize, contents_size, vd->count_dir_entries_true);
 
-    free(buf);
+    free(filename);
   }  /* if */
-
-  fseek(file, 0, SEEK_END);
 }
 
 static
-void LIBNFSVIV_PrintStatsEnc(VivDirectory * const vd,
+void LIBNFSVIV_PrintStatsEnc(UVT_Directory * const vd,
                              char **infiles_paths, const int count_infiles,
                              const int opt_filenameshex, const int opt_faithfulencode)
 {
   int gap;
   int i;
   int j;
-  size_t sz;
-  char *ptr;
-#ifdef _WIN32
-  char buf[LIBNFSVIV_FilenameMaxLen] = {0};
-#endif
 
   SCL_printf("Buffer = %d\n", LIBNFSVIV_BufferSize);
-  __LIBNFSVIV_PrintVivDirectoryStats_Header(vd);
-  /* __LIBNFSVIV_PrintVivDirectoryStats_Parsed(vd); */  /* file not yet written */
+
+  __LIBNFSVIV_UVT_DirectoryPrintStats_Header(vd, !memcmp(vd->format, "wwww", 4));
+  /* __LIBNFSVIV_UVT_DirectoryPrintStats_Parsed(vd); */  /* file not yet written */
+  printf("Invalid Entries = %d\n", vd->null_count);
   printf("Filenames as hex: %d\n", opt_filenameshex);
   if (opt_faithfulencode)
     printf("Faithful encoder: %d\n", opt_faithfulencode);
@@ -1363,137 +1480,137 @@ void LIBNFSVIV_PrintStatsEnc(VivDirectory * const vd,
     printf("                       0                %10d           header\n"
            " ---- ----- ------------ ------------ ------------ --- ----  -----------------------\n", vd->viv_hdr_size_true);
 
-    for (i = 0, j = 0; i < LIBNFSVIV_min(count_infiles, LIBNFSVIV_DirEntrMax); ++j)
+    for (i = 0, j = 0; i < LIBNFSVIV_min(count_infiles, LIBNFSVIV_DirEntrMax); j++)
     {
       if (!opt_faithfulencode && !SCL_BITMAP_IsSet(vd->bitmap, j))
         continue;
 
-      if (i > 0)  gap = vd->buffer[i].offset - vd->buffer[i - 1].offset - vd->buffer[i - 1].filesize;
+      if (i > 0)  gap = vd->buffer[i].offset - vd->buffer[i - 1].offset - vd->buffer[i - 1].e_filesize;
       else  gap = vd->buffer[0].offset - vd->viv_hdr_size_true;
 
-      /* avoid printing non-UTF8 / non-printable string */
+      printf(" %4d     %d   %10d   %10d   %10d %3d %4x  ", i + 1, SCL_BITMAP_IsSet(vd->bitmap, i), vd->buffer[i].offset, gap, vd->buffer[i].e_filesize, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_);
+      /*
+        avoid printing non-printable string
+        filename buffer is always nul-terminated
+        Windows: transform short paths that contain tilde (~)
+      */
+      {
+        char *ptr;
 #ifdef _WIN32
-      sz = (size_t)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
-      if (sz >= 2 && sz < sizeof(buf) - 1)
-      {
-        ptr = buf;
-      }
-      else
-      {
-        sz = strlen(infiles_paths[i]) + 1;
-        ptr = infiles_paths[i];
-      }
+        char buf[LIBNFSVIV_FilenameMaxLen];
+        const int sz = LIBNFSVIV_GetPathBasename2(infiles_paths[i], &ptr, buf, sizeof(buf));
 #else
-      sz = strlen(infiles_paths[i]) + 1;
-      ptr = infiles_paths[i];
+        const int sz = LIBNFSVIV_GetPathBasename2(infiles_paths[i], &ptr, NULL, 0);
 #endif
-      printf(" %4d     %d   %10d   %10d   %10d %3d %4x  %s \n", i + 1, SCL_BITMAP_IsSet(vd->bitmap, i), vd->buffer[i].offset, gap, vd->buffer[i].filesize, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_, (opt_filenameshex || /* SCL_BITMAP_IsSet(vd->bitmap, i) || */ LIBNFSVIV_IsPrintString(ptr, sz, 1) > 0) ? LIBNFSVIV_GetPathBasename(ptr) : "<non-printable>");
+        if (LIBNFSVIV_IsPrintString(ptr, sz + 1) == sz)  printf("%.*s", sz, ptr);
+      }
+      printf("\n");
       ++i;
-    }  /* for i */
+    }  /* for i, j */
     printf(" ---- ----- ------------ ------------ ------------ --- ----  -----------------------\n"
-           "              %10d                %10d           %d files\n", vd->filesize, vd->filesize - vd->header_size, vd->count_dir_entries);
+           "              %10d                %10d           %d files\n", vd->h_filesize, vd->h_filesize - vd->header_size, vd->count_dir_entries);
   }
 }
 
-/* internal: validate ------------------------------------------------------- */
+/* validate BIGF/BIGH/BIG4/0xFBC0 (Viv) ----------------------------------------------------------------------------- */
 
 static
-int LIBNFSVIV_GetVivFileValidMinOffset(const VivDirectory *vd, const int filesize)
+int __LIBNFSVIV_UVT_DirectoryGetValidMinFileOffset(const UVT_Directory *vd, const int filesize)
 {
   int i;
   int min_ = filesize;
-  for (i = 0; i < vd->count_dir_entries; ++i)
+  for (i = 0; i < vd->count_dir_entries; i++)
   {
-    if (!SCL_BITMAP_IsSet(vd->bitmap, i))
-      continue;
-    min_ = LIBNFSVIV_min(min_, vd->buffer[i].offset);
+    if (SCL_BITMAP_IsSet(vd->bitmap, i))  min_ = LIBNFSVIV_min(min_, vd->buffer[i].offset);
   }
   return min_;
 }
 
+
 static
-int LIBNFSVIV_CheckVivHeader(const VivDirectory *vd, const int viv_filesize)
+int LIBNFSVIV_VivCheckHeader(const UVT_Directory * const vd, const int viv_filesize)
 {
-  if(LIBNFSVIV_GetVivVersion_FromBuf(vd->format) <= 0)
+  const int fmt = LIBNFSVIV_GetVivVersion_FromBuf(vd->format);
+  if(fmt <= 1)
   {
-    fprintf(stderr, "CheckVivHeader: Format error (expects BIGF, BIGH, BIG4, 0xFBC0)\n");
+    fprintf(stderr, "VivCheckHeader: Format error (expects BIGF, BIGH, BIG4, 0xFBC0)\n");
     return 0;
   }
 
   if (vd->count_dir_entries < 0)
   {
-    fprintf(stderr, "CheckVivHeader: Format error (number of directory entries < 0) %d\n", vd->count_dir_entries);
+    fprintf(stderr, "VivCheckHeader: Format error (number of directory entries < 0) %d\n", vd->count_dir_entries);
     return 0;
   }
 
   if (vd->count_dir_entries > LIBNFSVIV_DirEntrMax)
   {
-    fprintf(stderr, "CheckVivHeader: Number of purported directory entries not supported and likely invalid (%d > %d)\n", vd->count_dir_entries, LIBNFSVIV_DirEntrMax);
+    fprintf(stderr, "VivCheckHeader: Number of purported directory entries not supported and likely invalid (%d > %d)\n", vd->count_dir_entries, LIBNFSVIV_DirEntrMax);
     return 0;
   }
 
   if (vd->header_size > viv_filesize)
-    fprintf(stderr, "Warning:CheckVivHeader: Format (headersize > filesize)\n");
+    fprintf(stderr, "Warning:VivCheckHeader: Format (headersize > filesize)\n");
 
-  if (vd->header_size > vd->count_dir_entries * (8 + LIBNFSVIV_FilenameMaxLen) + 16)
-    fprintf(stderr, "Warning:CheckVivHeader: Format (invalid headersize) (%d) %d\n", vd->header_size, vd->count_dir_entries);
+  if (vd->header_size > (fmt != 5 ? vd->count_dir_entries * (8 + LIBNFSVIV_FilenameMaxLen) + 16 : vd->count_dir_entries * (6 + LIBNFSVIV_FilenameMaxLen) + 6))
+    fprintf(stderr, "Warning:VivCheckHeader: Format (invalid headersize) (%d) %d\n", vd->header_size, vd->count_dir_entries);
 
   return 1;
 }
 
 static
-void LIBNFSVIV_CheckVivDirectory(VivDirectory *vd, const int viv_filesize)
+void LIBNFSVIV_VivValidateDirectory(UVT_Directory *vd, const int viv_filesize)
 {
   int contents_size = 0;
-  int i;
   int minimal_ofs;
+  int i;
 
   if (vd->count_dir_entries != vd->count_dir_entries_true)
   {
-    printf("Warning:CheckVivDirectory: incorrect number of archive directory entries in header (%d files listed, %d files found)\n", vd->count_dir_entries, vd->count_dir_entries_true);
+    printf("Warning:VivValidateDirectory: incorrect number of archive directory entries in header (%d files listed, %d files found)\n", vd->count_dir_entries, vd->count_dir_entries_true);
   }
 
   /* :HS, :PU allow values greater than true value */
   if ((vd->count_dir_entries < 1) || (vd->count_dir_entries_true < 1))
   {
-    printf("Warning:CheckVivDirectory: empty archive (%d files listed, %d files found)\n", vd->count_dir_entries, vd->count_dir_entries_true);
+    printf("Warning:VivValidateDirectory: empty archive (%d files listed, %d files found)\n", vd->count_dir_entries, vd->count_dir_entries_true);
     return;
   }
 
   /* Validate file offsets, sum filesizes */
-  for (i = 0; i < vd->count_dir_entries; ++i)
+  for (i = 0; i < vd->count_dir_entries; i++)
   {
-    int ofs_now = vd->buffer[i].offset;
+    const int ofs_now = vd->buffer[i].offset;
 
     if (!SCL_BITMAP_IsSet(vd->bitmap, i))
       continue;
 
-    if ((vd->buffer[i].filesize >= viv_filesize) ||
-        (vd->buffer[i].filesize < 0))
+    if ((vd->buffer[i].e_filesize >= viv_filesize) ||
+        (vd->buffer[i].e_filesize < 0))
     {
-      printf("CheckVivDirectory: file %d invalid (filesize out of bounds) (%d ? %d)\n", i, vd->buffer[i].filesize, viv_filesize);
+      printf("VivValidateDirectory: file %d invalid (e_filesize out of bounds) (%d ? %d)\n", i, vd->buffer[i].e_filesize, viv_filesize);
       SCL_BITMAP_Unset(vd->bitmap, i);
     }
     if ((ofs_now < vd->viv_hdr_size_true) ||
         (ofs_now < vd->header_size) ||
         (ofs_now >= viv_filesize))
     {
-      printf("CheckVivDirectory: file %d invalid (offset out of bounds) %d\n", i, ofs_now);
+      printf("VivValidateDirectory: file %d invalid (offset out of bounds) %d\n", i, ofs_now);
       SCL_BITMAP_Unset(vd->bitmap, i);
     }
-    if (ofs_now >= INT_MAX - vd->buffer[i].filesize)
+    if (ofs_now >= INT_MAX - vd->buffer[i].e_filesize)
     {
-      printf("CheckVivDirectory: file %d invalid (offset overflow) %d\n", i, ofs_now);
+      printf("VivValidateDirectory: file %d invalid (offset overflow) %d\n", i, ofs_now);
       SCL_BITMAP_Unset(vd->bitmap, i);
     }
-    if ((ofs_now + vd->buffer[i].filesize > viv_filesize))
+    if ((ofs_now + vd->buffer[i].e_filesize > viv_filesize))
     {
-      printf("CheckVivDirectory: file %d invalid (filesize from offset out of bounds) (%d+%d) > %d\n", i, ofs_now, vd->buffer[i].filesize, viv_filesize);
+      printf("VivValidateDirectory: file %d invalid (e_filesize from offset out of bounds) (%d+%d) > %d\n", i, ofs_now, vd->buffer[i].e_filesize, viv_filesize);
       SCL_BITMAP_Unset(vd->bitmap, i);
     }
 
     if (SCL_BITMAP_IsSet(vd->bitmap, i) == 1)
-      contents_size += vd->buffer[i].filesize;
+      contents_size += vd->buffer[i].e_filesize;
     else
     {
       --vd->count_dir_entries_true;
@@ -1501,51 +1618,50 @@ void LIBNFSVIV_CheckVivDirectory(VivDirectory *vd, const int viv_filesize)
     }
   }  /* for i */
 
-  minimal_ofs = LIBNFSVIV_GetVivFileValidMinOffset(vd, viv_filesize);
-  if (vd->buffer[0].offset != minimal_ofs)
-  {
-    printf("Warning:CheckVivDirectory: smallest offset (%d) is not file 0\n", minimal_ofs);
-  }
+  minimal_ofs = __LIBNFSVIV_UVT_DirectoryGetValidMinFileOffset(vd, viv_filesize);
 
-  /* Typically, should be equal. Smaller is allowed, as archives may have null-byte padding "gaps" between files.
-     example: official DLC walm/car.viv  */
-  if (minimal_ofs + contents_size > viv_filesize)
-  {
-    printf("Warning:CheckVivDirectory (valid archive directory filesizes sum too large: overlapping content?)\n");
-  }
+  /* not an issue for BIGF, but nice to know */
+  if (vd->buffer[0].offset != minimal_ofs)  SCL_printf("DEV Warning:VivValidateDirectory: smallest offset (%d) is not file 0\n", minimal_ofs);
 
-  /* :HS, :PU allow value greater than true value */
-  if (vd->count_dir_entries != vd->count_dir_entries_true)
-    printf("Warning:CheckVivDirectory (archive header has incorrect number of directory entries)\n");
+  /*
+    Typically, should be equal. Smaller is allowed, as archives may have null-byte padding "gaps" between files.
+    example: official DLC walm/car.viv
+  */
+  if (minimal_ofs + contents_size > viv_filesize)  printf("Warning:VivValidateDirectory (valid archive directory filesizes sum too large: overlapping content?)\n");
+
+  /*
+    :HS, :PU allow value greater than true value
+  */
+  if (vd->count_dir_entries != vd->count_dir_entries_true)  printf("Warning:VivValidateDirectory (archive header has incorrect number of directory entries)\n");
 
   return;
 }
 
-/* decode ------------------------------------------------------------------- */
+/* decode BIGF/BIGH/BIG4/0xFBC0 (Viv) ------------------------------------------------------------------------------- */
 
 /*
   Clamp number of viv directory entries to be parsed to 0,max
-  Check and potentially swap filesize endianness s.t. vd->filesize > 0
+  Check and potentially swap filesize endianness s.t. vd->h_filesize > 0
 */
 static
-void LIBNFSVIV_FixVivHeader(VivDirectory *vd, const int filesz)
+void LIBNFSVIV_VivFixHeader(UVT_Directory *vd, const int filesz)
 {
   if (vd->count_dir_entries < 0)
   {
-    printf("Warning:FixVivHeader: Format (invalid number of purported directory entries) (%d)(0x%x),\n", vd->count_dir_entries, vd->count_dir_entries);
-    SCL_printf("FixVivHeader: 32 bit (%d)(0x%x) bitmask,\n", vd->count_dir_entries & 0x7FFFFFFF, vd->count_dir_entries & 0x7FFFFFFF);
+    printf("Warning:VivFixHeader: Format (invalid number of purported directory entries) (%d)(0x%x),\n", vd->count_dir_entries, vd->count_dir_entries);
+    SCL_printf("VivFixHeader: 32 bit (%d)(0x%x) bitmask,\n", vd->count_dir_entries & 0x7FFFFFFF, vd->count_dir_entries & 0x7FFFFFFF);
     vd->count_dir_entries = LIBNFSVIV_min(vd->count_dir_entries & 0x7FFFFFFF, LIBNFSVIV_DirEntrMax);
-    printf("Warning:FixVivHeader: assume %d entries\n", vd->count_dir_entries);
+    printf("Warning:VivFixHeader: assume %d entries\n", vd->count_dir_entries);
   }
   else if (vd->count_dir_entries > LIBNFSVIV_DirEntrMax)
   {
-    printf("Warning:FixVivHeader: Format (unsupported number of purported directory entries) (%d)(0x%x),\n", vd->count_dir_entries, vd->count_dir_entries);
+    printf("Warning:VivFixHeader: Format (unsupported number of purported directory entries) (%d)(0x%x),\n", vd->count_dir_entries, vd->count_dir_entries);
     vd->count_dir_entries = LIBNFSVIV_DirEntrMax;
     printf("assume %d entries\n", vd->count_dir_entries);
   }
-  if (LIBNFSVIV_SwapEndian(vd->filesize) == filesz)
+  if (LIBNFSVIV_SwapEndian(vd->h_filesize) == filesz)
   {
-    vd->filesize = filesz;
+    vd->h_filesize = filesz;
     vd->__padding[0] ^= 0x2;
   }
 }
@@ -1553,33 +1669,33 @@ void LIBNFSVIV_FixVivHeader(VivDirectory *vd, const int filesz)
 /* Assumes ftell(file) == 0
    Returns 1, if Viv header can be read. Else 0. */
 static
-int LIBNFSVIV_ReadVivHeader(VivDirectory *vd, FILE *file, const int filesz)
+int LIBNFSVIV_VivReadHeader(UVT_Directory *vd, FILE *file, const int filesz)
 {
   int sz = 0;
 
   if (filesz < 16)
   {
-    fprintf(stderr, "Format error (invalid filesize) %d\n", filesz);
+    fprintf(stderr, "VivReadHeader: Format error (invalid filesize) %d\n", filesz);
     return 0;
   }
 
   sz += (int)fread(vd->format, 1, 4, file);  /* 0x00 */
 
-  if (*(unsigned int *)vd->format != 0x8000FBC0)  /* BIGF, BIGH, BIGF4 */
+  if (SCL_deseri_uint(vd->format) != 0x8000FBC0)  /* BIGF, BIGH, BIGF4 */
   {
-    sz += (int)fread(&vd->filesize, 1, 4, file);  /* 0x04 */
+    sz += (int)fread(&vd->h_filesize, 1, 4, file);  /* 0x04 */
     sz += (int)fread(&vd->count_dir_entries, 1, 4, file);  /* 0x08 */
     sz += (int)fread(&vd->header_size, 1, 4, file);  /* 0x0C */
 
     if (sz != 16)
     {
-      fprintf(stderr, "ReadVivHeader: File read error\n");
+      fprintf(stderr, "VivReadHeader: File read error\n");
       return 0;
     }
   }
   else  /* example: GameData/Track/Data/tr00a.viv */
   {
-    vd->filesize = 0;  /* n/a */
+    vd->h_filesize = 0;  /* n/a */
     vd->count_dir_entries = 0;
     sz += (int)fread(&vd->count_dir_entries, 1, 2, file);  /* 0x04 */
     vd->count_dir_entries <<= 16;
@@ -1587,7 +1703,7 @@ int LIBNFSVIV_ReadVivHeader(VivDirectory *vd, FILE *file, const int filesz)
 
     if (sz != 6)
     {
-      fprintf(stderr, "ReadVivHeader: File read error\n");
+      fprintf(stderr, "VivReadHeader: File read error\n");
       return 0;
     }
   }
@@ -1595,8 +1711,8 @@ int LIBNFSVIV_ReadVivHeader(VivDirectory *vd, FILE *file, const int filesz)
   vd->__padding[0] = 0xC;
   if (strncmp(vd->format, "BIG4", 4))  /* BIG4 encodes filesize in little endian */
   {
-    vd->filesize = LIBNFSVIV_SwapEndian(vd->filesize);
-    vd->__padding[0] += 0x2;
+    vd->h_filesize = LIBNFSVIV_SwapEndian(vd->h_filesize);
+    vd->__padding[0] |= 1 << 1;  /* set endianness bit */
   }
   vd->count_dir_entries = LIBNFSVIV_SwapEndian(vd->count_dir_entries);
   vd->header_size = LIBNFSVIV_SwapEndian(vd->header_size);
@@ -1604,40 +1720,37 @@ int LIBNFSVIV_ReadVivHeader(VivDirectory *vd, FILE *file, const int filesz)
   return 1;
 }
 
-/* Assumes (vd).
-Assumes (vd->count_dir_entries >= true value).
-Assumes (vd->length == 0) && !(vd->buffer) && !(vd->bitmap)
-Returns boolean.
+/*
+  Assumes (vd).
+  Assumes (vd->count_dir_entries >= true value).
+  Assumes (vd->length == 0) && !(vd->buffer) && !(vd->bitmap)
+  Assumes file has BIGF/BIGH/BIG4/0xFBC0 format.
+  Returns boolean.
 
-If (opt_direnlenfixed < 10) assumes variable length directory entries,
-else assumes fixed length directory entries.
+  If (opt_direnlenfixed < 10) assumes variable length directory entries,
+  else assumes fixed length directory entries.
 
-vd->count_dir_entries_true will be the number of entries parsed.
-vd->viv_hdr_size_true will be the true unpadded header size.
+  vd->count_dir_entries_true will be the number of entries parsed.
+  vd->viv_hdr_size_true will be the true unpadded header size.
 
-Format variants:
-BIGF, BIGH, BIG4: int32 values
-0xFBC0: int24 values, shifted into int32 fields
+  Format variants:
+  BIGF, BIGH, BIG4: int32 values
+  0xFBC0: int24 values, shifted into int32 fields
 */
 static
-int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
-                        const int viv_filesize, FILE *file,
-                        const int opt_verbose, const int opt_direnlenfixed,
-                        const int opt_filenameshex)
+int LIBNFSVIV_VivReadDirectory(UVT_Directory *vd,
+                               const int viv_filesize, FILE *file,
+                               const int opt_verbose, const int opt_direnlenfixed,
+                               const int opt_filenameshex)
 {
-  unsigned char buf[LIBNFSVIV_CircBuf_Size] = {0};  /* initialize in case (viv_filesize < buffer size) */
+  unsigned char buf[LIBNFSVIV_CircBuf_Size];
   int len = 0;
   int i;
   LIBNFSVIV_CircBuf cbuf;
   int direntr_minsz = 8;  /* int32 direntries */
   int int_sz = 4;
   int int_shift = 0;
-  if (*(unsigned int *)vd->format == 0x8000FBC0)  /* int24 direntries */
-  {
-    direntr_minsz = 6;
-    int_sz = 3;
-    int_shift = 8;
-  }
+  memset(buf, 0, sizeof(buf));  /* initialize in case (viv_filesize < buffer size) */
 
   cbuf.buf = buf;
   cbuf.sz = sizeof(buf);
@@ -1645,26 +1758,34 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
   cbuf.wr = 0;
 
   vd->count_dir_entries_true = vd->count_dir_entries;
-  if (!LIBNFSVIV_VivDirectory_Init(vd, vd->count_dir_entries))
+  if (!LIBNFSVIV_UVT_DirectoryInit(vd, vd->count_dir_entries))
   {
-    fprintf(stderr, "ReadVivDirectory: Cannot allocate memory\n");
+    fprintf(stderr, "VivReadDirectory: Cannot allocate memory\n");
     return 0;
   }
   vd->null_count = vd->count_dir_entries;
-  if (*(unsigned int *)vd->format != 0x8000FBC0)
+  if (SCL_deseri_uint(vd->format) != 0x8000FBC0)
+  {
     vd->viv_hdr_size_true = 0x10;
-  else
+  }
+  else  /* int24 direntries */
+  {
     vd->viv_hdr_size_true = 0x06;
+
+    direntr_minsz = 6;
+    int_sz = 3;
+    int_shift = 8;
+  }
 
 #if SCL_DEBUG >= 2
   if (opt_verbose >= 1)
   {
-    printf("Directory Entries (malloc'd): %d (ceil(x/64)=%d), Bitmap (malloc'd): %d, Padding: %d\n", vd->length, LIBNFSVIV_ceil(vd->length, 64), vd->length > LIBNFSVIV_VivDirectoryPaddingSize * 8, LIBNFSVIV_VivDirectoryPaddingSize);
+    SCL_printf("Directory Entries (malloc'd): %d (ceil(x/64)=%d), Bitmap (malloc'd): %d, Padding: %d\n", vd->length, LIBNFSVIV_ceil0(vd->length, 64), vd->length > LIBNFSVIV_VivDirectoryPaddingSize * 8, LIBNFSVIV_VivDirectoryPaddingSize);
   }
 #endif
 
   /*
-    The following cases may occur when reading filenames from the directory:
+    The following cases can occur when reading filenames from entries:
       1. filename is printable string (isprint() == true)
       2. filename is string of UTF8 characters
       3. filename is string of length 1
@@ -1677,7 +1798,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         - allow cases 3. and 4.
 
     Supported filename length is upper-bounded by (buffer size - 8).
-    By default, we are using a buffer size of 4096 + 16
+    By default, we are using buffer size 4096 + 16
     to ensure that any valid UTF8-encoded filename can be handled.
     (Given domain knowledge, this can safely be reduced to VAL + 16,
     where VAL is the longest known filename.)
@@ -1690,25 +1811,27 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
     SCL_printf("  Read initial chunk\n");
     if (viv_filesize - (int)ftell(file) >= 10 && LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf) - 4) < 9)
     {
-      fprintf(stderr, "ReadVivDirectory: File read error at %d\n", vd->viv_hdr_size_true);
+      fprintf(stderr, "VivReadDirectory: File read error at %d\n", vd->viv_hdr_size_true);
       return 0;
     }
 
-    for (i = 0; i < vd->count_dir_entries_true; ++i)
+    for (i = 0; i < vd->count_dir_entries_true; i++)
     {
       char valid = 1;
       int lefttoread = LIBNFSVIV_CircBuf_lefttoread(&cbuf);
 
+#if SCL_DEBUG > 1
       SCL_printf("\n");
       SCL_printf("i: %d\n", i);
       SCL_printf("ftell(file): %d 0x%x\n", (int)ftell(file), (int)ftell(file));
       SCL_printf("vd->viv_hdr_size_true: %d\n", vd->viv_hdr_size_true);
-      SCL_printf("cbuf stats: buf %p, !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", cbuf.buf, !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
+      SCL_printf("cbuf stats: buf %p, !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", (void *)cbuf.buf, !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
       SCL_printf("lefttoread: %d\n", lefttoread);
       SCL_printf("readtoend: %d\n", LIBNFSVIV_CircBuf_readtoend(&cbuf));
       SCL_printf("memchr: %p\n", lefttoread > 0 ? LIBNFSVIV_CircBuf_memchr(&cbuf, '\0', 8, lefttoread) : NULL);
       SCL_printf("memchr2: %p\n", LIBNFSVIV_CircBuf_memchr(&cbuf, '\0', 8, lefttoread));
-#if SCL_DEBUG >= 2
+#endif
+#if SCL_DEBUG > 2
       SCL_debug_printbuf(cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr);
 #endif
 
@@ -1725,14 +1848,14 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         /* Returns 0 bytes if (ftell(file) == EOF) */
         if (LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf) - lefttoread) < 0)
         {
-          fprintf(stderr, "ReadVivDirectory: File read error at %d\n", vd->viv_hdr_size_true);
+          fprintf(stderr, "VivReadDirectory: File read error at %d\n", vd->viv_hdr_size_true);
           return 0;
         }
 
         lefttoread = LIBNFSVIV_CircBuf_lefttoread(&cbuf);  /* zero if (cb->rd == cb->wr) */
         lefttoread = lefttoread > 0 ? lefttoread : (int)sizeof(buf);
-#if SCL_DEBUG >= 2
-        SCL_printf("  cbuf stats: buf %p, !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", cbuf.buf, !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
+#if SCL_DEBUG > 1
+        SCL_printf("  cbuf stats: buf %p, !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", (void *)cbuf.buf, !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("  memchr: %p\n", LIBNFSVIV_CircBuf_memchr(&cbuf, '\0', 8, lefttoread));
         SCL_debug_printbuf(cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr);
 #endif
@@ -1757,7 +1880,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
       if (!LIBNFSVIV_CircBuf_memchr(&cbuf, '\0', direntr_minsz, lefttoread))
       {
         if (opt_verbose >= 1)
-          fprintf(stderr, "Warning:ReadVivDirectory: Filename at %d not a string. Not a directory entry. Stop parsing directory.\n", vd->viv_hdr_size_true);
+          fprintf(stderr, "Warning:VivReadDirectory: Filename at %d not a string. Not a directory entry. Stop parsing directory.\n", vd->viv_hdr_size_true);
 
         vd->count_dir_entries_true = i;  /* breaks FOR loop */
         break;
@@ -1769,14 +1892,14 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
 #if SCL_DEBUG >= 2
       SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
 #endif
-      valid &= int_sz == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].filesize, 0, int_sz);
+      valid &= int_sz == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].e_filesize, 0, int_sz);
 #if SCL_DEBUG >= 2
       SCL_printf("  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
 #endif
-      vd->buffer[i].offset   <<= int_shift;
-      vd->buffer[i].filesize <<= int_shift;
-      vd->buffer[i].offset   = LIBNFSVIV_SwapEndian(vd->buffer[i].offset);
-      vd->buffer[i].filesize = LIBNFSVIV_SwapEndian(vd->buffer[i].filesize);
+      vd->buffer[i].offset = LIBNFSVIV_SwapEndian(vd->buffer[i].offset);
+      vd->buffer[i].e_filesize = LIBNFSVIV_SwapEndian(vd->buffer[i].e_filesize);
+      vd->buffer[i].offset = (int)((unsigned int)vd->buffer[i].offset >> int_shift);  /* UB without the casts... */
+      vd->buffer[i].e_filesize = (int)((unsigned int)vd->buffer[i].e_filesize >> int_shift);  /* UB without the casts... */
 #if SCL_DEBUG >= 2
       SCL_printf("valid: %d\n", valid);
 #endif
@@ -1787,7 +1910,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
 #if SCL_DEBUG >= 2
       {
         unsigned char * const ptr = LIBNFSVIV_CircBuf_PeekPtr(&cbuf, 0);
-        SCL_printf("ptr: %p\n", ptr);
+        SCL_printf("ptr: %p\n", (void *)ptr);
         {
           int _readtoend = LIBNFSVIV_CircBuf_readtoend(&cbuf);
           unsigned char *_p = ptr;
@@ -1814,7 +1937,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         SCL_printf("len: %d (0x%x)\n", len, len);
         SCL_printf(":  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("vd: offset: 0x%x\n", vd->buffer[i].offset);
-        SCL_printf("vd: filesize: 0x%x\n", vd->buffer[i].filesize);
+        SCL_printf("vd: e_filesize: 0x%x\n", vd->buffer[i].e_filesize);
         SCL_printf("vd->buffer[i] stats: filename_ofs_ 0x%x, filename_len_ 0x%x (next 0x%x)\n", vd->buffer[i].filename_ofs_, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_);
 #endif
         if (!isprint(tmp_UTF8) && (len < 2))
@@ -1843,7 +1966,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         SCL_printf("len: %d (0x%x)\n", len, len);
         SCL_printf(":  cbuf stats: !!buf %d, sz %d, rd %d, wr %d, r2e %d, l2r %d\n", !!cbuf.buf, cbuf.sz, cbuf.rd, cbuf.wr, LIBNFSVIV_CircBuf_readtoend(&cbuf), LIBNFSVIV_CircBuf_lefttoread(&cbuf));
         SCL_printf("vd: offset: 0x%x\n", vd->buffer[i].offset);
-        SCL_printf("vd: filesize: 0x%x\n", vd->buffer[i].filesize);
+        SCL_printf("vd: e_filesize: 0x%x\n", vd->buffer[i].e_filesize);
         SCL_printf("vd->buffer[i] stats: filename_ofs_ 0x%x, filename_len_ 0x%x (next 0x%x)\n", vd->buffer[i].filename_ofs_, vd->buffer[i].filename_len_, vd->buffer[i].filename_ofs_ + vd->buffer[i].filename_len_);
 #endif
       }
@@ -1862,19 +1985,19 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
   {
     if (opt_direnlenfixed >= (int)sizeof(buf))
     {
-      fprintf(stderr, "ReadVivDirectory: fixed directory entry length too large for buffer size (%d > %d)\n", opt_direnlenfixed, (int)sizeof(buf));
+      fprintf(stderr, "VivReadDirectory: fixed directory entry length too large for buffer size (%d > %d)\n", opt_direnlenfixed, (int)sizeof(buf));
       return 0;
     }
 
     SCL_printf("  Read initial chunk\n");
     if (viv_filesize - (int)ftell(file) >= 10 && LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf) - 4) < opt_direnlenfixed)
     {
-      fprintf(stderr, "ReadVivDirectory: File read error at %d\n", vd->viv_hdr_size_true);
+      fprintf(stderr, "VivReadDirectory: File read error at %d\n", vd->viv_hdr_size_true);
       return 0;
     }
     SCL_printf("\n");
 
-    for (i = 0; i < vd->count_dir_entries_true; ++i)
+    for (i = 0; i < vd->count_dir_entries_true; i++)
     {
       char valid = 1;
       int lefttoread = LIBNFSVIV_CircBuf_lefttoread(&cbuf);
@@ -1886,7 +2009,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
         /* Returns 0 bytes if (ftell(file) == EOF) */
         if (LIBNFSVIV_CircBuf_addFromFile(&cbuf, file, viv_filesize - (int)ftell(file), sizeof(buf) - lefttoread) < 0)
         {
-          fprintf(stderr, "ReadVivDirectory: File read error at %d\n", vd->viv_hdr_size_true);
+          fprintf(stderr, "VivReadDirectory: File read error at %d\n", vd->viv_hdr_size_true);
           return 0;
         }
 
@@ -1900,7 +2023,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
       if (lefttoread < opt_direnlenfixed)
       {
         if (opt_verbose >= 1)
-          fprintf(stderr, "Warning:ReadVivDirectory: Filename at %d not a string. Not a directory entry. Stop parsing directory.\n", vd->viv_hdr_size_true);
+          fprintf(stderr, "Warning:VivReadDirectory: Filename at %d not a string. Not a directory entry. Stop parsing directory.\n", vd->viv_hdr_size_true);
 
         vd->count_dir_entries_true = i;  /* breaks FOR loop */
         break;
@@ -1909,9 +2032,9 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
       vd->buffer[i].filename_len_ = 0;
 
       valid &= 4 == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].offset, 0, 4);
-      valid &= 4 == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].filesize, 0, 4);
+      valid &= 4 == LIBNFSVIV_CircBuf_Get(&cbuf, &vd->buffer[i].e_filesize, 0, 4);
       vd->buffer[i].offset   = LIBNFSVIV_SwapEndian(vd->buffer[i].offset);
-      vd->buffer[i].filesize = LIBNFSVIV_SwapEndian(vd->buffer[i].filesize);
+      vd->buffer[i].e_filesize = LIBNFSVIV_SwapEndian(vd->buffer[i].e_filesize);
 
       vd->viv_hdr_size_true += 0x08;
       vd->buffer[i].filename_ofs_ = vd->viv_hdr_size_true;
@@ -1936,7 +2059,7 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
       else
       {
         /** fixed length entries with printable filenames are not known to exist */
-        fprintf(stderr, "ReadVivDirectory: Not implemented. Try with filenames as hex.\n");
+        fprintf(stderr, "VivReadDirectory: Not implemented. Try with filenames as hex.\n");
         return 0;
       }
 
@@ -1953,52 +2076,63 @@ int LIBNFSVIV_ReadVivDirectory(VivDirectory *vd,
   }
 
   #if SCL_DEBUG > 0
-    LIBNFSVIV_PrintVivDirEntr(vd, 0);
+    LIBNFSVIV_UVT_DirEntrPrint(vd, 0);
   #endif
 
   return 1;
 }
 
-/*
-  Extracts the described file to disk. Returns boolean.
-  Assumes (vde), (infile). If (wenc_file), assumes (wenc_outpath).
-*/
+/* Returns strlen of created filename in (buf), 0 on error. */
 static
-int LIBNFSVIV_VivExtractFile(const VivDirEntr * const vde, FILE *infile,
-                             const int opt_filenameshex, const int opt_overwrite,
-                             FILE *wenc_file, const char * const wenc_outpath)
+size_t LIBNFSVIV_CreateExtractFilename(const UVT_DirEntr * const vde, FILE *infile,
+                                       const int opt_filenameshex,
+                                       char *buf, const int bufsz)
 {
-  char buf[LIBNFSVIV_BufferSize] = {0};
-  int retv = 1;
-  FILE *outfile;
-
   /* Read outfilename to buf */
-  if (LIBNFSVIV_FreadToStr(buf, sizeof(buf), vde->filename_ofs_, vde->filename_len_, infile) < 0)
+  if (LIBNFSVIV_FreadToStr(buf, bufsz, vde->filename_ofs_, vde->filename_len_, infile) < 0)
   {
-    fprintf(stderr, "VivExtractFile: File read error at %d (extract outfilename)\n", vde->filename_ofs_);
+    fprintf(stderr, "CreateExtractFilename: File read error at %d (extract outfilename)\n", vde->filename_ofs_);
     return 0;
   }
 
-  if (opt_filenameshex)  /* Option: Encode outfilename to Base16 */
-    LIBNFSVIV_EncBase16(buf, vde->filename_len_);
+  /* Option: Encode outfilename to Base16 */
+  if (opt_filenameshex)  LIBNFSVIV_EncBase16(buf, vde->filename_len_);
+
+  return strlen(buf);
+}
+
+/*
+  Extracts the described file to disk. Returns boolean.
+  Assumes (vde), (infile). If (wenc_file), assumes (wenc_outpath).
+  Assumes (buf), buf is string and valid filepath.
+
+  If (opt_overwrite == 1) attempts to rename existing file, otherwise attempts to overwrite.
+*/
+static
+int LIBNFSVIV_UVT_DirEntrExtractFile(const UVT_DirEntr * const vde, FILE *infile,
+                                     /* const int opt_filenameshex, */ const int opt_overwrite,
+                                     FILE *wenc_file, const char * const wenc_outpath,
+                                     char *buf)
+{
+  int retv = 1;
+  FILE *outfile;
 
   /* Create outfile */
   if (LIBNFSVIV_IsFile(buf))  /* overwrite mode: for existing files and duplicated filenames in archive */
   {
     if (opt_overwrite == 1)  /* attempt renaming existing file, return on failure */
     {
-      if (!LIBNFSVIV_IncrementFile(buf, (int)sizeof(buf), 1))
-        return 0;
+      if (!LIBNFSVIV_IncrementFile(buf, sizeof(buf), 1))  return 0;
     }
     else
     {
-      fprintf(stderr, "Warning:VivExtractFile: Attempt overwriting existing '%s' (duplicated filename?)\n", buf);
+      fprintf(stderr, "Warning:UVT_DirEntrExtractFile: Attempt overwriting existing '%s' (duplicated filename?)\n", buf);
     }
   }
   outfile = fopen(buf, "wb");
   if (!outfile)
   {
-    fprintf(stderr, "VivExtractFile: Cannot create output file '%s'\n", buf);
+    fprintf(stderr, "UVT_DirEntrExtractFile: Cannot create output file '%s'\n", buf);
     return 0;
   }
 
@@ -2009,9 +2143,12 @@ int LIBNFSVIV_VivExtractFile(const VivDirEntr * const vde, FILE *infile,
   }
 
   /* Extract */
-  memset(buf, 0, sizeof(buf));
-  fseek(infile, vde->offset, SEEK_SET);
-  retv &= LIBNFSVIV_FileCopyData(outfile, infile, vde->filesize, buf, (int)sizeof(buf));
+  {
+    char buf__[LIBNFSVIV_BufferSize];
+    memset(buf__, 0, sizeof(buf__));
+    fseek(infile, vde->offset, SEEK_SET);
+    retv &= LIBNFSVIV_FileCopyData(outfile, infile, vde->e_filesize, buf__, sizeof(buf__));
+  }
   fclose(outfile);
   return retv;
 }
@@ -2020,7 +2157,7 @@ int LIBNFSVIV_VivExtractFile(const VivDirEntr * const vde, FILE *infile,
     Returns 1-based directory entry index of given filename,
     -1 if it does not exist, 0 on error. **/
 static
-int LIBNFSVIV_GetIdxFromFname(const VivDirectory *vd, FILE* infile, const char *request_file_name)
+int LIBNFSVIV_UVT_DirectoryGetIdxFromFname(const UVT_Directory *vd, FILE* infile, const char *request_file_name)
 {
   char buf[LIBNFSVIV_FilenameMaxLen];
   const int len = (int)strlen(request_file_name);
@@ -2028,195 +2165,179 @@ int LIBNFSVIV_GetIdxFromFname(const VivDirectory *vd, FILE* infile, const char *
 
   if (len + 1 > LIBNFSVIV_FilenameMaxLen)
   {
-    fprintf(stderr, "GetIdxFromFname: Requested filename is too long\n");
+    fprintf(stderr, "UVT_DirectoryGetIdxFromFname: Requested filename is too long\n");
     return 0;
   }
 
-  for (i = 0; i < vd->count_dir_entries; ++i)
+  for (i = 0; i < vd->count_dir_entries; i++)
   {
     if (len == vd->buffer[i].filename_len_)
     {
       if (len != LIBNFSVIV_FreadToStr(buf, len + 1, vd->buffer[i].filename_ofs_, vd->buffer[i].filename_len_, infile))
-        fprintf(stderr, "GetIdxFromFname: File read error at 0x%x\n", vd->buffer[i].filename_ofs_);
+        fprintf(stderr, "UVT_DirectoryGetIdxFromFname: File read error at 0x%x\n", vd->buffer[i].filename_ofs_);
       if (!strncmp(buf, request_file_name, len))
         return i + 1;
     }
   }
 
-  fprintf(stderr, "GetIdxFromFname: Cannot find requested file in archive\n");
+  fprintf(stderr, "UVT_DirectoryGetIdxFromFname: Cannot find requested file in archive\n");
   return -1;
 }
 
-/* internal: encode --------------------------------------------------------- */
+/* encode ----------------------------------------------------------------------------------------------------------- */
 
-/* Assumes length of opt_requestfmt >= 4 */
+/*
+  Assumes (vd) and vd is zero'd.
+  Assumes length of opt_requestfmt >= 4
+  Returns 1 on success, 0 on failure.
+*/
 static
-int LIBNFSVIV_SetVivDirHeader(VivDirectory *vd,
-                              char **infiles_paths, const int count_infiles,
-                              const char *opt_requestfmt, const int opt_requestendian,
-                              const int opt_direnlenfixed,
-                              const int opt_filenameshex,
-                              const int opt_faithfulencode)
+int LIBNFSVIV_UVT_DirectorySet(UVT_Directory *vd,
+                               char **infiles_paths, const int count_infiles,
+                               const char *opt_requestfmt, const int opt_requestendian,
+                               const int opt_direnlenfixed,
+                               const int opt_filenameshex,
+                               const int opt_faithfulencode)
 {
-  int retv = 1;
-  int curr_offset = 0x10;
-  int len_filename;  /* string length including nul */
+  int sum_filesz = 0;
+  const int requestfmt_i = LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt);
+  const int direntr_minsz = requestfmt_i == 5 ? 0x6 : (requestfmt_i==1?0x4:0x8);
   int i;
-#ifdef _WIN32
-  char buf[LIBNFSVIV_FilenameMaxLen];
-#endif
-  int direntr_minsz = 8;  /* int32 direntries */
-  if (*(unsigned int *)opt_requestfmt == 0x8000FBC0)  /* int24 direntries */
-  {
-    curr_offset = 0x06;
-    direntr_minsz = 6;
-  }
 
-  SCL_printf("SetVivDirHeader: count_infiles: %d\n", count_infiles);
-  SCL_printf("SetVivDirHeader: opt_requestfmt: %s\n", LIBNFSVIV_GetVivVersionString(opt_requestfmt));
-  SCL_printf("SetVivDirHeader: vd->format: %x\n", *(unsigned int *)vd->format);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: count_infiles: %d\n", count_infiles);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: opt_requestfmt: %s\n", requestfmt_i > 0 ? LIBNFSVIV_GetVivVersionString(opt_requestfmt) : "");
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: requestfmt_i: %d\n", requestfmt_i);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: opt_direnlenfixed: %d\n", opt_direnlenfixed);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: opt_faithfulencode: %d\n", opt_faithfulencode);
+  SCL_printf("LIBNFSVIV_UVT_DirectorySet: direntr_minsz: %d\n", direntr_minsz);
 
-  if (!opt_requestfmt || LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt) <= 0)
+  if (requestfmt_i < 1)
   {
-    fprintf(stderr, "SetVivDirHeader: Invalid format (expects 'BIGF', 'BIGH', 'BIG4' or 'C0FB')\n");
+    fprintf(stderr, "LIBNFSVIV_UVT_DirectorySet: Invalid format (expects 'BIGF', 'BIGH', 'BIG4', 'wwww' or '0x80000FBC0')\n");
     return 0;
   }
 
-  if (!LIBNFSVIV_VivDirectory_Init(vd, count_infiles))
+  if (!LIBNFSVIV_UVT_DirectoryInit(vd, count_infiles))
   {
-    fprintf(stderr, "SetVivDirHeader: Cannot allocate memory\n");
+    fprintf(stderr, "LIBNFSVIV_UVT_DirectorySet: Cannot allocate memory\n");
     return 0;
   }
-
-  vd->filesize = 0;
-
   SCL_assert(vd->length >= count_infiles);
 
-  SCL_printf("pre: curr_offset: %d (0x%x)\n", curr_offset, curr_offset);
-
-  /**
-    Create VivDirectory based on filelist, even for invalid files.
+  /*
+    Set UVT_Directory directory entries from filelist, even for invalid files.
 
     opt_faithfulencode == 0:  directory entries for invalid files do not count towards offsets
-    opt_faithfulencode != 0:  directory entries for invalid files do count towards offsets (pretend all is well, set filesize 0)
+    opt_faithfulencode != 0:  directory entries for invalid files count towards offsets (pretend all is well, set filesize 0)
   */
-  for (i = 0; i < count_infiles; ++i)
+  for (i = 0; i < count_infiles; i++)
   {
-    SCL_printf("i: %d\n", i);
-#if SCL_DEBUG > 0
-    printf("!LIBNFSVIV_IsFile(infiles_paths[i]) || LIBNFSVIV_IsDir(infiles_paths[i]): %d\n", !LIBNFSVIV_IsFile(infiles_paths[i]) || LIBNFSVIV_IsDir(infiles_paths[i]));
-#endif
-
-    /* If invalid, pretend that the file is there but has length 0. */
-    if (!LIBNFSVIV_IsFile(infiles_paths[i]) || LIBNFSVIV_IsDir(infiles_paths[i]))
+    /* validity and filesize */
+    if (LIBNFSVIV_IsFile(infiles_paths[i]) && !LIBNFSVIV_IsDir(infiles_paths[i]))
     {
-      SCL_BITMAP_Unset(vd->bitmap, i);
+      vd->count_dir_entries_true++;
+      SCL_BITMAP_Set(vd->bitmap, i);
+      vd->buffer[i].e_filesize = LIBNFSVIV_GetFilesize(infiles_paths[i]);  /* file size */
+      sum_filesz += vd->buffer[i].e_filesize;
+    }
+    else
+    {
       ++vd->null_count;
-      vd->buffer[i].filesize = 0;
       if (!opt_faithfulencode)
       {
-#if SCL_DEBUG > 0
-        printf("SetVivDirHeader: Invalid file. Skipping '%s'\n", infiles_paths[i]);
-#endif
-        fprintf(stderr, "SetVivDirHeader: Invalid file. Skipping '%s'\n", infiles_paths[i]);
+        fprintf(stderr, "LIBNFSVIV_UVT_DirectorySet: Invalid file. Skipping '%s'\n", infiles_paths[i]);
         continue;
       }
-      else
-        printf("Warning:SetVivDirHeader: Invalid file. Skipping '%s'\n", infiles_paths[i]);
-    }
-    else
-    {
-      SCL_BITMAP_Set(vd->bitmap, i);
-      ++vd->count_dir_entries_true;
-      vd->buffer[i].filesize = LIBNFSVIV_GetFilesize(infiles_paths[i]);
-      vd->filesize += vd->buffer[i].filesize;
-    }
+      printf("Warning:LIBNFSVIV_UVT_DirectorySet: Invalid file. '%s'\n", infiles_paths[i]);
+    }  /* if */
 
+    /* filename length */
+    if (requestfmt_i != 1)  /* not wwww */
+    {
 #ifdef _WIN32
-    len_filename = (int)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
-    if (len_filename < 2 || len_filename > LIBNFSVIV_FilenameMaxLen)
-    {
-      printf("Warning:UpdateVivDirectory: Cannot get long path name for file '%s': %d (len_filename=%d)\n", infiles_paths[i], len_filename, (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1);
-      len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1;
-    }
-    else
-      len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(buf)) + 1;
+      char buf[LIBNFSVIV_FilenameMaxLen];
+      int len_filename = LIBNFSVIV_GetPathBasename2(infiles_paths[i], NULL, buf, sizeof(buf)) + 1;
 #else
-    len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i])) + 1;
+      int len_filename = LIBNFSVIV_GetPathBasename2(infiles_paths[i], NULL, NULL, 0) + 1;
 #endif
+      len_filename = LIBNFSVIV_clamp(len_filename, 1, LIBNFSVIV_FilenameMaxLen);
+      if (opt_filenameshex)  len_filename = len_filename / 2 + len_filename % 2;
+      vd->buffer[i].filename_len_ = len_filename - 1;
 
-    len_filename = LIBNFSVIV_clamp(len_filename, 1, LIBNFSVIV_FilenameMaxLen);
-    if (opt_filenameshex)
-      len_filename = len_filename / 2 + len_filename % 2;
-    vd->buffer[i].filename_len_ = len_filename - 1;
-
-    curr_offset += direntr_minsz;
-    vd->buffer[i].filename_ofs_ = curr_offset;
-    curr_offset += len_filename;
-
-    SCL_printf("curr_offset: %d (0x%x)\n", curr_offset, curr_offset);
-    SCL_printf("vd offset: %d\n", vd->buffer[i].offset);
-    SCL_printf("vd filesize: %d\n", vd->buffer[i].filesize);
-    SCL_printf("vd filename_ofs_: 0x%x\n", vd->buffer[i].filename_ofs_);
-    SCL_printf("vd filename_len_: %d\n", vd->buffer[i].filename_len_);
-
-    if (opt_direnlenfixed > 10 && len_filename <= opt_direnlenfixed)
-      curr_offset += opt_direnlenfixed - len_filename - direntr_minsz;
+      if (opt_direnlenfixed < 10)
+        vd->h_filesize += vd->buffer[i].filename_len_ + 1;
+      else
+        vd->h_filesize += opt_direnlenfixed - direntr_minsz;
+    }  /* if (requestfmt != 5) */
   }  /* for i */
+  SCL_assert(vd->count_dir_entries_true + vd->null_count == count_infiles);
 
-  vd->buffer[0].offset = curr_offset;
-  for (i = 1; i < vd->length; ++i)
-    vd->buffer[i].offset = vd->buffer[i - 1].offset + vd->buffer[i - 1].filesize;
+  /*
+    Finish writing header
 
-  memcpy(vd->format, opt_requestfmt, 4);
-  vd->__padding[0] |= opt_requestendian & 0xf;  /* archive header endianess */
-  vd->filesize += curr_offset;
-  vd->count_dir_entries = vd->count_dir_entries_true;
-  vd->header_size = curr_offset;
-  vd->viv_hdr_size_true = vd->header_size;
+    From above, vd->h_filesize is the total size of filename lenths with nul-terminators
+      or the fixed length of directory entries times number of valid entries
+      or 0 for 'wwww'.
+  */
+  memcpy(vd->format, opt_requestfmt, 4);  /* final: format */
+  vd->count_dir_entries = vd->count_dir_entries_true + (!opt_faithfulencode?0:vd->null_count);  /* final: number of entries */
+  vd->header_size = (requestfmt_i==5?0x6:(requestfmt_i==1?0x8:0x10));  /* archive header size w/o entries: 6 bytes for 0x8000FBC0, 8 bytes for wwww, 16 bytes for BIGF/BIGH/BIG4 */
+  vd->viv_hdr_size_true = vd->header_size;  /* tracks filename offsets */
+  vd->header_size += vd->h_filesize + direntr_minsz * vd->count_dir_entries;  /* final: archive header size */
+  vd->h_filesize = vd->header_size;  /* tracks file offsets */
+  if (requestfmt_i != 1)  vd->__padding[0] |= opt_requestendian & 0xf;  /* final: archive header endianess */
+  SCL_assert((requestfmt_i == 1 && vd->header_size == 4 + 4 + 4*vd->count_dir_entries) || requestfmt_i != 1);
 
-#if SCL_DEBUG > 0
-    printf("debug:LIBNFSVIV_SetVivDirHeader: offsets ");
-    for (i = 0; i < count_infiles; ++i)
-      printf("%d ", vd->buffer[i].offset);
-    printf("/%d (curr_offset: %d)\n", vd->count_dir_entries_true, curr_offset);
+  for (i = 0; i < count_infiles; i++)
+  {
+    if (SCL_BITMAP_IsSet(vd->bitmap, i) || opt_faithfulencode)
+    {
+      /* track file offsets */
+      vd->buffer[i].offset = vd->h_filesize;
+      vd->h_filesize += vd->buffer[i].e_filesize;
+
+      /* tracks filename offsets */
+      vd->viv_hdr_size_true += direntr_minsz;
+      if (opt_direnlenfixed < 10 || requestfmt_i == 1)  /* variable length entry or wwww */
+      {
+        vd->buffer[i].filename_ofs_ = requestfmt_i != 1 ? vd->viv_hdr_size_true : vd->buffer[i].offset;  /* filename offset (for wwww identical to file offset) */
+        vd->viv_hdr_size_true += vd->buffer[i].filename_len_ + (int)(requestfmt_i != 1);
+      }
+      else  /* fixed length entry */
+      {
+        vd->buffer[i].filename_ofs_ = vd->viv_hdr_size_true;
+        vd->viv_hdr_size_true += opt_direnlenfixed - direntr_minsz;
+      }
+
+      if (requestfmt_i == 1)  vd->buffer[i].filename_len_ = 4;  /* wwww: artifical value */
+    }
+  }  /* for i */
+#if SCL_DEBUG > 2
+  LIBNFSVIV_UVT_DirEntrPrint(vd, 1);
 #endif
+  SCL_assert(vd->header_size == vd->viv_hdr_size_true);
+  SCL_assert(vd->h_filesize == vd->header_size + sum_filesz);
 
-#if SCL_DEBUG > 0
-    printf("debug:LIBNFSVIV_SetVivDirHeader: input paths validity ");
-    for (i = 0; i < count_infiles; ++i)
-      printf("%d ", SCL_BITMAP_IsSet(vd->bitmap, i));
-    printf("/%d (null count: %d)\n", vd->count_dir_entries_true, vd->null_count);
-#endif
-
-  return retv;
+  return (vd->count_dir_entries_true + vd->null_count == count_infiles) && (vd->header_size == vd->viv_hdr_size_true) && (vd->h_filesize == vd->header_size + sum_filesz);
 }
 
 static
-int LIBNFSVIV_WriteVivHeader(VivDirectory *vd, FILE *file)
+int LIBNFSVIV_WriteVivHeader(UVT_Directory *vd, FILE *file)
 {
   size_t err = 0;
   int buf[3];
 
   buf[1] = vd->count_dir_entries;
-
   err += fwrite(vd->format, 1, 4, file);
 
-  if (*(unsigned int *)vd->format != 0x8000FBC0)
+  if (SCL_deseri_uint(vd->format) != 0x8000FBC0)
   {
-    buf[0] = vd->filesize;
-    if (SCL_BITMAP_IsSet(&vd->__padding[0], 1))
-      buf[0] = LIBNFSVIV_SwapEndian(buf[0]);
-    if (SCL_BITMAP_IsSet(&vd->__padding[0], 2))
-      buf[1] = LIBNFSVIV_SwapEndian(buf[1]);
+    buf[0] = vd->h_filesize;
+    if (SCL_BITMAP_IsSet(&vd->__padding[0], 1))  buf[0] = LIBNFSVIV_SwapEndian(buf[0]);
+    if (SCL_BITMAP_IsSet(&vd->__padding[0], 2))  buf[1] = LIBNFSVIV_SwapEndian(buf[1]);
     buf[2] = vd->header_size;
-    if (SCL_BITMAP_IsSet(&vd->__padding[0], 3))
-      buf[2] = LIBNFSVIV_SwapEndian(buf[2]);
-
-    err += fwrite(&buf[0], 1, 4, file);
-    err += fwrite(&buf[1], 1, 4, file);
-    err += fwrite(&buf[2], 1, 4, file);
-
+    if (SCL_BITMAP_IsSet(&vd->__padding[0], 3))  buf[2] = LIBNFSVIV_SwapEndian(buf[2]);
+    err += fwrite(&buf, 1, sizeof(buf), file);
     return err == 16;
   }
   else  /* example: GameData/Track/Data/tr00a.viv */
@@ -2227,7 +2348,6 @@ int LIBNFSVIV_WriteVivHeader(VivDirectory *vd, FILE *file)
       buf[1] >>= 16;
     }
     err += fwrite(&buf[1], 1, 2, file);
-
     return err == 6;
   }
 }
@@ -2238,69 +2358,49 @@ int LIBNFSVIV_WriteVivHeader(VivDirectory *vd, FILE *file)
   Allows writing broken headers with (opt_faithfulencode != 0)
 */
 static
-int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
+int LIBNFSVIV_WriteVivDirectory(UVT_Directory *vd, FILE *file,
                                 char **infiles_paths, const int count_infiles,
                                 const int opt_direnlenfixed, const int opt_filenameshex,
                                 const int opt_faithfulencode)
 {
   int val;
-  char buf[LIBNFSVIV_FilenameMaxLen] = {0};
+  char buf[LIBNFSVIV_FilenameMaxLen];
   int len;  /* strlen() of viv directory entry filename  */
   int i;
-  size_t err = 0x10;  /* tracks VivDirectory written length */
+  size_t err = 0x10;  /* tracks UVT_Directory written length */
   int int_sz = 4;
   int int_shift = 0;
-  if (*(unsigned int *)vd->format == 0x8000FBC0)  /* int24 direntries */
+  if (SCL_deseri_uint(vd->format) == 0x8000FBC0)  /* int24 direntries */
   {
     err = 0x06;
     int_sz = 3;
     int_shift = 8;
   }
 
-  for (i = 0; i < count_infiles; ++i)
+  for (i = 0; i < count_infiles; i++)
   {
-    if (!SCL_BITMAP_IsSet(vd->bitmap, i) && !opt_faithfulencode)
-      continue;
+    char *ptr;
+
+    if (!SCL_BITMAP_IsSet(vd->bitmap, i) && !opt_faithfulencode)  continue;
 
     val = LIBNFSVIV_SwapEndian(vd->buffer[i].offset);
     val >>= int_shift;
     err += fwrite(&val, 1, int_sz, file);
 
-    val = LIBNFSVIV_SwapEndian(vd->buffer[i].filesize);
+    val = LIBNFSVIV_SwapEndian(vd->buffer[i].e_filesize);
     val >>= int_shift;
     err += fwrite(&val, 1, int_sz, file);
 
-#ifdef _WIN32
     /*
-      transform short paths that contain tilde (~)
-      GetLongPathName() returns 0 on error, otherwise strlen(). For the moment,
+      Get basename of infiles_paths[i]
+      Windows: transform short paths that contain tilde (~)
     */
-    len = (int)GetLongPathName(infiles_paths[i], buf, LIBNFSVIV_FilenameMaxLen);
-    if (strlen(infiles_paths[i]) > 0 && (len == 0 || len > LIBNFSVIV_FilenameMaxLen))
-    {
-      printf("Warning:WriteVivDirectory: Cannot get long path name for file '%s': %d (len=%d)\n", infiles_paths[i], len, (int)strlen(infiles_paths[i]));
-      len = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i]));
-      if (len > LIBNFSVIV_FilenameMaxLen - 1)
-      {
-        fprintf(stderr, "WriteVivDirectory: infile basename length incompatible (%d)\n", len);
-        return 0;
-      }
-      memcpy(buf, LIBNFSVIV_GetPathBasename(infiles_paths[i]), len + 1);
-    }
-    buf[len] = '\0';
-    {
-      char *ptr = LIBNFSVIV_GetPathBasename(buf);
-      len = (int)strlen(ptr);
-      memmove(buf, ptr, len + 1);
-    }
+#ifdef _WIN32
+    len = LIBNFSVIV_GetPathBasename2(infiles_paths[i], &ptr, buf, sizeof(buf));
+    if (len > 0)  memmove(buf, ptr, len + 1);
 #else
-    len = (int)strlen(LIBNFSVIV_GetPathBasename(infiles_paths[i]));
-    if (len > LIBNFSVIV_FilenameMaxLen - 1)
-    {
-      fprintf(stderr, "WriteVivDirectory: infile basename length incompatible (%d)\n", len);
-      return 0;
-    }
-    memcpy(buf, LIBNFSVIV_GetPathBasename(infiles_paths[i]), len + 1);
+    len = LIBNFSVIV_GetPathBasename2(infiles_paths[i], &ptr, NULL, 0);
+    if (len > 0)  memcpy(buf, ptr, len + 1);
 #endif
 
     if (opt_filenameshex)
@@ -2336,6 +2436,7 @@ int LIBNFSVIV_WriteVivDirectory(VivDirectory *vd, FILE *file,
   Returns ftell(DEST) on success, -1 on failure.
 
   If (!SRC), opens/closes SRC at infile_path.
+  Expects either (SRC) or (infile_path).
 */
 static
 int LIBNFSVIV_VivWriteFile(FILE *dest, FILE *src, const char * const infile_path, const int infile_ofs, const int len)
@@ -2356,29 +2457,228 @@ int LIBNFSVIV_VivWriteFile(FILE *dest, FILE *src, const char * const infile_path
   return (retv) ? (int)ftell(dest) : -1;
 }
 
-
-/* api ---------------------------------------------------------------------- */
+/* api: functions --------------------------------------------------------------------------------------------------- */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Assumes (sz >= 4), need not nul-terminated. Returns string (char[5]) or NULL. */
+/* wwww --------------------------------------------------------------------- */
+
+#ifdef UVTWWWW  /* optional branch */
+#define SCL_WWWW_BUFSZ 64
+#define SCL_WWWW_MAX_ENTRIES (((SCL_WWWW_BUFSZ)-8)/4)  /* == 14 > 4-12 entries in known examples */
+
+#if 1
+/* Returns 0 if valid. */
+static
+int SCL_CheckwwwwDirectory(UVT_Directory *vd, const int wwww_filesize)
+{
+  int i;
+  if (!vd)  return 1 << 0;
+  if (memcmp(vd->format, "wwww", 4))  return 1 << 2;
+  if (vd->count_dir_entries < 0 || vd->count_dir_entries > LIBNFSVIV_DirEntrMax)  return 1 << 3;
+  /* if (vd->h_filesize < 8)  return 1 << 4; */  /* irrelevant */
+  if (vd->count_dir_entries == 0)  return 0;
+  if (wwww_filesize < vd->count_dir_entries * 4 + 8)  return 1 << 5;
+  if (vd->viv_hdr_size_true < 8 + 4 * vd->count_dir_entries)  return 1 << 6;
+
+  for (i = 0; i < vd->count_dir_entries; i++)
+  {
+    if (SCL_BITMAP_IsSet(vd->bitmap, i))
+    {
+      if ((vd->buffer[i].offset < 8 + 4 * vd->count_dir_entries) ||  /* file offset is in directory */
+          (vd->buffer[i].offset >= wwww_filesize) ||  /* file offset out of bounds */
+          (vd->buffer[i].offset + vd->buffer[i].e_filesize < 0) ||  /* overflow */
+          (vd->buffer[i].e_filesize < 4))  /* too small or overflow */
+      {
+        SCL_BITMAP_Unset(vd->bitmap, i);
+        vd->null_count++;
+        vd->count_dir_entries_true--;
+      }
+    }
+  }  /* for i */
+
+  return 0;
+}
+#endif
+
+#if 1
+UVT_Directory *SCL_GetwwwwInfo_FromBuf(UVT_Directory *vd, const char *buf, const int bufsz, const int filesz, const int opt_verbose)
+{
+  char err = 0;
+  int i;
+#ifndef UVT_UNVIVTOOLMODULE
+  (void)opt_verbose;
+#endif
+
+  if (!vd || !buf)  return NULL;
+  if (bufsz > filesz || bufsz < 8)
+  {
+    fprintf(stderr, "Format error (invalid filesize) %d, %d\n", bufsz, filesz);
+    return NULL;
+  }
+
+  /* Read wwww header  */
+  memcpy(vd->format, buf, 4);
+  if (memcmp(vd->format, "wwww", 4))  return NULL;
+  memcpy(&vd->count_dir_entries, buf + 4, 4);
+
+  /* Check wwww header */
+  if (vd->count_dir_entries < 0 || vd->count_dir_entries > SCL_WWWW_MAX_ENTRIES)
+  {
+    fprintf(stderr, "Format error (unsupported count_dir_entries) %d\n", vd->count_dir_entries);
+    return NULL;
+  }
+  if (bufsz < vd->count_dir_entries * 4 + 8)  return NULL;
+#ifdef UVT_UNVIVTOOLMODULE
+  if (opt_verbose)
+  {
+#endif
+  __LIBNFSVIV_UVT_DirectoryPrintStats_Header(vd, 1);
+#ifdef UVT_UNVIVTOOLMODULE
+  }
+#endif
+  if (vd->count_dir_entries == 0)  return vd;
+
+  /* Read wwww directory */
+  if (!LIBNFSVIV_UVT_DirectoryInit(vd, vd->count_dir_entries))
+  {
+    fprintf(stderr, "GetwwwwInfo_FromBuf: Cannot allocate memory\n");
+    return NULL;
+  }
+  {
+    /* Get entry offsets */
+    const char *ptr = buf + 8;
+    for (i = 0; i < vd->count_dir_entries; i++)
+    {
+      memcpy(&vd->buffer[i].offset, ptr, 4);
+      vd->buffer[i].filename_ofs_ = vd->buffer[i].offset;
+      vd->buffer[i].filename_len_ = 4;  /* assume format is char[4] */
+      if ((vd->buffer[i].offset >= 8 + 4 * vd->count_dir_entries) &&  /* file must not start inside directory */
+          (vd->buffer[i].offset + 4 < filesz))  /* filesize must be >= 4 and within file */
+      {
+        SCL_BITMAP_Set(vd->bitmap, i);
+      }
+      else
+      {
+        vd->null_count++;
+      }
+      ptr += 4;
+    }
+  }
+  {
+    /* Derive entry filesizes */
+    int previous_valid_ofs = filesz;
+    for (i = vd->count_dir_entries - 1; i >= 0; i--)
+    {
+      if (SCL_BITMAP_IsSet(vd->bitmap, i))
+      {
+        vd->buffer[i].e_filesize = previous_valid_ofs - vd->buffer[i].offset;
+        if (vd->buffer[i].e_filesize < 0)
+        {
+          SCL_BITMAP_Unset(vd->bitmap, i);
+          vd->null_count++;
+        }
+        else
+        {
+          previous_valid_ofs = vd->buffer[i].offset;
+          vd->count_dir_entries_true++;
+        }
+      }
+    }
+  }
+  vd->viv_hdr_size_true = 8 + 4 * vd->count_dir_entries;
+
+  err |= SCL_CheckwwwwDirectory(vd, filesz);
+  if (err)
+  {
+    LIBNFSVIV_UVT_DirEntrPrint(vd, 1);
+    fprintf(stderr, "GetwwwwInfo_FromBuf: Format error\n");
+    return NULL;
+  }
+#ifdef UVT_UNVIVTOOLMODULE
+  if (opt_verbose)
+  {
+#endif
+  __LIBNFSVIV_UVT_DirectoryPrintStats_Parsed(vd);
+#ifdef UVT_UNVIVTOOLMODULE
+  }
+#endif
+  return vd;
+}
+#endif
+
+
+#if 1
+UVT_Directory *SCL_GetwwwwInfo_FromFile(UVT_Directory *vd, FILE *file, const int filesz, const int opt_verbose)
+{
+  if (vd && file && filesz >= 8)
+  {
+    char buf[SCL_WWWW_BUFSZ];
+    if (fread(&buf, 1, LIBNFSVIV_min(SCL_WWWW_BUFSZ, filesz), file) == (size_t)LIBNFSVIV_min(SCL_WWWW_BUFSZ, filesz))
+    {
+      vd = SCL_GetwwwwInfo_FromBuf(vd, buf, LIBNFSVIV_min(SCL_WWWW_BUFSZ, filesz), filesz, opt_verbose);
+      if (opt_verbose && vd)  LIBNFSVIV_PrintStatsDec(vd, file, filesz, 0, 0, 0, !1);
+    }
+  }
+  SCL_printf("GetwwwwInfo_FromFile(): %s\n", vd ? "OK" : "FAILED");
+  return vd;
+}
+#endif
+
+
+#if 1
+/* Wrapper */
+UVT_Directory *SCL_GetwwwwInfo(UVT_Directory *vd, const char * const path, const int opt_verbose)
+{
+  FILE *file = path ? fopen(path, "rb") : NULL;
+  const int filesz = LIBNFSVIV_GetFilesize(path);
+  vd = SCL_GetwwwwInfo_FromFile(vd, file, filesz, opt_verbose);
+  if (file)  fclose(file);
+  SCL_printf("GetwwwwInfo(): %s\n", vd ? "OK" : "FAILED");
+  return vd;
+}
+#endif
+
+
+int LIBNFSVIV_WritewwwwInfo(UVT_Directory *vd, FILE *file)
+{
+  size_t err = 0;
+  int buf;
+  int i;
+  err += fwrite(vd->format, 1, 4, file);
+  buf = vd->count_dir_entries;
+  err += fwrite(&buf, 1, sizeof(buf), file);
+  for (i = 0; i < vd->count_dir_entries_true; i++)
+  {
+    buf = vd->buffer[i].offset;
+    err += fwrite(&buf, 1, sizeof(buf), file);
+  }
+  return err == (size_t)(4 + 4 + 4 * vd->count_dir_entries_true);
+}
+
+#endif  /* UVTWWWW */
+
+
+/* BIGF, BIGH, BIG4, 0x8000FBC0 (viv) --------------------------------------- */
+
+/* Assumes (sz >= 4), need not nul-terminated. Returns string (const char[5]) or NULL. */
 const char *LIBNFSVIV_GetVivVersionString(const char *buf)
 {
-  if (buf)
+  switch (LIBNFSVIV_GetVivVersion_FromBuf(buf))
   {
-    if (!strncmp(buf, "BIGF", 4))  return "BIGF";
-    if (!strncmp(buf, "BIGH", 4))  return "BIGH";
-    if (!strncmp(buf, "BIG4", 4))  return "BIG4";
-    if (!strncmp(buf, "wwww", 4))  return "wwww";
-    if (*(const unsigned int *)buf == 0x8000FBC0)  return "C0FB";
+    case 7:  return "BIGF";
+    case 8:  return "BIGH";
+    case 4:  return "BIG4";
+    case 1:  return "wwww";
+    case 5:  return "C0FB";
+    default:  return NULL;
   }
-  return NULL;
 }
 
 /*
-  Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), 5 (0x8000FBC0), -1 (unknown format)
+  Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), 1 (wwww), 5 (0x8000FBC0), -1 (unknown format)
   Assumes (sz >= 4).
 
   Attn: Return values differ from LIBNFSVIV_GetVivVersion_FromPath().
@@ -2389,34 +2689,67 @@ int LIBNFSVIV_GetVivVersion_FromBuf(const char * const buf)
   if (!strncmp(buf, "BIGH", 4))  return 8;
   if (!strncmp(buf, "BIG4", 4))  return 4;
   if (!strncmp(buf, "wwww", 4))  return 1;
-  if (*(const unsigned int *)buf == 0x8000FBC0)  return 5;
+  {
+    const unsigned int fbc0 = 0x8000FBC0;
+    if (!memcmp(buf, &fbc0, 4))  return 5;
+  }
   return -1;
 }
 
 /*
-  Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), 5 (0x8000FBC0), -1 (unknown format), 0 (fread error)
+  Returns 7 (BIGF), 8 (BIGH), 4 (BIG4), 1 (wwww), 5 (0x8000FBC0), -1 (unknown format), 0 (fread error)
 
   Attn: Return values differ from LIBNFSVIV_GetVivVersion_FromBuf().
 */
 int LIBNFSVIV_GetVivVersion_FromPath(const char * const path)
+#if 0
 {
   int retv = 0;
   FILE *file = fopen(path, "rb");
   if (file)
   {
-    char buf[16];
     const int filesz = LIBNFSVIV_GetFilesize(path);
-    if (filesz >= 6 && fread(&buf, 1, 4, file) == 4)
+    if (filesz >= 6)
     {
-      retv = LIBNFSVIV_GetVivVersion_FromBuf(buf);
-      retv = (filesz >= 16 || retv == 5) ? retv : -1;
+      char buf[4];
+      setvbuf(file, NULL, _IONBF, 0);
+      if (fread(&buf, 1, 4, file) == 4)
+      {
+        retv = LIBNFSVIV_GetVivVersion_FromBuf(buf);
+        retv = (filesz >= 16 || (retv == 1 && filesz >= 8) || retv == 5) ? retv : -1;
+      }
+      fclose(file);
     }
-    else if (filesz < 16)
-      retv = -1;
-    fclose(file);
+    else  retv = -1;
   }
   return retv;
 }
+#else
+{
+  int retv = 0;
+  int fd = open(path, O_RDONLY
+#ifdef _WIN32
+    |_O_BINARY
+#endif
+  );
+  if (fd != -1)
+  {
+    const int filesz = LIBNFSVIV_GetFilesize(path);
+    if (filesz >= 6)
+    {
+      char buf[4];
+      if (read(fd, &buf, 4) == 4)
+      {
+        retv = LIBNFSVIV_GetVivVersion_FromBuf(buf);
+        retv = (filesz >= 16 || (retv == 1 && filesz >= 8) || retv == 5) ? retv : -1;
+      }
+      close(fd);
+    }
+    else  retv = -1;
+  }
+  return retv;
+}
+#endif
 
 /*
   The following functions can be used for data analysis.
@@ -2429,40 +2762,40 @@ int LIBNFSVIV_GetVivVersion_FromPath(const char * const path)
 */
 
 /* Assumes (ftell(file) == 0) */
-VivDirectory *LIBNFSVIV_GetVivDirectory_FromFile(VivDirectory *vd, FILE *file, const int filesz,
-                                                 const int opt_verbose, const int opt_direnlenfixed,
-                                                 const int opt_filenameshex,
-                                                 const int __print_stats_if_verbose)
+UVT_Directory *LIBNFSVIV_GetVivDirectory_FromFile(UVT_Directory *vd, FILE *file, const int filesz,
+                                                  const int opt_verbose, const int opt_direnlenfixed,
+                                                  const int opt_filenameshex,
+                                                  const int __print_stats_if_verbose)
 {
-  VivDirectory *retv = NULL;
+  UVT_Directory *retv = NULL;
   for (;;)
   {
     if (!vd || !file)  break;
-    if (!LIBNFSVIV_ReadVivHeader(vd, file, filesz))  break;
+    if (!LIBNFSVIV_VivReadHeader(vd, file, filesz))  break;
 #ifdef UVT_UNVIVTOOLMODULE
     if (opt_verbose)
     {
 #endif
-    __LIBNFSVIV_PrintVivDirectoryStats_Header(vd);
+    __LIBNFSVIV_UVT_DirectoryPrintStats_Header(vd, 0);
 #ifdef UVT_UNVIVTOOLMODULE
     }
 #endif
-    LIBNFSVIV_FixVivHeader(vd, filesz);
-    if (!LIBNFSVIV_CheckVivHeader(vd, filesz))  break;
-    if (!LIBNFSVIV_ReadVivDirectory(vd, filesz, file, opt_verbose, opt_direnlenfixed, opt_filenameshex))  break;
-    LIBNFSVIV_CheckVivDirectory(vd, filesz);
-    if (vd->null_count > 0 && opt_verbose)  LIBNFSVIV_PrintVivDirEntr(vd, 0);
+    LIBNFSVIV_VivFixHeader(vd, filesz);
+    if (!LIBNFSVIV_VivCheckHeader(vd, filesz))  break;
+    if (!LIBNFSVIV_VivReadDirectory(vd, filesz, file, opt_verbose, opt_direnlenfixed, opt_filenameshex))  break;
+    LIBNFSVIV_VivValidateDirectory(vd, filesz);
+    if (opt_verbose && vd->null_count > 0)  LIBNFSVIV_UVT_DirEntrPrint(vd, 0);
 #ifdef UVT_UNVIVTOOLMODULE
     if (opt_verbose)
     {
 #endif
-    __LIBNFSVIV_PrintVivDirectoryStats_Parsed(vd);
+    __LIBNFSVIV_UVT_DirectoryPrintStats_Parsed(vd);
 #ifdef UVT_UNVIVTOOLMODULE
     }
 #endif
-    if (__print_stats_if_verbose && opt_verbose)
+    if (opt_verbose && __print_stats_if_verbose)
     {
-      LIBNFSVIV_PrintStatsDec(vd, file, 0, NULL, opt_direnlenfixed, opt_filenameshex);
+      LIBNFSVIV_PrintStatsDec(vd, file, filesz, 0, NULL, opt_direnlenfixed, opt_filenameshex);
     }
 
     retv = vd;
@@ -2472,14 +2805,14 @@ VivDirectory *LIBNFSVIV_GetVivDirectory_FromFile(VivDirectory *vd, FILE *file, c
 }
 
 /* Wrapper for LIBNFSVIV_GetVivDirectory_FromFile() */
-VivDirectory *LIBNFSVIV_GetVivDirectory(VivDirectory *vd, char * const path,
-                                        const int opt_verbose, const int opt_direnlenfixed,
-                                        const int opt_filenameshex,
-                                        const int __print_stats_if_verbose)
+UVT_Directory *LIBNFSVIV_GetVivDirectory(UVT_Directory *vd, char * const path,
+                                         const int opt_verbose, const int opt_direnlenfixed,
+                                         const int opt_filenameshex,
+                                         const int __print_stats_if_verbose)
 {
   const int filesz = LIBNFSVIV_GetFilesize(path);
   FILE *file = path ? fopen(path, "rb") : NULL;
-  VivDirectory *ret = LIBNFSVIV_GetVivDirectory_FromFile(vd, file, filesz, opt_verbose, opt_direnlenfixed, opt_filenameshex, __print_stats_if_verbose);
+  UVT_Directory *ret = LIBNFSVIV_GetVivDirectory_FromFile(vd, file, filesz, opt_verbose, opt_direnlenfixed, opt_filenameshex, __print_stats_if_verbose);
   if (file)  fclose(file);
   return ret;
 }
@@ -2487,25 +2820,25 @@ VivDirectory *LIBNFSVIV_GetVivDirectory(VivDirectory *vd, char * const path,
 
 /* Returns 0 on success. */
 static
-int LIBNFSVIV_ValidateVivDirectory(const VivDirectory * const vd)
+int LIBNFSVIV_ValidateVivDirectory(const UVT_Directory * const vd)
 {
   int err = 0;
   if (!vd)  err |= 1 << 0;
   if (vd->count_dir_entries < 0 || vd->count_dir_entries > vd->length)  err |= 1 << 1;
   if (vd->count_dir_entries_true < 0 || vd->count_dir_entries_true > vd->length)  err |= 1 << 2;
-  /* if (vd->filesize < 0)  err |= 1 << 3; */  /* irrelevant */
+  /* if (vd->h_filesize < 0)  err |= 1 << 3; */  /* irrelevant */
   /* if (vd->header_size < 16)  err |= 1 << 4; */  /* irrelevant */
   if (vd->viv_hdr_size_true < 16)  err |= 1 << 5;
-  /* if (vd->viv_hdr_size_true > vd->filesize)  err |= 1 << 6; */  /* irrelevant */
+  /* if (vd->viv_hdr_size_true > vd->h_filesize)  err |= 1 << 6; */  /* irrelevant */
   /* if (vd->viv_hdr_size_true > vd->header_size)  err |= 1 << 7; */  /* irrelevant */
   if (vd->count_dir_entries - vd->count_dir_entries_true != vd->null_count)  err |= 1 << 8;
-  SCL_printf("LIBNFSVIV_ValidateVivDirectory: 0x%x\n", err);
+  SCL_printf("LIBNFSVIV_ValidateVivDirectory: %d\n", err);
   return err;
 }
 
 /*
   Returns NULL on unsuccesful malloc.
-  Returns char **filelist, an array of char* arrays. Returned filenames may be non-printable and may have embedded nul's. Consult VivDirectory for the filenames lengths.
+  Returns char **filelist, an array of char* arrays. Returned filenames may be non-printable and may have embedded nul's. Consult UVT_Directory for the filenames lengths.
 
   The first element is a contiguous block of all filenames. The rest are pointers to the start of each filename.
   Consumers must call free(*filelist), then free(filelist).
@@ -2515,7 +2848,7 @@ int LIBNFSVIV_ValidateVivDirectory(const VivDirectory * const vd)
 
   NB: filelist and *filelist malloc'd sizes are upper-bounded, see libnfsviv.h header
 */
-char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, const int opt_invalidentries)
+char **LIBNFSVIV_VivDirectoryToFileList_FromFile(UVT_Directory *vd, FILE *file, const int opt_invalidentries)
 {
   char **ret = NULL;
   if (LIBNFSVIV_ValidateVivDirectory(vd))  return NULL;
@@ -2543,7 +2876,7 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, c
     if (vd->count_dir_entries_true > 0 || (opt_invalidentries && vd->count_dir_entries > 0))
     {
       int filenames_sz;
-      filenames_sz = LIBNFSVIV_SumVivDirectoryFilenameSizes(vd, opt_invalidentries);  /* guarantees (filenames_sz >= vd->count_dir_entries_true) */
+      filenames_sz = LIBNFSVIV_UVT_DirectorySumFilenameSizes(vd, opt_invalidentries);  /* guarantees (filenames_sz >= vd->count_dir_entries_true) */
       *filelist = (char *)calloc(filenames_sz * sizeof(**filelist), 1);
       if (!*filelist)
       {
@@ -2555,8 +2888,8 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, c
         int i;
         int cnt_entries;
         char *p = *filelist;
-        SCL_printf("!  p: %p, *filelist: %p, last: %p\n", p, *filelist, *filelist + (filenames_sz-1));
-        for (i = 0, cnt_entries = 0; i < vd->count_dir_entries; ++i)
+        SCL_printf("!  p: %p, *filelist: %p, last: %p\n", (void *)p, (void *)*filelist, (void *)(*filelist + (filenames_sz-1)));
+        for (i = 0, cnt_entries = 0; i < vd->count_dir_entries; i++)
         {
           if (!opt_invalidentries && SCL_BITMAP_IsSet(vd->bitmap, i) == 0)
             continue;
@@ -2583,7 +2916,7 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, c
         SCL_assert(p == *filelist + filenames_sz);
         SCL_printf(".cnt_entries %d, vd->count_dir_entries_true %d, opt_invalidentries: %d\n", cnt_entries, vd->count_dir_entries_true, opt_invalidentries);
         SCL_printf("filenames_sz %d\n", filenames_sz);
-        SCL_printf(".p: %p, *filelist: %p, last: %p\n", p, *filelist, *filelist + filenames_sz);
+        SCL_printf(".p: %p, *filelist: %p, last: %p\n", (void *)p, (void *)*filelist, (void *)(*filelist + filenames_sz));
 #ifdef UVT_UNVIVTOOLMODULE
         if ((!opt_invalidentries && cnt_entries != vd->count_dir_entries_true) || p != *filelist + filenames_sz)
         {
@@ -2605,7 +2938,7 @@ char **LIBNFSVIV_VivDirectoryToFileList_FromFile(VivDirectory *vd, FILE *file, c
 }
 
 /* Wrapper for LIBNFSVIV_VivDirectoryToFileList_FromFile() */
-char **LIBNFSVIV_VivDirectoryToFileList(VivDirectory *vd, char *path, const int opt_invalidentries)
+char **LIBNFSVIV_VivDirectoryToFileList(UVT_Directory *vd, char *path, const int opt_invalidentries)
 {
   FILE *file = path ? fopen(path, "rb") : NULL;
   char **ret = LIBNFSVIV_VivDirectoryToFileList_FromFile(vd, file, opt_invalidentries);
@@ -2613,13 +2946,21 @@ char **LIBNFSVIV_VivDirectoryToFileList(VivDirectory *vd, char *path, const int 
   return ret;
 }
 
-
-/* LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions */
+/* api: clients ----------------------------------------------------------------------------------------------------- */
 
 /*
+  LIBNFSVIV_Unviv() and LIBNFSVIV_Viv() are one-and-done functions for extracting and creating archives.
+  LIBNFSVIV_UpdateVivDirectory() and LIBNFSVIV_Update() are used to update existing archives.
+*/
+
+/*
+  Returns 1 on success, 0 on failure.
   Assumes viv_name and outpath are NOT const's and have size >= LIBNFSVIV_FilenameMaxLen
   Assumes (viv_name). Assumes (outpath). Overwrites directory 'outpath'.
-  Changes working directory to 'outpath'.
+
+  When UVT__RESTORE_CWD_IN_UNVIV is #define'd:
+    On failure, the working directory may have been changed to 'outpath'.
+  Otherwise, the working directory is changed to 'outpath' on success.
 
   (request_file_idx == 0), extract all
   (request_file_idx > 0), extract file at given 1-based index.
@@ -2636,15 +2977,19 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
                     const int opt_direnlenfixed, const int opt_filenameshex,
                     const int opt_wenccommand, const int opt_overwrite)
 {
+  int i = 0;
   int retv = 0;
   FILE *file = NULL;
   int viv_filesize;
-  VivDirectory vd;
-  int i = 0;
   int count_extracted = 0;
+#ifdef UVT__RESTORE_CWD_IN_UNVIV
+  char *cwd_buf = NULL;
+#endif
   char *wenc_buf = NULL;
   FILE *wenc_f = NULL;
   const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
+  int version = 0;  /* 1: wwww; 4,5,7,8 VIV/BIG; <1: invalid */
+  UVT_Directory vd;
   memset(&vd, 0, sizeof(vd));
 
   SCL_printf(
@@ -2664,7 +3009,7 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
 
   for (;;)
   {
-      SCL_printf("LIBNFSVIV_Unviv: \"%s\", \"%s\"\n", viv_name, outpath);
+    SCL_printf("LIBNFSVIV_Unviv: \"%s\", \"%s\"\n", viv_name, outpath);
     if (!LIBNFSVIV_GetFullPathName(viv_name, NULL, 0, NULL))
     {
       fprintf(stderr, "Unviv: Cannot get full path of archive.\n");
@@ -2695,21 +3040,8 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
       if (opt_wenccommand)
       {
         wenc_buf = (char *)malloc(LIBNFSVIV_FilenameMaxLen * sizeof(*wenc_buf));
-        if (!wenc_buf)
-        {
-          fprintf(stderr, "Unviv: Memory allocation failed.\n");
-        }
-        else
-        {
-          memcpy(wenc_buf, viv_name, LIBNFSVIV_min(strlen(viv_name) + 1, LIBNFSVIV_FilenameMaxLen));
-          wenc_buf[LIBNFSVIV_FilenameMaxLen - 1] = '\0';
-          if (!LIBNFSVIV_AppendFileEnding(wenc_buf, LIBNFSVIV_FilenameMaxLen, LIBNFSVIV_WENCFileEnding))
-          {
-            fprintf(stderr, "Unviv: Cannot append extension '%s' to '%s'\n", viv_name, LIBNFSVIV_WENCFileEnding);
-            free(wenc_buf);
-            wenc_buf = NULL;
-          }
-        }
+        if (!wenc_buf || !LIBNFSVIV_GetWENCPath(viv_name, wenc_buf, LIBNFSVIV_FilenameMaxLen))
+          fprintf(stderr, "Unviv: Cannot append extension '%s' to '%s'\n", viv_name, LIBNFSVIV_WENCFileEnding);
       }  /* if (opt_wenccommand) */
     }  /* if (!opt_dryrun) */
 
@@ -2733,18 +3065,35 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
 
     viv_filesize = LIBNFSVIV_GetFilesize(viv_name);
     printf("Archive Size (parsed) = %d (0x%x)\n", viv_filesize, viv_filesize);
-    if (!LIBNFSVIV_GetVivDirectory_FromFile(&vd, file, viv_filesize, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 0))
-      break;
-    LIBNFSVIV_EnsureVivPathNotInVivDirWritePaths(&vd, viv_name, outpath, file, viv_filesize);  /* invalidate files that would overwrite archive */
+#ifdef UVTWWWW
+    version = LIBNFSVIV_GetVivVersion_FromPath(viv_name);
+    if (version != 1)
+    {
+#endif
+      if (!LIBNFSVIV_GetVivDirectory_FromFile(&vd, file, viv_filesize, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 0))
+        break;
+      LIBNFSVIV_EnsureArchiveNotInUVT_DirectoryWritePaths(&vd, viv_name, outpath, file, viv_filesize);  /* invalidate files that would overwrite archive */
+#ifdef UVTWWWW
+    }
+    else
+    {
+      if (!SCL_GetwwwwInfo_FromFile(&vd, file, viv_filesize, 0 * opt_verbose))
+      {
+        SCL_CheckwwwwDirectory(&vd, viv_filesize);
+        fprintf(stderr, "Cannot read file %s\n", viv_name);
+        break;
+      }
+    }
+#endif
 
     if ((request_file_name) && (request_file_name[0] != '\0'))
     {
-      request_file_idx = LIBNFSVIV_GetIdxFromFname(&vd, file, request_file_name);
+      request_file_idx = LIBNFSVIV_UVT_DirectoryGetIdxFromFname(&vd, file, request_file_name);
       if (request_file_idx <= 0)  break;
     }
 
     if (opt_verbose)
-      LIBNFSVIV_PrintStatsDec(&vd, file, request_file_idx, request_file_name, opt_direnlenfixed, local_opt_filenameshex);
+      LIBNFSVIV_PrintStatsDec(&vd, file, viv_filesize, request_file_idx, request_file_name, opt_direnlenfixed, local_opt_filenameshex);
 
     if (opt_dryrun)
     {
@@ -2763,7 +3112,7 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
       }
       else
       {
-        if (strncmp(vd.format, "BIGF", 4))  /* omit writing default BIGF  */
+        if (strcmp(vd.format, "BIGF"))  /* omit writing default BIGF  */
         {
           fprintf(wenc_f, "%s%.4s ", "-fmt", LIBNFSVIV_GetVivVersionString(vd.format));
         }
@@ -2775,42 +3124,90 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
     }
 
     /* Extract archive */
-    if (chdir(outpath) != 0)
+#ifdef UVT__RESTORE_CWD_IN_UNVIV
+    cwd_buf = (char *)malloc((LIBNFSVIV_FilenameMaxLen + 64) * sizeof(*cwd_buf));
+    if (!cwd_buf || !getcwd(cwd_buf, LIBNFSVIV_FilenameMaxLen) || !!chdir(outpath))
     {
       fprintf(stderr, "Unviv: Cannot change working directory to '%s'\n", outpath);
       break;
     }
-
-    if (request_file_idx == 0)
+#else
+    if (!!chdir(outpath))
     {
-      for (i = 0; i < vd.count_dir_entries; ++i)
+      fprintf(stderr, "Unviv: Cannot change working directory to '%s'\n", outpath);
+      break;
+    }
+#endif
+
+    {
+      char buf[LIBNFSVIV_FilenameMaxLen];
+      char *ptr = buf;
+      char *ptr2;
+      if (version == 1)
       {
-        if (SCL_BITMAP_IsSet(vd.bitmap, i) == 1)
+        /* <archive_basename>_<id>_<filename> */
+        ptr = LIBNFSVIV_GetPathBasename(viv_name);
+        ptr = (char *)LIBNFSVIV_memccpy(buf, ptr, '\0', sizeof(buf));
+        ptr = buf + strlen(buf);
+      }
+      ptr2 = ptr;
+      if (request_file_idx == 0)
+      {
+        for (i = 0; i < vd.count_dir_entries; i++)
         {
           /* Continue through failures */
-          count_extracted += LIBNFSVIV_VivExtractFile(&vd.buffer[i], file, local_opt_filenameshex, opt_overwrite, wenc_f, outpath);
+          if (SCL_BITMAP_IsSet(vd.bitmap, i) == 1)
+          {
+            size_t len__ = 0;
+            ptr = ptr2;
+            if (version == 1)
+            {
+              sprintf(ptr, "_%04d_", i);
+              len__ = strlen(buf);
+              ptr = buf + len__;
+            }
+            len__ = LIBNFSVIV_CreateExtractFilename(&vd.buffer[i], file, version!=1?opt_filenameshex:0, ptr, (int)sizeof(buf) - (int)len__ - 1);
+            if (version == 1)  SCL_printf("<archive_basename>_<id>_<filename>: %s\n", buf);
+            if (len__ == 0 || LIBNFSVIV_IsPrintString(buf, len__) != (int)len__)
+            {
+              fprintf(stderr, "Unviv: Cannot create printable filename for entry (%d)\n", i);
+              continue;
+            }
+            count_extracted += LIBNFSVIV_UVT_DirEntrExtractFile(&vd.buffer[i], file, /* local_opt_filenameshex, */ version==1?1:opt_overwrite, wenc_f, outpath, buf);
+          }
         }
       }
+      else
+      {
+        size_t len__;
+        if (request_file_idx < 0 || request_file_idx > vd.count_dir_entries_true)
+        {
+          fprintf(stderr, "Unviv: Requested idx (%d) out of bounds (1-based index)\n", request_file_idx);
+          break;
+        }
+        if (SCL_BITMAP_IsSet(vd.bitmap, request_file_idx - 1) != 1)
+        {
+          fprintf(stderr, "Unviv: Requested idx (%d) is invalid entry\n", request_file_idx);
+          break;
+        }
+        len__ = LIBNFSVIV_CreateExtractFilename(&vd.buffer[request_file_idx - 1], file, opt_filenameshex, buf, sizeof(buf));
+        if (!len__)
+        {
+          fprintf(stderr, "Unviv: Cannot create filename for requested entry %d\n", request_file_idx);
+          break;
+        }
+        if (LIBNFSVIV_IsPrintString(buf, len__) != (int)len__)
+        {
+          fprintf(stderr, "Unviv: Skipping non-printable filename (%d)\n", request_file_idx);
+          continue;
+        }
+        if (!LIBNFSVIV_UVT_DirEntrExtractFile(&vd.buffer[request_file_idx - 1], file, /* local_opt_filenameshex, */ version==1?1:opt_overwrite, wenc_f, outpath, buf))
+        {
+          break;
+        }
+        ++count_extracted;
+      }
     }
-    else
-    {
-      if (request_file_idx < 0 || request_file_idx > vd.count_dir_entries_true)
-      {
-        fprintf(stderr, "Unviv: Requested idx (%d) out of bounds (1-based index)\n", request_file_idx);
-        break;
-      }
-      if (SCL_BITMAP_IsSet(vd.bitmap, request_file_idx - 1) != 1)
-      {
-        fprintf(stderr, "Unviv: Requested idx (%d) is invalid entry\n", request_file_idx);
-        break;
-      }
-      if (!LIBNFSVIV_VivExtractFile(&vd.buffer[request_file_idx - 1], file, local_opt_filenameshex, opt_overwrite, wenc_f, outpath))
-      {
-        break;
-      }
-      ++count_extracted;
-    }
-
     retv = 1;
     break;
   }  /* for (;;) */
@@ -2818,13 +3215,21 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
   if (!opt_dryrun)
     printf("Number extracted: %d\n", count_extracted);
 
+#ifdef UVT__RESTORE_CWD_IN_UNVIV
+  if (cwd_buf && !!chdir(cwd_buf))
+    fprintf(stderr, "Cannot restore working directory\n");
+#endif
+
+#ifdef UVT__RESTORE_CWD_IN_UNVIV
+  free(cwd_buf);
+#endif
   if (wenc_f)
   {
     fprintf(wenc_f, "\n");
     fclose(wenc_f);
   }
-  /* free(wenc_buf); */  /* already free'd */
-  LIBNFSVIV_FreeVivDirectory(&vd);
+  free(wenc_buf);
+  LIBNFSVIV_UVT_DirectoryRelease(&vd);
   if (file)  fclose(file);
 
   return retv;
@@ -2833,6 +3238,7 @@ int LIBNFSVIV_Unviv(char *viv_name, char *outpath,
 /*
   Assumes (viv_name). Overwrites file 'viv_name'. Skips unopenable infiles.
   Assumes (opt_requestfmt).
+  Returns 1 on success, 0 on failure.
 */
 int LIBNFSVIV_Viv(const char * const viv_name,
                   char **infiles_paths, const int count_infiles,
@@ -2841,12 +3247,13 @@ int LIBNFSVIV_Viv(const char * const viv_name,
                   const char *opt_requestfmt, const int opt_requestendian,
                   const int opt_faithfulencode)
 {
-  int retv = 1;
+  int err = 0;
   int i;
   FILE *file = NULL;
   int filesz = -1;
   int count_archived = 0;
-  VivDirectory vd;
+  const int opt_requestfmt_i = LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt);
+  UVT_Directory vd;
   memset(&vd, 0, sizeof(vd));
 
   SCL_printf("count_infiles %d\n"
@@ -2856,6 +3263,7 @@ int LIBNFSVIV_Viv(const char * const viv_name,
   "opt_filenameshex %d\n"
   , count_infiles, opt_dryrun, opt_verbose, opt_direnlenfixed, opt_filenameshex);
   SCL_printf("opt_requestfmt %s\n", LIBNFSVIV_GetVivVersionString(opt_requestfmt));
+  SCL_printf("opt_requestfmt_i %d\n", opt_requestfmt_i);
   SCL_printf("opt_faithfulencode %d\n", opt_faithfulencode);
 
 
@@ -2873,15 +3281,16 @@ int LIBNFSVIV_Viv(const char * const viv_name,
 
   for (;;)
   {
-    /* Set VIV directory */
+    /* Set directory */
 
-    /* Use struct VivDirectory bitmap to capture input file openability.
-       In typical use, all input files will be available.
-       Hence, any malloc overhead incurred for invalid paths is acceptable.
+    /*
+      Use struct UVT_Directory bitmap to capture input file openability.
+      In typical use, all input files will be available.
+      Hence, any malloc overhead incurred for invalid paths is acceptable.
     */
-    if (!LIBNFSVIV_SetVivDirHeader(&vd, infiles_paths, count_infiles, opt_requestfmt, opt_requestendian, opt_direnlenfixed, opt_filenameshex, opt_faithfulencode))
+    if (!LIBNFSVIV_UVT_DirectorySet(&vd, infiles_paths, count_infiles, opt_requestfmt, opt_requestendian, opt_direnlenfixed, opt_filenameshex, opt_faithfulencode))
     {
-      retv = 0;
+      err++;
       break;
     }
 
@@ -2898,35 +3307,51 @@ int LIBNFSVIV_Viv(const char * const viv_name,
     if (!file)
     {
       fprintf(stderr, "Viv: Cannot create output file '%s'\n", viv_name);
-      retv = 0;
+      err++;
       break;
     }
 
-    /* Write viv directory to file */
-    if (!LIBNFSVIV_WriteVivHeader(&vd, file))
+    /* Write directory to file */
+#ifdef UVTWWWW
+    if (opt_requestfmt_i >= 4)
     {
-      fprintf(stderr, "Viv: Cannot write Viv header\n");
-      retv = 0;
-      break;
+#endif
+      if (!LIBNFSVIV_WriteVivHeader(&vd, file))
+      {
+        fprintf(stderr, "Viv: Cannot write %s header\n", "Viv");
+        err++;
+        break;
+      }
+      printf("Endianness (written) = 0x%x\n", vd.__padding[0]);
+      if (!LIBNFSVIV_WriteVivDirectory(&vd, file, infiles_paths, count_infiles, opt_direnlenfixed, opt_filenameshex, opt_faithfulencode))
+      {
+        err++;
+        break;
+      }
+#ifdef UVTWWWW
     }
-    printf("Endianness (written) = 0x%x\n", vd.__padding[0]);
-    if (!LIBNFSVIV_WriteVivDirectory(&vd, file, infiles_paths, count_infiles, opt_direnlenfixed, opt_filenameshex, opt_faithfulencode))
+    else
     {
-      retv = 0;
-      break;
+      if (!LIBNFSVIV_WritewwwwInfo(&vd, file))
+      {
+        fprintf(stderr, "Viv: Cannot write %s header\n", "wwww");
+        err++;
+        break;
+      }
     }
+#endif
     printf("Header Size (written) = %d (0x%x)\n", vd.viv_hdr_size_true, vd.viv_hdr_size_true);
     filesz = (int)ftell(file);
 
     /* Write infiles to file, abandon on failure */
-    for (i = 0; i < count_infiles; ++i)
+    for (i = 0; i < count_infiles; i++)
     {
       if (SCL_BITMAP_IsSet(vd.bitmap, i) == 1)
       {
-        filesz = LIBNFSVIV_VivWriteFile(file, NULL, infiles_paths[i], 0, vd.buffer[i].filesize);
+        filesz = LIBNFSVIV_VivWriteFile(file, NULL, infiles_paths[i], 0, vd.buffer[i].e_filesize);
         if (filesz < 0)
         {
-          retv = 0;
+          err++;
           break;
         }
         ++count_archived;
@@ -2938,22 +3363,28 @@ int LIBNFSVIV_Viv(const char * const viv_name,
       printf("Number archived: %d\n", count_archived);
 
     /* Validate */
-    if (!LIBNFSVIV_CheckVivHeader(&vd, filesz))
+#ifdef UVTWWWW
+    if (opt_requestfmt_i != 1 ? !LIBNFSVIV_VivCheckHeader(&vd, filesz) : !!SCL_CheckwwwwDirectory(&vd, filesz))
+#else
+    if (!LIBNFSVIV_VivCheckHeader(&vd, filesz))
+#endif
     {
       fprintf(stderr, "Viv: New archive failed format check (header)\n");
-      retv = 0;
+      err++;
       break;
     }
-    LIBNFSVIV_CheckVivDirectory(&vd, filesz);
-    /* if (vd.null_count > 0 && opt_verbose)  LIBNFSVIV_PrintVivDirEntr(&vd, 0); */
+    LIBNFSVIV_VivValidateDirectory(&vd, filesz);
+#if SCL_DEBUG >= 3
+    if (vd.null_count > 0 && opt_verbose)  LIBNFSVIV_UVT_DirEntrPrint(&vd, 0);
+#endif
 
     break;
   }  /* for (;;) */
 
   if (file)  fclose(file);
-  LIBNFSVIV_FreeVivDirectory(&vd);
+  LIBNFSVIV_UVT_DirectoryRelease(&vd);
 
-  return retv;
+  return err == 0;
 }
 
 
@@ -2974,17 +3405,13 @@ int LIBNFSVIV_Viv(const char * const viv_name,
 
   (opt_insert==1) overrides opt_replacefilename.
 */
-int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd_old, FILE *file, char *infile_path,
+int LIBNFSVIV_UpdateVivDirectory(UVT_Directory *vd, const UVT_Directory * const vd_old, FILE *file, char *infile_path,
                                  const char * const request_file_name, int request_file_idx, const int opt_insert,
                                  const int opt_replacefilename,
                                  const int opt_filenameshex, const int opt_faithfulencode)
 {
   int retv = -1;
   int i;
-  int len_filename;
-  #ifdef _WIN32
-    char buf[LIBNFSVIV_FilenameMaxLen];
-  #endif
 
   for (;;)
   {
@@ -3002,20 +3429,20 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
     /* Get target index */
     if ((request_file_name) && (request_file_name[0] != '\0'))
     {
-      request_file_idx = LIBNFSVIV_GetIdxFromFname(vd, file, request_file_name);
+      request_file_idx = LIBNFSVIV_UVT_DirectoryGetIdxFromFname(vd, file, request_file_name);
       if (request_file_idx <= 0)  break;
     }
 
     /**
-      Update VivDirectory based on file, even for invalid file.
+      Update UVT_Directory based on file, even for invalid file.
 
       opt_faithfulencode == 0:  directory entries for invalid files do not count towards offsets
       opt_faithfulencode != 0:  directory entries for invalid files do count towards offsets (pretend all is well, set filesize 0)
     */
     if (opt_insert >= 0 && LIBNFSVIV_IsFile(infile_path) && !LIBNFSVIV_IsDir(infile_path))
     {
-      VivDirEntr vde_old = vd_old->buffer[request_file_idx - 1];
-      VivDirEntr vde_temp;
+      UVT_DirEntr vde_old = vd_old->buffer[request_file_idx - 1];
+      UVT_DirEntr vde_temp;
 
       if (request_file_idx <= 0 || (opt_faithfulencode && request_file_idx > vd->count_dir_entries) || (!opt_faithfulencode && request_file_idx > vd->count_dir_entries_true))
       {
@@ -3029,37 +3456,30 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
       }
 
       vde_old.offset = vd_old->buffer[request_file_idx - 1].offset;
-      vde_old.filesize = vd_old->buffer[request_file_idx - 1].filesize;
+      vde_old.e_filesize = vd_old->buffer[request_file_idx - 1].e_filesize;
       vde_old.filename_ofs_ = vd_old->buffer[request_file_idx - 1].filename_ofs_;
       vde_old.filename_len_ = vd_old->buffer[request_file_idx - 1].filename_len_;
       vde_temp.offset = vd_old->buffer[request_file_idx - 1].offset;
-      vde_temp.filesize = LIBNFSVIV_GetFilesize(infile_path);
+      vde_temp.e_filesize = LIBNFSVIV_GetFilesize(infile_path);
       vde_temp.filename_ofs_ = vd_old->buffer[request_file_idx - 1].filename_ofs_;
       vde_temp.filename_len_ = vd_old->buffer[request_file_idx - 1].filename_len_;
 
       if (opt_insert > 0 || opt_replacefilename)
       {
 #ifdef _WIN32
-        len_filename = (int)GetLongPathName(infile_path, buf, LIBNFSVIV_FilenameMaxLen) + 1;  /* transform short paths that contain tilde (~) */
-        if (len_filename < 2 || len_filename > LIBNFSVIV_FilenameMaxLen)
-        {
-          printf("Warning:UpdateVivDirectory: Cannot get long path name for file '%s': %d (len_filename=%d)\n", infile_path, len_filename, (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1);
-          len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1;
-        }
-        else
-          len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(buf)) + 1;
+        char buf[LIBNFSVIV_FilenameMaxLen];
+        int len_filename = LIBNFSVIV_GetPathBasename2(infile_path, NULL, buf, sizeof(buf)) + 1;
 #else
-        len_filename = (int)strlen(LIBNFSVIV_GetPathBasename(infile_path)) + 1;
+        int len_filename = LIBNFSVIV_GetPathBasename2(infile_path, NULL, NULL, 0) + 1;
 #endif
         len_filename = LIBNFSVIV_clamp(len_filename, 1, LIBNFSVIV_FilenameMaxLen);
-        if (opt_filenameshex)
-          len_filename = len_filename / 2 + len_filename % 2;
+        if (opt_filenameshex)  len_filename = len_filename / 2 + len_filename % 2;
 
         vde_temp.filename_len_ = len_filename - 1;
       }  /* if opt_replacefilename */
 
       SCL_printf("vd offset: %d\n", vde_temp.offset);
-      SCL_printf("vd filesize: %d\n", vde_temp.filesize);
+      SCL_printf("vd e_filesize: %d\n", vde_temp.e_filesize);
       SCL_printf("vd filename_ofs_: 0x%x\n", vde_temp.filename_ofs_);
       SCL_printf("vd filename_len_: %d\n", vde_temp.filename_len_);
 
@@ -3067,18 +3487,18 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
       {
         /* Update header */
         if (!opt_faithfulencode)  SCL_BITMAP_Set(vd->bitmap, request_file_idx - 1);
-        vd->filesize += vde_temp.filesize - vde_old.filesize;
+        vd->h_filesize += vde_temp.e_filesize - vde_old.e_filesize;
         vd->header_size += vde_temp.filename_len_ - vde_old.filename_len_;
         vd->viv_hdr_size_true += vde_temp.filename_len_ - vde_old.filename_len_;
 
         /* Update target entry */
         vd->buffer[request_file_idx - 1].offset = vde_temp.offset;
-        vd->buffer[request_file_idx - 1].filesize = vde_temp.filesize;
+        vd->buffer[request_file_idx - 1].e_filesize = vde_temp.e_filesize;
         vd->buffer[request_file_idx - 1].filename_ofs_ = vde_temp.filename_ofs_;
         vd->buffer[request_file_idx - 1].filename_len_ = vde_temp.filename_len_;
 
         /* Update existing entries */
-        for (i = 0; i < vd->count_dir_entries; ++i)
+        for (i = 0; i < vd->count_dir_entries; i++)
         {
           /* Offset remaining entries */
           if (i > request_file_idx - 1)
@@ -3091,7 +3511,7 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
             vd->buffer[i].offset += vd->viv_hdr_size_true - vd_old->viv_hdr_size_true;
             if (i != request_file_idx - 1 && vd->buffer[i].offset >= vde_old.offset)
             {
-              vd->buffer[i].offset += vde_temp.filesize - vde_old.filesize;
+              vd->buffer[i].offset += vde_temp.e_filesize - vde_old.e_filesize;
             }
           }
         }  /* for i */
@@ -3129,12 +3549,12 @@ int LIBNFSVIV_UpdateVivDirectory(VivDirectory *vd, const VivDirectory * const vd
   New archive will be written to temporary path. In case of success, will be copied toviv_name_out_
 */
 int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
-                        int request_file_idx, const char *request_file_name,
-                        char *infile_path,
-                        const int opt_insert, const int opt_replacefilename,
-                        const int opt_dryrun, const int opt_verbose,
-                        const int opt_direnlenfixed, const int opt_filenameshex,
-                        const int opt_faithfulencode)
+                     int request_file_idx, const char *request_file_name,
+                     char *infile_path,
+                     const int opt_insert, const int opt_replacefilename,
+                     const int opt_dryrun, const int opt_verbose,
+                     const int opt_direnlenfixed, const int opt_filenameshex,
+                     const int opt_faithfulencode)
 {
   int retv = 0;
   FILE *file = NULL;
@@ -3142,20 +3562,30 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
   FILE *file_out = NULL;
   int count_infiles;
   char **infiles_paths = NULL;
-  VivDirectory vd;
-  VivDirectory vd_old;
+  UVT_Directory vd;
+  UVT_Directory vd_old;
   const int local_opt_filenameshex = (opt_filenameshex || (opt_direnlenfixed >= 10));  /* fixed length entries with all-printable names are not known to exist */
-  char *temppath = NULL;
-  char *viv_name_out = NULL;  /* temporary archive */
+  char *temppath;
+  const char * const ptr_viv_name_out = viv_name_out_ ? viv_name_out_ : viv_name;  /* target archive path */
   int i;
   int count_archived = 0;
   memset(&vd, 0, sizeof(vd));
   memset(&vd_old, 0, sizeof(vd_old));
 
+  if (LIBNFSVIV_IsPrintString(viv_name, 4096) != (int)strlen(viv_name)
+    || (viv_name_out_ && LIBNFSVIV_IsPrintString(viv_name_out_, 4096) != (int)strlen(viv_name_out_))
+    || LIBNFSVIV_IsPrintString(infile_path, 4096) != (int)strlen(infile_path)
+    || (request_file_name && LIBNFSVIV_IsPrintString(request_file_name, 4096) != (int)strlen(request_file_name))
+  )
+  {
+    fprintf(stderr, "VivUpdate: Non-printable characters in input\n");
+    return 0;
+  }
+
   SCL_printf("viv_name %s\n", viv_name);
-  SCL_printf("viv_name_out_ %s\n", viv_name_out_);
+  SCL_printf("viv_name_out_ %s\n", viv_name_out_?viv_name_out_:"(null)");
   SCL_printf("request_file_idx %d\n", request_file_idx);
-  SCL_printf("request_file_name %s\n", request_file_name);
+  SCL_printf("request_file_name %s\n", request_file_name?request_file_name:"(null)");
   SCL_printf("infile_path %s\n", infile_path);
   SCL_printf("opt_insert %d\n", opt_insert);
   SCL_printf("opt_replacefilename %d\n", opt_replacefilename);
@@ -3168,42 +3598,39 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
   if (opt_dryrun)
     printf("Begin dry run\n");
 
-  printf("Updating archive: %s\n", viv_name);
-
   for (;;)
   {
+    printf("Updating archive: %s\n", viv_name);
+
     temppath = (char *)malloc(LIBNFSVIV_FilenameMaxLen * sizeof(*temppath));
     if (!temppath)
     {
       fprintf(stderr, "VivUpdate: Cannot allocate memory\n");
       break;
     }
-    viv_name_out = (char *)malloc(LIBNFSVIV_FilenameMaxLen * sizeof(*viv_name_out));
-    if (!viv_name_out)
+
+    /* Build write path in temp directory */
     {
-      fprintf(stderr, "VivUpdate: Cannot allocate memory\n");
-      break;
-    }
-    {
-      const char * const viv_name_out_ptr = viv_name_out_ ? viv_name_out_ : viv_name;
-      int len_temp;
-      const int len_ = LIBNFSVIV_min(strlen(viv_name_out_ptr), LIBNFSVIV_FilenameMaxLen - 1);
-      char buf_[LIBNFSVIV_FilenameMaxLen];
-      const char *p;
-      memcpy(viv_name_out, viv_name_out_ptr, len_);
-      viv_name_out[len_] = '\0';
-      memcpy(buf_, viv_name_out_ptr, len_);
-      buf_[len_] = '\0';
-      p = LIBNFSVIV_GetPathBasename(buf_);
-      len_temp = LIBNFSVIV_GetTempPath(LIBNFSVIV_FilenameMaxLen, temppath);
-      if (len_temp < 1)  break;
-      memcpy(temppath + len_temp, p, strlen(p) + 1);
+      const int len_temp = LIBNFSVIV_GetTempPath(LIBNFSVIV_FilenameMaxLen, temppath);
+      if (len_temp > 0 && len_temp < LIBNFSVIV_FilenameMaxLen - 1)
+      {
+        char *ptr;
+        char buf_[LIBNFSVIV_FilenameMaxLen];
+        LIBNFSVIV_memccpy(buf_, ptr_viv_name_out, '\0', LIBNFSVIV_FilenameMaxLen);
+        if (LIBNFSVIV_GetPathBasename2(buf_, &ptr, buf_, sizeof(buf_)) < 1)  break;
+        if (!LIBNFSVIV_memccpy(temppath + len_temp, ptr, '\0', LIBNFSVIV_FilenameMaxLen - len_temp))  break;
+      }
+      else
+      {
+        fprintf(stderr, "VivUpdate: Cannot get temporary path\n");
+        break;
+      }
     }
 
-    printf("Writing to archive: %s\n", viv_name_out);
+    printf("Writing to archive: %s\n", ptr_viv_name_out);
     SCL_printf("temppath %s\n", temppath);
 
-    /* Read VivDirectory */
+    /* Read UVT_Directory */
     if (!LIBNFSVIV_GetFullPathName(viv_name, NULL, 0, NULL))
     {
       fprintf(stderr, "VivUpdate: Cannot get full path of archive.\n");
@@ -3216,9 +3643,9 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
       break;
     }
 
-    if (LIBNFSVIV_IsDir(viv_name_out))
+    if (LIBNFSVIV_IsDir(ptr_viv_name_out))
     {
-      fprintf(stderr, "VivUpdate: Cannot open directory as file '%s'\n", viv_name_out);
+      fprintf(stderr, "VivUpdate: Cannot open directory as file '%s'\n", ptr_viv_name_out);
       break;
     }
 
@@ -3243,7 +3670,7 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     {
       printf("\n");
       printf("Before update...\n");
-      LIBNFSVIV_PrintStatsDec(&vd, file, request_file_idx, request_file_name, opt_direnlenfixed, local_opt_filenameshex);
+      LIBNFSVIV_PrintStatsDec(&vd, file, filesz, request_file_idx, request_file_name, opt_direnlenfixed, local_opt_filenameshex);
     }
 
     request_file_idx = LIBNFSVIV_UpdateVivDirectory(&vd, &vd_old, file, infile_path,
@@ -3259,9 +3686,8 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
 
     if (opt_verbose)
     {
-      printf("\n");
       printf("After update...\n");
-      LIBNFSVIV_PrintVivDirEntr(&vd, opt_faithfulencode);
+      LIBNFSVIV_UVT_DirEntrPrint(&vd, opt_faithfulencode);
     }
 
     /** TODO: export to static function  */
@@ -3269,14 +3695,14 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     if (opt_insert == 0)
     {
       int len_ = 0;
-      char *p;
+      char *ptr;
       if (vd.count_dir_entries != vd_old.count_dir_entries)
       {
         fprintf(stderr, "VivUpdate: mismatched number of dir entries\n");
         break;
       }
       count_infiles = vd_old.count_dir_entries;
-      SCL_printf("infiles_paths count_infiles %d\n", count_infiles);
+      SCL_printf("vd_old count_infiles %d\n", count_infiles);
       infiles_paths = (char **)malloc(count_infiles * sizeof(*infiles_paths));
       if (!infiles_paths)
       {
@@ -3284,13 +3710,13 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
         break;
       }
       if (opt_replacefilename)  len_ = strlen(infile_path) + 1;
-      for (i = 0; i < vd_old.count_dir_entries; ++i)
+      for (i = 0; i < vd_old.count_dir_entries; i++)
       {
         if (opt_replacefilename && i == request_file_idx - 1)
           continue;
         len_ += LIBNFSVIV_clamp(vd_old.buffer[i].filename_len_ + 1, 1, LIBNFSVIV_FilenameMaxLen);
       }
-      SCL_printf("infiles_paths len_ %d\n", len_);
+      SCL_printf("vd sum filenames lengths: len_ %d\n", len_);
       *infiles_paths = (char *)calloc(len_ * sizeof(**infiles_paths), 1);
       if (!*infiles_paths)
       {
@@ -3298,20 +3724,20 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
         break;
       }
 
-      p = *infiles_paths;
-      for (i = 0; i < vd_old.count_dir_entries; ++i)
+      ptr = *infiles_paths;
+      for (i = 0; i < vd_old.count_dir_entries; i++)
       {
-        infiles_paths[i] = p;
+        infiles_paths[i] = ptr;
         if (opt_replacefilename && i == request_file_idx - 1)
         {
-          memcpy(p, infile_path, strlen(infile_path) + 1);
-          p += strlen(infile_path) + 1;
+          memcpy(ptr, infile_path, strlen(infile_path) + 1);
+          ptr += strlen(infile_path) + 1;
         }
         else
         {
           const int tmp_bufsz_ = LIBNFSVIV_clamp(vd_old.buffer[i].filename_len_ + 1, 1, LIBNFSVIV_FilenameMaxLen);
           const int tmp_len_ = LIBNFSVIV_min(vd_old.buffer[i].filename_len_, LIBNFSVIV_FilenameMaxLen);
-          if (tmp_len_ != LIBNFSVIV_FreadToStr(p,
+          if (tmp_len_ != LIBNFSVIV_FreadToStr(ptr,
                                                tmp_bufsz_,
                                                vd_old.buffer[i].filename_ofs_, tmp_len_, file)
           )
@@ -3319,9 +3745,10 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
             fprintf(stderr, "VivUpdate: LIBNFSVIV_FreadToStr\n");
             break;  /* inner loop */
           }
-          p += tmp_len_ + 1;
+          ptr += tmp_len_ + 1;
         }
       }  /* for i */
+      for (i = 0; i < vd_old.count_dir_entries; i++)  SCL_printf(" infiles_paths[%d] %s\n", i, infiles_paths[i]);
     }
     else if (opt_insert > 0)
     {
@@ -3356,13 +3783,6 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     }
     printf("Endianness (written) = 0x%x\n", vd.__padding[0]);
 
-#if SCL_DEBUG > 0
-    {
-      for (i = 0; i < count_infiles; ++i)
-        SCL_printf("%2d: %s \n", i, infiles_paths[i]);
-    }
-#endif
-
     if (!LIBNFSVIV_WriteVivDirectory(&vd, file_out, infiles_paths, count_infiles, opt_direnlenfixed, opt_filenameshex, opt_faithfulencode))
     {
       fprintf(stderr, "VivUpdate: Cannot write Viv directory\n");
@@ -3374,7 +3794,7 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     if (opt_insert == 0)
     {
       int offs_ = vd.viv_hdr_size_true;
-      for (i = 0; i < vd.count_dir_entries; ++i)
+      for (i = 0; i < vd.count_dir_entries; i++)
       {
         if (SCL_BITMAP_IsSet(vd.bitmap, i) == 1)
         {
@@ -3388,15 +3808,15 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
             SCL_printf(".");
           }
           if (i != request_file_idx - 1)
-            err__ = LIBNFSVIV_VivWriteFile(file_out, file, NULL, vd_old.buffer[i].offset, vd.buffer[i].filesize);
+            err__ = LIBNFSVIV_VivWriteFile(file_out, file, NULL, vd_old.buffer[i].offset, vd.buffer[i].e_filesize);
           else
-            err__ = LIBNFSVIV_VivWriteFile(file_out, NULL, infile_path, 0, vd.buffer[i].filesize);
+            err__ = LIBNFSVIV_VivWriteFile(file_out, NULL, infile_path, 0, vd.buffer[i].e_filesize);
           if (err__ < 0)
           {
             fprintf(stderr, "VivUpdate: Cannot write Viv archive\n");
             break;
           }
-          offs_ += vd.buffer[i].filesize;
+          offs_ += vd.buffer[i].e_filesize;
           ++count_archived;
           SCL_printf("| %d %d  (vd_old.buffer[i].offset %d)\n", offs_, (int)ftell(file_out), vd.buffer[i].offset);
         }
@@ -3417,26 +3837,35 @@ int LIBNFSVIV_Update(char *viv_name, const char * const viv_name_out_,
     if (opt_verbose)
     {
       printf("After write...\n");
-      SCL_printf("LIBNFSVIV_IsFile %d\n", LIBNFSVIV_IsFile(temppath));
-      LIBNFSVIV_PrintStatsDec(&vd, file_out, 0, NULL, opt_direnlenfixed, local_opt_filenameshex);
+      LIBNFSVIV_PrintStatsDec(&vd, file_out, (int)ftell(file_out), 0, NULL, opt_direnlenfixed, local_opt_filenameshex);
     }
+    fclose(file_out);
+    file_out = NULL;
 
-    if (!LIBNFSVIV_CopyFile(temppath, viv_name_out, 0))
+
+    {
+      char buf[LIBNFSVIV_FilenameMaxLen];
+      if (!LIBNFSVIV_memccpy(buf, ptr_viv_name_out, '\0', LIBNFSVIV_FilenameMaxLen))
       {
-        fprintf(stderr, "VivUpdate: Cannot create '%s'\n", viv_name_out);
+        fprintf(stderr, "VivUpdate: Cannot copy archive name\n");
         break;
       }
+      if (!LIBNFSVIV_CopyFile(temppath, buf, 0))
+      {
+        fprintf(stderr, "VivUpdate: Cannot create '%s'\n", buf);
+        break;
+      }
+    }
     retv = 1;
     break;
   }  /* for (;;) */
 
   if (infiles_paths)  free(*infiles_paths);
   free(infiles_paths);
-  LIBNFSVIV_FreeVivDirectory(&vd_old);
-  LIBNFSVIV_FreeVivDirectory(&vd);
+  LIBNFSVIV_UVT_DirectoryRelease(&vd_old);
+  LIBNFSVIV_UVT_DirectoryRelease(&vd);
   if (file_out)  fclose(file_out);
   if (file)  fclose(file);
-  free(viv_name_out);
   free(temppath);
 
   return retv;

@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 #
 # Portions copyright, see each source file for more information.
 #
@@ -39,9 +39,9 @@ print(f"VERSION_INFO={__version__}")
 
 long_description = (SCRIPT_PATH / "./python/README.md").read_text(encoding="utf-8")
 
-if sys.version_info.minor < 13 or sysconfig.get_config_var("Py_GIL_DISABLED") != 1 or sys._is_gil_enabled() == True:
+if sys.version_info.minor < 14 or sysconfig.get_config_var("Py_GIL_DISABLED") != 1 or sys._is_gil_enabled() == True:
     os.environ["PYMEM_MALLOC"] = ""
-elif sys.version_info.minor >= 13:
+elif sys.version_info.minor >= 14:
     if sysconfig.get_config_var("Py_GIL_DISABLED") == 1 and sys._is_gil_enabled() == False:
         print(f'sysconfig.get_config_var("Py_GIL_DISABLED") = {sysconfig.get_config_var("Py_GIL_DISABLED")}')
         print(f'sys._is_gil_enabled() = {sys._is_gil_enabled()}')
@@ -52,6 +52,18 @@ if "PYMEM_MALLOC" in os.environ:
     extra_compile_args += [ "-DPYMEM_MALLOC" ]
 if platform.system() == "Windows":
     extra_compile_args += [
+        # debug
+        # ("/Od"),  # disable optimization
+        # ("/O2"),
+        # ("/guard:cf"),  # Control Flow Guard (CFG) security feature
+        # ("/Zi"),  # generate complete debugging information
+        # ("/Z7"),  # generate complete debugging information but in .obj files
+        # ("/DEBUG"),  # create a .pdb file
+        # ("/EHsc"),  # enable C++ exceptions
+        # ("/MD"),  # link against MSVCRT DLL
+        # ("/bigobj"),  # for large source files
+        ("/W4"),  # warning level 4
+
         ("/wd4267"),  # prevents warnings on conversion from size_t to int
         ("/wd4996"),  # prevents warnings on fopen() and other POSIX functions
         ("/std:c++latest"), ("/Zc:__cplusplus"),  # sets __cplusplus
@@ -59,18 +71,26 @@ if platform.system() == "Windows":
 else:
     extra_compile_args += [
         # debug
-        # ("-std=c23"),
+        # ("-std=c99"),
+        # ("-std=c11"),
+        # ("-std=c2x"),  # C23
         # ("-g"),
         # ("-Og"),
         # ("-O3"),
         # ("-pedantic-errors"),  # multi-phase extension gives error
+        # ("-fno-strict-aliasing"),  # -fstrict-aliasing is on by default with -O2
 
-        ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden
+        # ("-fvisibility=hidden"),  # sets the default symbol visibility to hidden
         ("-Wformat-security"),
         ("-Wdeprecated-declarations"),
+        ("-Wstrict-aliasing"),
     ]
 
-    if "gcc" in platform.python_compiler().lower():
+    # set compiler through environment variables "CC" and "CXX", e.g., CC=gcc|g++|clang|clang++
+    print(f"""platform.python_compiler(): {platform.python_compiler()}""")
+    print(f"""CC={os.environ.get("CC")}""")
+
+    if "gcc" in platform.python_compiler().lower() and "clang" not in os.environ.get("CC", ""):
         extra_compile_args += [
             # ("-Wno-sign-compare"),  # prevents warnings on conversion from size_t to int
             ("-Wno-unused-parameter"),  # self in PyObject *unviv(PyObject *self, ...)
@@ -103,8 +123,10 @@ else:
             # ("-Wl,-z,now"),
             # ("-Wl,-z,relro"),
         ]
-    elif "clang" in platform.python_compiler().lower():
+    elif "clang" in platform.python_compiler().lower() or "clang" in os.environ.get("CC", ""):
         extra_compile_args += [
+            # ("-fsanitize=address"), ("-fno-omit-frame-pointer"),
+
             # ("-Weverything"),
             ("-Wno-braced-scalar-init"),
             ("-Wno-embedded-directive"),
@@ -115,13 +137,13 @@ else:
 
 define_macros = [
     ("VERSION_INFO", __version__),
-    # ("SCL_DEVMODE", os.environ.get("SCL_DEVMODE", 0)),  # 0 if key not set
     # ("SCL_DEBUG", os.environ.get("SCL_DEBUG", 0)),  # 0 if key not set
-    # defined in unvivtoolmodule.c # ("UVTUTF8", os.environ.get("UVTUTF8", 0)),  # branch: unviv() detects utf8
 ]
-print(f'SCL_DEBUG={os.environ.get("SCL_DEBUG", "not set")}')
+# extra_compile_args += [("-DUVTUTF8")]  # defined in unvivtoolmodule.c
+# print(f'UVTUTF8={os.environ.get("UVTUTF8", "")}')
+print(f'SCL_DEBUG={os.environ.get("SCL_DEBUG", "")}')
 if "SCL_DEBUG" in os.environ:
-    define_macros += [ ("SCL_DEBUG", os.environ.get("SCL_DEBUG")) ]
+    define_macros += [("SCL_DEBUG", os.environ.get("SCL_DEBUG"))]
 ext_modules = [
     setuptools.Extension(
         name="unvivtool",

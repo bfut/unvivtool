@@ -1,4 +1,4 @@
-# unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+# unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
 # Portions copyright, see each source file for more information.
 
@@ -27,8 +27,14 @@ import re
 import shutil
 import subprocess
 import struct
+import sys
 
 import pytest
+
+def insert_ASan_LDPRELOAD(choose: bool):
+    if choose:
+        return "LD_PRELOAD=$(gcc -print-file-name=libasan.so) "
+    return ""
 
 def get_subprocess_ret(command, shell=False):
     ret = subprocess.run(command, shell=shell, capture_output=True)
@@ -47,12 +53,17 @@ if platform.system() == "Windows":
         EXECUTABLE_PATH = SCRIPT_PATH / ".." / "unvivtool_x86.exe"
 elif platform.system() == "Linux":
     EXECUTABLE_PATH = SCRIPT_PATH / ".." / "unvivtool_c++"
+    if not EXECUTABLE_PATH.is_file():
+        EXECUTABLE_PATH = SCRIPT_PATH / ".." / "test/.bin" / "unvivtool_c++"
 else:
     EXECUTABLE_PATH = SCRIPT_PATH / ".." / "unvivtool_macOS_c++"
+# EXECUTABLE_PATH = insert_ASan_LDPRELOAD(1) + str(EXECUTABLE_PATH)
 VALGRIND_EXISTS = get_subprocess_ret(" ".join([ "valgrind", "--version" ]), True).returncode == 0
 if VALGRIND_EXISTS:
     VALGRIND_LOG = "valgrind.log"
-    EXECUTABLE_PATH = f"valgrind -s --log-file=\"{str(OUTDIR / VALGRIND_LOG)}\" " + str(EXECUTABLE_PATH)
+    # EXECUTABLE_PATH = f"valgrind -s --log-file=\"{str(OUTDIR / VALGRIND_LOG)}\" " + str(EXECUTABLE_PATH)
+    EXECUTABLE_PATH = f"valgrind -s --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=\"{str(OUTDIR / VALGRIND_LOG)}\" " + str(EXECUTABLE_PATH)
+EXECUTABLE_PATH = pathlib.Path(EXECUTABLE_PATH)
 
 if OUTDIR.is_dir():
     shutil.rmtree(OUTDIR)
@@ -60,7 +71,14 @@ try:
     os.mkdir(OUTDIR)
 except FileExistsError:
     pass
-assert OUTDIR.is_dir()
+
+def delete_file(path):
+    """CI does not allow pathlib.Path().unlink()"""
+    try:
+        os.remove(path)
+    # except FileNotFoundError:
+    except Exception:
+        pass
 
 def delete_whitespace(string):
     return re.sub(r"\s+", "", string, flags=re.MULTILINE)
@@ -71,26 +89,28 @@ def get_valgrind_results(string):
     m3 = re.search(r"^.*?ERROR SUMMARY:.*?\n", string, flags=re.MULTILINE)
     return m1.group(0)[:-1], m2.group(0)[:-1], m3.group(0)[:-1]
 
-def delete_file(path):
-    try:
-        os.remove(path)
-    except FileNotFoundError:
-        pass
+def fetch_string(pattern: str, string_input: str):
+    m1 = re.search(pattern, string_input, flags=re.MULTILINE)
+    # print(f"m1: {m1}")
+    return m1.group(0)[:-1]
+
+def get_fetched_num(string_input: str, pattern: str, expected):
+    print(f"compare_fetched {pattern} {expected}")
+    a = fetch_string(pattern, string_input)
+    if sys.platform.startswith("win"):
+        a = a.replace("\r", "")
+    foundall = re.findall(r'\d+', a)
+    print(f"a: {a}")
+    print(f"foundall: {foundall}")
+    print(f"expected: {expected}")
+    return foundall, expected
 
 # ------------------------------------------------------------------------------
+
 def test_dir():
     print(OUTDIR)
     print(EXECUTABLE_PATH)
-    if platform.system() == "Windows":
-        ret = get_subprocess_ret(" ".join([
-            "dir",
-        ]), True)
-    else:
-        ret = get_subprocess_ret(" ".join([
-            "ls", "-lg",
-        ]), True)
-    assert OUTDIR.exists()
-    assert True
+    assert OUTDIR.is_dir()
 
 
 @pytest.mark.skipif(0, reason="")
@@ -103,6 +123,7 @@ def test_cli_smoketest():
         (SCRIPT_PATH / "../unvivtool.c").read_text("utf-8"),
         re.DOTALL
     )[0]
+    # print(void_Usage)
     void_Usage_strings = re.findall(
         r"(?!#include )\"(.*)\\n\"",
         void_Usage,
@@ -115,6 +136,7 @@ def test_cli_smoketest():
 #        unvivtool <path/to/input.viv>
 #        unvivtool <paths/to/input_files>...
 # """
+    # print(out)
 
     ret = get_subprocess_ret(" ".join([f"{EXECUTABLE_PATH}"]), True)
     stdout = delete_whitespace(ret.stdout.decode("utf-8"))
@@ -128,16 +150,18 @@ def test_cli_smoketest():
         print(b)
         print(c)
         # print(log)
+        foundall, expected = get_fetched_num(log, r"^.*?ERROR SUMMARY: .*?\n", ["0","0","0","0"])
+        assert foundall[1:] == expected
     assert re.sub(r"^.*?Usage", "Usage", stdout) == delete_whitespace(out)
 
 
 
 @pytest.mark.skipif(0, reason="")
 @pytest.mark.parametrize("verbose, dry",
-    [ ("", ""),
-      ("-v", ""),
-      ("", "-p"),
-      ("-v", "-p"), ])
+    [ ("", "-p"),
+      ("-v", "-p"),
+      ("", ""),
+      ("-v", ""), ])
 def test_cli_decode_all_existing_dir(verbose, dry):
     err = ""
     out = \
@@ -191,6 +215,7 @@ Decoder successful.
     ]), True)
     stdout = delete_whitespace(ret.stdout.decode("utf-8"))
     assert ret.returncode == 0
+    assert ret.stderr.decode("utf-8") == err
     if "valgrind" not in str(EXECUTABLE_PATH):
         assert ret.stderr.decode("utf-8") == err
     else:
@@ -199,7 +224,10 @@ Decoder successful.
         print(a)
         print(b)
         print(c)
-        # print(log)
+        foundall, expected = get_fetched_num(log, r"^.*?ERROR SUMMARY: .*?\n", ["0","0","0","0"])
+        if not foundall[1:] == expected:
+            print(log)
+        assert foundall[1:] == expected
     if dry != "-p":
         if verbose != "-v":
             assert re.sub(r"^.*?File", "File", stdout) == delete_whitespace(out)
@@ -209,7 +237,7 @@ Decoder successful.
         assert re.sub(r"^.*?Printing", "Printing", stdout) == delete_whitespace(poutv)
 
 # @pytest.mark.skipif(0, reason="")
-# @pytest.mark.parametrize("verbose, dry",
+# @pytest.mark.parametrize("verbose, _, dry",
 #     [ ("", "", ""),
 #       ("-v", "", ""),
 #       ("", "", "-p"),
@@ -322,18 +350,14 @@ Decoder successful.
 #         assert re.sub(r"^.*?\n+.*?\n+.*?\n+.*?\n+.*?\n+Archive", "Archive", ret.stdout.decode("utf-8")) == delete_whitespace(poutv)
 
 
-# @pytest.mark.skipif(0, reason="")
-# @pytest.mark.parametrize("verbose, strict, dry",
-#     [ ("", "", ""),
-#       ("-v", "", ""),
-#       ("", "-strict", ""),
-#       ("-v", "-strict", ""),# ])
-#       ("", "", "-p"),
-#       ("-v", "", "-p"),
-#       ("", "-strict", "-p"),
-#       ("-v", "-strict", "-p"), ])
-# def test_cli_encode_with_existing(verbose, strict, dry):
-#     err = ""
+@pytest.mark.skipif(0, reason="")
+@pytest.mark.parametrize("verbose, _, dry",
+    [ ("", "", "-p"),
+      ("-v", "", "-p"),
+      ("", "", ""),
+      ("-v", "", ""), ])
+def test_cli_encode_with_existing(verbose, _, dry):
+    err = ""
 #     out = \
 # """Number of files to encode = 2
 # Encoder successful.
@@ -369,31 +393,89 @@ Decoder successful.
 # End dry run
 # Encoder successful.
 # """
-#     ret = get_subprocess_ret(" ".join([
-#       f"{EXECUTABLE_PATH}",
-#       "e",
-#       verbose, strict, dry,
-#       f"{OUTDIR / 'car.viv'}",
-#       f"{SCRIPT_PATH / 'in/LICENSE'}", f"{SCRIPT_PATH / 'in/pyproject.toml'}",
-#     ]), True)
-#     assert ret.returncode == 0
-#     assert ret.stderr.decode("utf-8") == err
-#     assert ret.returncode == 0
-#     if dry != "-p":
-#       assert ret.stderr.decode("utf-8") == err
-#       if verbose != "-v":
-#           assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(out)
-#       else:
-#           assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(outv)
-#     else:
-#       assert ret.stderr.decode("utf-8") == "" # no error
-#       assert re.sub(r"^.*?\n+.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(poutv)
-#     """
-#     if verbose != "-v":
-#         assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(out)
-#     else:
-#         assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(outv)
-#     """
+    outfile = OUTDIR / "car_encode.viv"
+    if dry != "-p":
+        delete_file(outfile)
+    ret = get_subprocess_ret(" ".join([
+        f"{EXECUTABLE_PATH}",
+        "e",
+        verbose, dry,
+        f"{outfile}",
+        f"{SCRIPT_PATH / 'in/LICENSE'}", f"{SCRIPT_PATH / 'in/pyproject.toml'}",
+    ]), True)
+    assert outfile.is_file() or dry == "-p"
+    assert ret.returncode == 0
+    assert ret.stderr.decode("utf-8") == err
+
+    # stdout_ = delete_whitespace(ret.stdout.decode("utf-8"))
+    # print(delete_whitespace(ret.stdout.decode("utf-8")))
+
+    if dry != "-p" and verbose == "-v":
+        stdout_ = str(ret.stdout.decode("utf-8"))
+        # some of these are only available in verbose mode and non-dry run
+        # do not delete stdout_ whitespace here, we need to match exact strings at the end of lines
+        # parentheses, backslash etc. must be escaped
+        valid = {
+            r"^.*?Number of files to encode.*?\n": "2",
+            r"^.*?File format \(header.*?\n": "BIGF",
+            # r"^.*?Archive Size \(header.*?\n": "35307 (0x89eb)",
+            r"^.*?Header Size \(header.*?\n": "55 (0x37)",
+            r"^.*?Invalid Entries =.*?\n": "0",
+            r"^.*?Endianness \(written.*?\n": "0xe",
+            # r"^.*?Archive Size \(written.*?\n": "35307 (0x89eb)",
+            r"^.*?Number archived.*?\n": "2",
+        }
+        # Windows line endings mean that text files have different sizes
+        # 35307 (0x89eb) -> 35986 (0x8c92)
+        if sys.platform.startswith("win"):
+            valid[r"^.*?Archive Size \(header.*?\n"] = "35986 (0x8c92)"
+            valid[r"^.*?Archive Size \(written.*?\n"] = "35986 (0x8c92)"
+        else:
+            valid[r"^.*?Archive Size \(header.*?\n"] = "35307 (0x89eb)"
+            valid[r"^.*?Archive Size \(written.*?\n"] = "35307 (0x89eb)"
+        for pattern, expected in valid.items():
+            print(f"assert {pattern} {expected}")
+            a = fetch_string(pattern, stdout_)
+            if sys.platform.startswith("win"):
+                a = a.replace("\r", "")
+            assert a[ -1 * (len(expected)) :] == expected
+
+    if dry != "-p":
+        print("test_cli_encode_with_existing: decode to verify")
+        ret = get_subprocess_ret(" ".join([
+            f"{EXECUTABLE_PATH}",
+            "d",
+            "-p",
+            f"{outfile}",
+        ]), True)
+        assert ret.returncode == 0
+        assert ret.stderr.decode("utf-8") == err
+
+    if "valgrind" in str(EXECUTABLE_PATH):
+        log = (OUTDIR / VALGRIND_LOG).read_text(encoding="utf-8")
+        a, b, c = get_valgrind_results(log)
+        print(a)
+        print(b)
+        print(c)
+        # print(log)
+        foundall, expected = get_fetched_num(log, r"^.*?ERROR SUMMARY: .*?\n", ["0","0","0","0"])
+        assert foundall[1:] == expected
+
+    # if dry != "-p":
+    #   assert ret.stderr.decode("utf-8") == err
+    #   if verbose != "-v":
+    #       assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(out)
+    #   else:
+    #       assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(outv)
+    # else:
+    #   assert ret.stderr.decode("utf-8") == "" # no error
+    #   assert re.sub(r"^.*?\n+.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(poutv)
+    # """
+    # if verbose != "-v":
+    #     assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(out)
+    # else:
+    #     assert re.sub(r"^.*?\n+.*?\n+Number", "Number", ret.stdout.decode("utf-8")) == delete_whitespace(outv)
+    # """
 
 
 # @pytest.mark.skipif(0, reason="")

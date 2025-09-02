@@ -1,6 +1,6 @@
 /*
   unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
-  unvivtool Copyright (C) 2020-2025 Benjamin Futasz <https://github.com/bfut>
+  unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
 
@@ -25,14 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#define chdir _chdir
-#define getcwd _getcwd
-#else
-#include <unistd.h>  /* chdir, getcwd */
-#endif
-
 #include <Python.h>
 
 #define STRINGIFY(x) #x
@@ -48,9 +40,15 @@
 #include "../include/SCL/sclpython.h"
 
 #define UVT_UNVIVTOOLMODULE
-#define UVTUTF8
+#define UVT__RESTORE_CWD_IN_UNVIV
 #ifndef SCL_DEBUG
 #define SCL_DEBUG 0
+#endif
+#ifndef UVTUTF8
+#define UVTUTF8
+#endif
+#ifndef UVTWWWW
+#define UVTWWWW
 #endif
 #include "../libnfsviv.h"
 #define UVT_PY_MaxPathLen LIBNFSVIV_FilenameMaxLen
@@ -84,9 +82,9 @@ char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
   return dest;
 }
 
-/* data analysis ------------------------------------------------------------ */
+/* data analysis ---------------------------------------------------------------------------------------------------- */
 
-/* Returns Python dictionary with VivDirectory and list of valid or all filenames. */
+/* Returns Python dictionary with UVT_Directory and list of valid or all filenames. */
 static
 PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 {
@@ -99,7 +97,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_direnlenfixed = 0;
   int opt_filenameshex = 0;
   int opt_invalidentries = 0;  /* export info for invalid entries */
-  VivDirectory vd;
+  UVT_Directory vd;
   char **filelist = NULL;
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
   memset(&vd, 0, sizeof(vd));
@@ -136,18 +134,22 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-  retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 1);
+  if (viv_format != 1)
+    retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 1);
+  else
+    retv = !!SCL_GetwwwwInfo(&vd, viv_name, opt_verbose);
+
 
   /* handle formats:
 
-    BIGF BIGH BIG4: "<format>", full dictionary
+    BIGF BIGH BIG4 wwww: "<format>", full dictionary
     0x8000FBC0: "C0FB", full dictionary
     invalid utf8/printable: Py_None, othw. empty dictionary
     invalid non-printable: Py_None, othw. empty dictionary
     null: Py_None, othw. empty dictionary
   */
 
-  /* Handle: Valid file but is not BIGF BIGH BIG4 C0FB; returns {format: None|"string" } */
+  /* Handle: Valid file but is not BIGF BIGH BIG4 C0FB wwww; returns {format: None|"string" } */
   if (retv == 0 && viv_format < 0)
   {
     retv_obj = PyDict_New();
@@ -157,7 +159,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       return NULL;
     }
 
-    const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4, 0) == 4) ? vd.format : NULL;
+    const char *fmt_s = (LIBNFSVIV_IsPrintString(vd.format, 4) == 4) ? vd.format : NULL;
     PyObject *fmt_ = fmt_s ? PyUnicode_FromStringAndSize(fmt_s, 4) : Py_NewRef(Py_None);
     if (0 == PyDict_SetItemString(retv_obj, "format", fmt_))
       return retv_obj;
@@ -171,7 +173,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 #if SCL_DEBUG > 0
   LIBNFSVIV_ValidateVivDirectory(&vd);  // debug
   SCL_printf("UVT vd.format: %s\n", LIBNFSVIV_GetVivVersionString(vd.format));
-  LIBNFSVIV_PrintVivDirEntr(&vd, opt_invalidentries);
+  LIBNFSVIV_UVT_DirEntrPrint(&vd, opt_invalidentries);
   fflush(0);
 #endif
 
@@ -206,7 +208,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     retv &= 0 == PyDict_SetItemString(retv_obj, "format", fmt_);
     retv &= 0 == PyDict_SetItemString(retv_obj, "__state", Py_BuildValue("b", vd.__padding[0]));
-    retv &= 0 == PyDict_SetItemString(retv_obj, "size", Py_BuildValue("i", vd.filesize));
+    retv &= 0 == PyDict_SetItemString(retv_obj, "size", Py_BuildValue("i", vd.h_filesize));
     retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries", Py_BuildValue("i", vd.count_dir_entries));
     retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries_true", Py_BuildValue("i", vd.count_dir_entries_true));
     retv &= 0 == PyDict_SetItemString(retv_obj, "header_size", Py_BuildValue("i", vd.header_size));
@@ -231,12 +233,12 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       retv = 0;
       break;
     }
-    for (int i = 0; i < list_len; ++i)  /* do nothing for list of length zero */
+    for (int i = 0; i < list_len; i++)  /* do nothing for list of length zero */
     {
       PyObject *item_;
       if (!local_opt_filenameshex)
       {
-        if (LIBNFSVIV_IsPrintString(filelist[i], vd.buffer[i].filename_len_, 0) == vd.buffer[i].filename_len_)
+        if (LIBNFSVIV_IsPrintString(filelist[i], vd.buffer[i].filename_len_) == vd.buffer[i].filename_len_)
           item_ = PyUnicode_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
         else
           item_ = Py_NewRef(Py_None);
@@ -268,10 +270,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
         PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
         retv = 0;
       }
-      for (int i = 0; i < list_len && (retv); ++i)
+      for (int i = 0; i < list_len && (retv); i++)
       {
         PyObject *tmp1 = Py_BuildValue("i", vd.buffer[i].offset);
-        PyObject *tmp2 = Py_BuildValue("i", vd.buffer[i].filesize);
+        PyObject *tmp2 = Py_BuildValue("i", vd.buffer[i].e_filesize);
         PyObject *tmp3 = Py_BuildValue("i", vd.buffer[i].filename_len_);
         PyObject *tmp4 = Py_BuildValue("i", vd.buffer[i].filename_ofs_);
         PyObject *tmp5 = Py_BuildValue("i", SCL_BITMAP_IsSet(vd.bitmap, i));
@@ -309,7 +311,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
   if (filelist)  free(*filelist);
   free(filelist);
-  LIBNFSVIV_FreeVivDirectory(&vd);
+  LIBNFSVIV_UVT_DirectoryRelease(&vd);
   free(viv_name);
   if (!retv)
   {
@@ -321,7 +323,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   return retv_obj;
 }
 
-/* decoder/encoder ---------------------------------------------------------- */
+/* decoder/encoder -------------------------------------------------------------------------------------------------- */
 
 static
 PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -340,7 +342,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int opt_dryrun = 0;
   int opt_verbose = 0;
   int opt_overwrite = 0;
-  char *buf_cwd = NULL;
   static const char *keywords[] = { "viv", "dir",
                                     "fileidx", "filename",
                                     "dry", "verbose", "direnlen", "fnhex",
@@ -385,18 +386,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
-    buf_cwd = (char *)malloc(UVT_PY_MaxPathLen + 64);
-    if (!buf_cwd)
-    {
-      PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
-      break;
-    }
-    if (!getcwd(buf_cwd, UVT_PY_MaxPathLen + 64))
-    {
-      PyErr_SetString(PyExc_FileNotFoundError, "Cannot get current working directory");
-      break;
-    }
-
     if (opt_direnlenfixed != 0)
     {
       opt_direnlenfixed = LIBNFSVIV_clamp(opt_direnlenfixed, 10, LIBNFSVIV_BufferSize + 16 - 1);
@@ -411,12 +400,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
                            opt_dryrun, opt_verbose, opt_direnlenfixed,
                            opt_filenameshex, 0, opt_overwrite);
 
-    if (chdir(buf_cwd) != 0)
-    {
-      PyErr_SetString(PyExc_FileNotFoundError, "Cannot restore working directory");
-      break;
-    }
-
     if (retv == 1)
       PySys_WriteStdout("Decoder successful.\n");
     else
@@ -426,7 +409,6 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  free(buf_cwd);
   free(outpath);
   free(viv_name);
   Py_XDECREF(request_file_name_obj);
@@ -487,7 +469,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       opt_requestfmt[len_] = '\0';
       if (len_ != 4 || LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt) <= 0)
       {
-        PyErr_SetString(PyExc_ValueError, "Invalid format (expects 'BIGF', 'BIGH' or 'BIG4')");
+        PyErr_SetString(PyExc_ValueError, "Invalid format (expects 'BIGF', 'BIGH', 'BIG4', 'C0FB' or 'wwww')");
         break;
       }
       PySys_WriteStdout("Requested format: %.4s\n", opt_requestfmt);
@@ -503,7 +485,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
-    for (i = 0; i < count_infiles; ++i)
+    for (i = 0; i < count_infiles; i++)
     {
       item = PyList_GetItem(infiles_paths_obj, i);
       if (!item)
@@ -539,7 +521,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
         break;
       }
 
-      length_str += (int)strlen(ptr) + 1;
+      length_str += (int)strlen(ptr) + 1;  /* ptr is a full path */
 
       ptr = NULL;
       Py_DECREF(bytes);
@@ -569,7 +551,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     *infiles_paths = ptr;
     ptr = NULL;
 
-    for (i = 0; i < count_infiles; ++i)
+    for (i = 0; i < count_infiles; i++)
     {
       item = PyList_GetItem(infiles_paths_obj, i);
       if (!item)
@@ -769,11 +751,11 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   return retv_obj;
 }
 
-/* doc ---------------------------------------------------------------------- */
+/* doc -------------------------------------------------------------------------------------------------------------- */
 
 PyDoc_STRVAR(
   m_doc,
-  "BIGF BIGH BIG4 0x8000FBC0 decoder/encoder (commonly known as VIV/BIG)\n"
+  "BIGF BIGH BIG4 decoder/encoder (commonly known as VIV/BIG)\n"
   "\n"
   "Functions\n"
   "---------\n"
@@ -871,7 +853,7 @@ PyDoc_STRVAR(
 PyDoc_STRVAR(
   unviv__doc__,
   " |  unviv(viv, dir, direnlen=0, fileidx=None, filename=None, fnhex=False, dry=False, verbose=False, overwrite=0)\n"
-  " |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, and 0x8000FBC0.\n"
+  " |      Decode and extract archive. Accepts BIGF, BIGH, BIG4, 0x8000FBC0, and wwww.\n"
   " |\n"
   " |      Parameters\n"
   " |      ----------\n"
@@ -914,7 +896,7 @@ PyDoc_STRVAR(
 PyDoc_STRVAR(
   viv__doc__,
   " |  viv(viv, infiles, dry=False, verbose=False, format=\"BIGF\", endian=0xE, direnlen=0, fnhex=False, faithful=False)\n"
-  " |      Encode files to new archive in BIGF, BIGH, BIG4, or 0x8000FBC0 format.\n"
+  " |      Encode files to new archive in BIGF, BIGH, BIG4, 0x8000FBC0 or wwww format.\n"
   " |      Skips given input paths that cannot be opened.\n"
   " |\n"
   " |      Parameters\n"
@@ -929,10 +911,10 @@ PyDoc_STRVAR(
   " |      verbose : bool\n"
   " |          If True, print archive contents.\n"
   " |      format : str, optional\n"
-  " |          Expects \"BIGF\", \"BIGH\", \"BIG4\" or \"C0FB\".\n"
+  " |          Expects \"BIGF\", \"BIGH\", \"BIG4\", \"C0FB\" or \"wwww\" .\n"
   " |      endian : int, char, optional\n"
   " |          Defaults to 0xE for BIGF and BIGH, and 0xC for BIG4.\n"
-  " |          Only use for rare occurences where BIGF has to be 0xC.\n"
+  " |          Only use for the rare occurence where BIGF has to be 0xC.\n"
   " |      direnlen : int, optional\n"
   " |          If >= 10, set as fixed archive directory entry length.\n"
   " |      fnhex : bool, optional\n"
@@ -954,7 +936,7 @@ PyDoc_STRVAR(
   " |      ValueError\n"
 );
 
-/* -------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------------------------------------------------ */
 
 static
 PyMethodDef m_methods[] = {

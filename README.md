@@ -1,12 +1,12 @@
 # unvivtool
-unvivtool is a VIV/BIG decoder/encoder for uncompressed BIGF, BIGH, and BIG4 archives.
+unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
 unvivtool is available as command-line interface and as Python extension module.
 It is based on a dependency-free header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
 
 Purported VIV/BIG archives can contain faulty or manipulated header information.
-unvivtool is designed to validate and safely recover data as much as possible.
+unvivtool is designed to validate and recover data as much as possible.
 The decoder performs a single pass buffered read of the archive header only; content extraction is optional.
 
 Developers can drop-in and use, the encoder/decoder and some data analysis functions from ``libnfsviv.h``.
@@ -27,10 +27,11 @@ Developers can drop-in and use, the encoder/decoder and some data analysis funct
 * Win98 compatibility
 
 ## File format
-The supported formats are called ``BIGF``, ``BIGH``, ``BIG4``, and ``0xFBC0`` (equals first 4 bytes).<br/>
-All four are variants of each other and extend ``EA IFF 85`` (see [2]) archives.<br/>
+The supported archive formats are called ``BIGF``, ``BIGH``, ``BIG4``, ``0x8000FBC0``, and ``wwww`` (equals first 4 bytes).<br/>
+The first four are variants of each other, the last is a precursor.
+All are derived from ``EA IFF 85`` (see [2]).<br/>
 Archives can be arbitrarily large and can contain arbitrarily many entries.<br/>
-Typical file extensions are ``.VIV`` and ``.BIG``.
+Typical file extensions are ``.VIV`` and ``.BIG``.<br/>
 
 ## Installation / Documentation
 Command-line interface: [/cli/README.md](/cli/README.md)<br/>
@@ -38,10 +39,11 @@ Python extension module: [/python/README.md](/python/README.md)
 
 ## References
 The canonical ``BIGF`` format description was taken from [1].
-Description of fixed directory entry length, format deviations and ``0xFBC0``, own work.
+Unofficial descriptions of fixed directory entry length, format deviations and ``0x8000FBC0`` (see [3]), own work.
 
 [1] D. Auroux et al. (1998) [_The unofficial Need For Speed III file format specifications - Version 1.0_](/references/unofficial_nfs3_file_specs_10.txt)<br/>
-[2] J. Morrison (1985) _"EA IFF 85" Standard for Interchange Format Files_
+[2] J. Morrison (1985) _"EA IFF 85" Standard for Interchange Format Files_<br/>
+[3] B. F. (2024) [_Unofficial 0xFBC0 File Format Specification (.viv)_](/references/viv_C0FB_specs.md)
 
 ## Information
 __unvivtool License:__ GNU General Public License v3.0+<br/>

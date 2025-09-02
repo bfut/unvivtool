@@ -15,6 +15,7 @@ jobs:
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
         python-version: [ "3.10", "3.13", "3.14", "3.14t" ]
+        # python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
 
     name: Python ${{ matrix.python-version }} (${{ matrix.os }})
     steps:
@@ -41,9 +42,18 @@ jobs:
         python -c "import subprocess; import sys; ret = subprocess.run([ sys.executable, 'print_version.py' ]); print('Exit code', ret.returncode); sys.exit(0)"
         python -c "import unvivtool; help(unvivtool)"
 
-    - name: "pytest"
+    - name: "pytest test_smoketest"
       shell: bash
       run: |
         python -m pip install -q pytest
         pytest -s -vv ./tests/test_smoketest.py
+
+    - name: "pytest test_decodeencode"
+      shell: bash
+      run: |
         pytest -s -vv ./tests/test_decodeencode.py
+
+    - name: "pytest test_update"
+      shell: bash
+      run: |
+        pytest -s -vv ./tests/test_update.py
