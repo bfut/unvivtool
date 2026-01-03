@@ -1,5 +1,5 @@
 /*
-  unvivtoolmodule.c - VIV/BIG decoder/encoder Python module
+  unvivtoolmodule.c - BIGF BIGH BIG4 0xFBC0 decoder/encoder Python module (commonly known as VIV/BIG)
   unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
@@ -93,19 +93,18 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *list_ = NULL;
   char *viv_name = NULL;
   PyObject *viv_name_obj = NULL;
-  int opt_verbose = 0;
-  int opt_direnlenfixed = 0;
-  int opt_filenameshex = 0;
+  UVT_UnvivVivOpt opt;
   int opt_invalidentries = 0;  /* export info for invalid entries */
   UVT_Directory vd;
   char **filelist = NULL;
   static const char *keywords[] = { "path", "verbose", "direnlen", "fnhex", "invalid", NULL };
+  memset(&opt, 0, sizeof(opt));
   memset(&vd, 0, sizeof(vd));
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&|$pipp:get_info",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj,
-                                   &opt_verbose, &opt_direnlenfixed, &opt_filenameshex, &opt_invalidentries))
+                                   &opt.verbose, &opt.direnlenfixed, &opt.filenameshex, &opt_invalidentries))
   {
     return NULL;
   }
@@ -114,16 +113,16 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   Py_DECREF(viv_name_obj);
   if (!viv_name)  return NULL;
 
-  if (opt_direnlenfixed != 0)
-    opt_direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt_direnlenfixed, opt_verbose);
-  const int local_opt_filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed);
+  if (opt.direnlenfixed != 0)
+    opt.direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt.direnlenfixed, opt.verbose);
+  opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
 
   /* Workload */
   SCL_printf("UVT path: %s %p\n", viv_name, viv_name);
   SCL_printf("UVT path sz: %d\n", LIBNFSVIV_GetFilesize(viv_name));
-  SCL_printf("UVT opt_verbose: %d\n", opt_verbose);
-  SCL_printf("UVT opt_direnlenfixed: %d\n", opt_direnlenfixed);
-  SCL_printf("UVT opt_filenameshex: %d\n", opt_filenameshex);
+  SCL_printf("UVT opt.verbose: %d\n", opt.verbose);
+  SCL_printf("UVT opt.direnlenfixed: %d\n", opt.direnlenfixed);
+  SCL_printf("UVT opt.filenameshex: %d\n", opt.filenameshex);
   SCL_printf("UVT opt_invalidentries: %d\n", opt_invalidentries);
   SCL_printf("UVT LIBNFSVIV_IsFile: %d\n", LIBNFSVIV_IsFile(viv_name));
   const int viv_format = LIBNFSVIV_GetVivVersion_FromPath(viv_name);
@@ -135,9 +134,9 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   }
 
   if (viv_format != 1)
-    retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, opt_verbose, opt_direnlenfixed, local_opt_filenameshex, 1);
+    retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, &opt, 1);
   else
-    retv = !!SCL_GetwwwwInfo(&vd, viv_name, opt_verbose);
+    retv = !!SCL_GetwwwwInfo(&vd, viv_name, opt.verbose);
 
 
   /* handle formats:
@@ -172,7 +171,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if SCL_DEBUG > 0
   LIBNFSVIV_ValidateVivDirectory(&vd);  // debug
-  SCL_printf("UVT vd.format: %s\n", LIBNFSVIV_GetVivVersionString(vd.format));
+  SCL_printf("UVT vd.format: %s\n", LIBNFSVIV_GetVivVersionString(LIBNFSVIV_GetVivVersion_FromBuf(vd.format)));
   LIBNFSVIV_UVT_DirEntrPrint(&vd, opt_invalidentries);
   fflush(0);
 #endif
@@ -197,7 +196,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       retv = 0;
       break;
     }
-    const char *fmt_s = LIBNFSVIV_GetVivVersionString(vd.format);  /* invalid format is handled above */
+    const char *fmt_s = LIBNFSVIV_GetVivVersionString(LIBNFSVIV_GetVivVersion_FromBuf(vd.format));  /* invalid format is handled above */
     PyObject *fmt_ = fmt_s ? PyUnicode_FromString(fmt_s) : NULL;
     if (!fmt_s || !fmt_)
     {
@@ -207,10 +206,11 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
     retv &= 0 == PyDict_SetItemString(retv_obj, "format", fmt_);
-    retv &= 0 == PyDict_SetItemString(retv_obj, "__state", Py_BuildValue("b", vd.__padding[0]));
+    retv &= 0 == PyDict_SetItemString(retv_obj, "__state", Py_BuildValue("b", vd.__padding[0] & 0xE));
+    retv &= 0 == PyDict_SetItemString(retv_obj, "alignfofs", Py_BuildValue("i", LIBNFSVIV_GetBitIndex(vd.__padding[0] >> 4)));
     retv &= 0 == PyDict_SetItemString(retv_obj, "size", Py_BuildValue("i", vd.h_filesize));
-    retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries", Py_BuildValue("i", vd.count_dir_entries));
-    retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries_true", Py_BuildValue("i", vd.count_dir_entries_true));
+    retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries", Py_BuildValue("i", vd.num_direntries));
+    retv &= 0 == PyDict_SetItemString(retv_obj, "count_dir_entries_true", Py_BuildValue("i", vd.num_direntries_true));
     retv &= 0 == PyDict_SetItemString(retv_obj, "header_size", Py_BuildValue("i", vd.header_size));
     retv &= 0 == PyDict_SetItemString(retv_obj, "header_size_true", Py_BuildValue("i", vd.viv_hdr_size_true));
     if (retv == 0)  Py_XDECREF(fmt_);
@@ -236,16 +236,16 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     for (int i = 0; i < list_len; i++)  /* do nothing for list of length zero */
     {
       PyObject *item_;
-      if (!local_opt_filenameshex)
+      if (!opt.filenameshex)
       {
-        if (LIBNFSVIV_IsPrintString(filelist[i], vd.buffer[i].filename_len_) == vd.buffer[i].filename_len_)
-          item_ = PyUnicode_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
+        if (LIBNFSVIV_IsPrintString(filelist[i], vd.buffer[i].e_fname_len_) == vd.buffer[i].e_fname_len_)
+          item_ = PyUnicode_FromStringAndSize(filelist[i], vd.buffer[i].e_fname_len_);
         else
           item_ = Py_NewRef(Py_None);
       }
       else  /* filenames as hex */
       {
-        item_ = PyBytes_FromStringAndSize(filelist[i], vd.buffer[i].filename_len_);
+        item_ = PyBytes_FromStringAndSize(filelist[i], vd.buffer[i].e_fname_len_);
       }
 
       if (!item_)
@@ -272,10 +272,10 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
       }
       for (int i = 0; i < list_len && (retv); i++)
       {
-        PyObject *tmp1 = Py_BuildValue("i", vd.buffer[i].offset);
+        PyObject *tmp1 = Py_BuildValue("i", vd.buffer[i].e_offset);
         PyObject *tmp2 = Py_BuildValue("i", vd.buffer[i].e_filesize);
-        PyObject *tmp3 = Py_BuildValue("i", vd.buffer[i].filename_len_);
-        PyObject *tmp4 = Py_BuildValue("i", vd.buffer[i].filename_ofs_);
+        PyObject *tmp3 = Py_BuildValue("i", vd.buffer[i].e_fname_len_);
+        PyObject *tmp4 = Py_BuildValue("i", vd.buffer[i].e_fname_ofs_);
         PyObject *tmp5 = Py_BuildValue("i", SCL_BITMAP_IsSet(vd.bitmap, i));
         if (!tmp1 || !tmp2 || !tmp3 || !tmp4 || !tmp5)
         {
@@ -309,7 +309,6 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  if (filelist)  free(*filelist);
   free(filelist);
   LIBNFSVIV_UVT_DirectoryRelease(&vd);
   free(viv_name);
@@ -337,22 +336,19 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
   int request_file_idx = 0;
   char *request_file_name = NULL;
   PyObject *request_file_name_obj = NULL;
-  int opt_direnlenfixed = 0;
-  int opt_filenameshex = 0;
-  int opt_dryrun = 0;
-  int opt_verbose = 0;
-  int opt_overwrite = 0;
+  UVT_UnvivVivOpt opt;
   static const char *keywords[] = { "viv", "dir",
                                     "fileidx", "filename",
                                     "dry", "verbose", "direnlen", "fnhex",
                                     "overwrite", NULL };
+  memset(&opt, 0, sizeof(opt));
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&|$iO&ppipi:unviv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &outpath_obj,
                                    &request_file_idx, PyUnicode_FSConverter, &request_file_name_obj,
-                                   &opt_dryrun, &opt_verbose, &opt_direnlenfixed, &opt_filenameshex,
-                                   &opt_overwrite))
+                                   &opt.dryrun, &opt.verbose, &opt.direnlenfixed, &opt.filenameshex,
+                                   &opt.overwrite))
   {
     return NULL;
   }
@@ -386,19 +382,16 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
       break;
     }
 
-    if (opt_direnlenfixed != 0)
+    if (opt.direnlenfixed != 0)
     {
-      opt_direnlenfixed = LIBNFSVIV_clamp(opt_direnlenfixed, 10, LIBNFSVIV_BufferSize + 16 - 1);
-      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1);
+      opt.direnlenfixed = LIBNFSVIV_clamp(opt.direnlenfixed, 10, LIBNFSVIV_BufferSize + 16 - 1);
+      PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt.direnlenfixed, opt.direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1);
     }
 
-    if (opt_dryrun)
-      opt_verbose = 1;
+    if (opt.dryrun)
+      opt.verbose = 1;
 
-    retv = LIBNFSVIV_Unviv(viv_name, outpath,
-                           request_file_idx, request_file_name,
-                           opt_dryrun, opt_verbose, opt_direnlenfixed,
-                           opt_filenameshex, 0, opt_overwrite);
+    retv = LIBNFSVIV_Unviv(viv_name, outpath, request_file_idx, request_file_name, &opt);
 
     if (retv == 1)
       PySys_WriteStdout("Decoder successful.\n");
@@ -427,14 +420,8 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *viv_name_obj;
   char **infiles_paths = NULL;
   PyObject *infiles_paths_obj;
-  char opt_requestfmt[5] = "BIGF";
+  UVT_UnvivVivOpt opt;
   char *opt_requestfmt_ptr = NULL;
-  int opt_requestendian = 0xe;
-  int opt_direnlenfixed = 0;
-  int opt_filenameshex = 0;
-  int opt_dryrun = 0;
-  int opt_verbose = 0;
-  int opt_faithfulencode = 0;
   int count_infiles = 1;
   int i;
   int length_str = 0;
@@ -443,15 +430,18 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *bytes = NULL;
   char *ptr = NULL;
   static const char *keywords[] = { "viv", "infiles", "dry", "verbose",
-                                    "format", "endian", "direnlen", "fnhex", "faithful", NULL };
+                                    "format", "endian", "direnlen", "fnhex", "faithful", "alignfofs", NULL };
+  memset(&opt, 0, sizeof(opt));
+  opt.requestendian = 0xE;
+  memcpy(opt.requestfmt, "BIGF", 5);
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$ppsiipp:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O|$ppsiippi:viv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, &infiles_paths_obj,
-                                   &opt_dryrun, &opt_verbose,
-                                   &opt_requestfmt_ptr, &opt_requestendian,
-                                   &opt_direnlenfixed, &opt_filenameshex,
-                                   &opt_faithfulencode))
+                                   &opt.dryrun, &opt.verbose,
+                                   &opt_requestfmt_ptr, &opt.requestendian,
+                                   &opt.direnlenfixed, &opt.filenameshex,
+                                   &opt.faithfulencode, &opt.alignfofs))
   {
     return NULL;
   }
@@ -465,14 +455,14 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     if (opt_requestfmt_ptr)
     {
       int len_ = LIBNFSVIV_min(4, (int)strlen(opt_requestfmt_ptr));
-      memcpy(opt_requestfmt, opt_requestfmt_ptr, len_);
-      opt_requestfmt[len_] = '\0';
-      if (len_ != 4 || LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt) <= 0)
+      memcpy(opt.requestfmt, opt_requestfmt_ptr, len_);
+      opt.requestfmt[len_] = '\0';
+      if (len_ != 4 || LIBNFSVIV_GetVivVersion_FromBuf(opt.requestfmt) <= 0)
       {
         PyErr_SetString(PyExc_ValueError, "Invalid format (expects 'BIGF', 'BIGH', 'BIG4', 'C0FB' or 'wwww')");
         break;
       }
-      PySys_WriteStdout("Requested format: %.4s\n", opt_requestfmt);
+      PySys_WriteStdout("Requested format: %.4s\n", opt.requestfmt);
     }
 
     retv_obj = Py_BuildValue("i", retv);
@@ -598,20 +588,17 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     break;
   }  /* for (;;) */
 
-  if (opt_direnlenfixed != 0)
+  if (opt.direnlenfixed != 0)
   {
-    opt_direnlenfixed = LIBNFSVIV_clamp(opt_direnlenfixed, 10, LIBNFSVIV_BufferSize + 16 - 1);
-    PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt_direnlenfixed, opt_direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1);
+    opt.direnlenfixed = LIBNFSVIV_clamp(opt.direnlenfixed, 10, LIBNFSVIV_BufferSize + 16 - 1);
+    PySys_WriteStdout("Setting fixed directory entry length: %d (0x%x) (clamped to 0xA,0x%x)\n", opt.direnlenfixed, opt.direnlenfixed, LIBNFSVIV_BufferSize + 16 - 1);
   }
 
   if (retv_obj)
   {
     for (;;)
     {
-      retv = LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles,
-                           opt_dryrun, opt_verbose, opt_direnlenfixed,
-                           opt_filenameshex, opt_requestfmt, opt_requestendian,
-                           opt_faithfulencode);
+      retv = LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles, &opt);
 
       if (retv == 1)
         PySys_WriteStdout("Encoder successful.\n");
@@ -648,17 +635,12 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
 
   char *viv_name_out = NULL;
   PyObject *viv_name_out_obj = NULL;
-  int opt_insert = 0;
-  int opt_replacefilename = 0;
-  int opt_dryrun = 0;
-  int opt_verbose = 0;
-  int opt_direnlenfixed = 0;
-  int opt_filenameshex = 0;
-  int opt_faithfulencode = 0;
+  UVT_UnvivVivOpt opt;
   static const char *keywords[] = { "inpath", "infile", "entry",
                                     "outpath",
                                     "insert", "replace_filename",
                                     "dry", "verbose", "direnlen", "fnhex", "faithful", NULL };
+  memset(&opt, 0, sizeof(opt));
 
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&O|$O&ipppipp:viv",
                                    (char **)keywords,
@@ -667,11 +649,11 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
 
                                    PyUnicode_FSConverter, &viv_name_out_obj,
 
-                                   &opt_insert,
-                                   &opt_replacefilename,
-                                   &opt_dryrun, &opt_verbose,
-                                   &opt_direnlenfixed, &opt_filenameshex,
-                                   &opt_faithfulencode))
+                                   &opt.insert,
+                                   &opt.replacefilename,
+                                   &opt.dryrun, &opt.verbose,
+                                   &opt.direnlenfixed, &opt.filenameshex,
+                                   &opt.faithfulencode))
   {
     return NULL;
   }
@@ -727,13 +709,12 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
     SCL_printf("UVT viv_name_out: %s\n", viv_name_out);
     SCL_printf("\n");
 
+    opt.insert = 0;  /* only replace supported */
     retv = LIBNFSVIV_Update(viv_name, viv_name_out,
                             request_file_idx, request_file_name,
                             infile_path,
-                            /* opt_insert */ 0, opt_replacefilename,
-                            opt_dryrun, opt_verbose,
-                            opt_direnlenfixed, opt_filenameshex,
-                            opt_faithfulencode);
+                            &opt);
+
     if (retv == 1)
       PySys_WriteStdout("Update successful.\n");
     else
@@ -922,6 +903,9 @@ PyDoc_STRVAR(
   " |          Use for non-printable filenames in archive. Keeps\n"
   " |          leading/embedded null bytes.\n"
   " |      faithful : bool, optional\n"
+  " |      alignfofs : int, optional\n"
+  " |          Align file offsets to given power-of-two boundary.\n"
+  " |          Defaults to 0 (no alignment). A typical value is 4.\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"

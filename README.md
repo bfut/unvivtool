@@ -1,7 +1,7 @@
 # unvivtool
 unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
-unvivtool is available as command-line interface and as Python extension module.
-It is based on a dependency-free header-only library written in C89.
+Available as command-line interface and Python extension module.
+Based on a dependency-free header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
 
@@ -9,7 +9,7 @@ Purported VIV/BIG archives can contain faulty or manipulated header information.
 unvivtool is designed to validate and recover data as much as possible.
 The decoder performs a single pass buffered read of the archive header only; content extraction is optional.
 
-Developers can drop-in and use, the encoder/decoder and some data analysis functions from ``libnfsviv.h``.
+C/C++ developers can drop-in and use, the encoder/decoder and some data analysis functions from ``libnfsviv.h``.
 
 ## Features
 * memory usage typically peaks below 20 kB even for large archives; worst case ~25 MB
@@ -22,6 +22,7 @@ Developers can drop-in and use, the encoder/decoder and some data analysis funct
 * option: auto-rename duplicated filenames on decode
 * option: retrieve a single file from archive (by index or filename)
 * option: list archive contents without writing to disk (dry run)
+* option: encode to align file offsets to given power-of-two boundary
 * option: support non-printable filenames in archive (Base16 representation)
 * option: decode/encode with set fixed directory entry length
 * Win98 compatibility

@@ -12,11 +12,11 @@ Unknown purpose.  Part of NFS:PU (PC, 2000).  Known examples are archived in the
 `GameData/Track/Data/track##a.viv` (##=00, 02..10) set.
 ```C++
 struct Header {
-/* 0x0 */  uint16_t  filesize;  /* big endian */
+/* 0x0 */  uint16_t  filesize;  /* little endian */
 /* 0x2 */  uint8_t   unknown;  /* 03 */
 /* 0x3 */  uint8_t   unknown[5];  /* null */
 /* 0x8 */  uint16_t  unknown;  /* ? variable */
-/* 0x9 */  uint16_t  unknown;  /* 06 00 */
+/* 0xA */  uint16_t  unknown;  /* 06 00 */
 };
 // sizeof(Header) == 12 (0xC)
 ```

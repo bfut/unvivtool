@@ -1,7 +1,7 @@
 name: wheel
 
 on:
-  [push, pull_request, workflow_dispatch]
+  [workflow_dispatch]
 
 jobs:
   build_wheels:
@@ -10,20 +10,19 @@ jobs:
     strategy:
       matrix:
         # https://github.com/actions/runner-images
-        # arm64: macos-14, macos-15
-        # x86_64: macos-13
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14, macos-15]
+        # arm64: macos-latest
+        # x86_64: macos-15-intel
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build wheels
         # https://github.com/pypa/cibuildwheel/releases
-        uses: pypa/cibuildwheel@v3.1.0
+        uses: pypa/cibuildwheel@v3.3.0
         env:
           CIBW_ARCHS_WINDOWS: "AMD64 x86"
-          CIBW_SKIP: pp*
-          CIBW_FREE_THREADED_SUPPORT: 1
+          CIBW_ARCHS_LINUX: "x86_64"
         with:
           package-dir: "."
           output-dir:  "./wheelhouse"
@@ -39,7 +38,7 @@ jobs:
     name: Make SDist
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Optional, use if you use setuptools_scm
         fetch-tags: true  # Optional, use if you use setuptools_scm

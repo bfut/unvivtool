@@ -53,7 +53,7 @@ EXAMPLE 4
 EXAMPLE 5
       unvivtool e -p car.viv car.fce car00.tga carp.txt fedata.fsh fedata.eng
 
-      Dry run of EXAMPLE 4, does not write to disk
+      dry run of EXAMPLE 4, does not write to disk
 
 EXAMPLE 6
       unvivtool d -dnl80 -x -we archive.viv archive_viv
@@ -64,6 +64,12 @@ EXAMPLE 6
       on extraction to disk (-x). The archive contains a large number of files
       that are expected in a specific order; the complete re-encoding command
       is written to 'archive.viv.txt' (-we).
+
+EXAMPLE 7
+      unvivtool e -alf4 car.viv car.fce car00.tga carp.txt fedata.fsh fedata.eng
+
+      -alf<N>    align file offsets to given power-of-two boundary <N>
+      a typical value is 4
 ```
 
 ## Documentation
@@ -83,6 +89,7 @@ Options:
   -i<N>        decode file at 1-based Index <N>
   -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
   -x           decode/encode to/from filenames in base16/heXadecimal
+  -alf<N>      encoder ALigns File offsets to <N> (allows 0, 2, 4, 8, 16)
   -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)
   -p           Print archive contents, do not write to disk (dry run)
   -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)

@@ -84,6 +84,16 @@ else:
         ("-Wformat-security"),
         ("-Wdeprecated-declarations"),
         ("-Wstrict-aliasing"),
+
+        ("-msse"),
+        ("-msse2"),
+        # ("-msse3"),
+        # ("-mssse3"),
+        # ("-msse4"),
+        # ("-mavx"),
+        # ("-mavx2"),
+        # ("-march=native"),  # compiles for the local machine
+        # ("-mtune=native"),  # tuned for the local machine, does not generate any code that cannot run on the default machine type
     ]
 
     # set compiler through environment variables "CC" and "CXX", e.g., CC=gcc|g++|clang|clang++

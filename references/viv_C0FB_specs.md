@@ -27,8 +27,8 @@ struct Directory {
 }
 struct DirEntry {
 /* 0x0 */  uint24_t          offset;              /* big endian */
-/* 0x6 */  uint24_t          filesize;            /* big endian */
-/* 0xC */  uint8_t          *filename;            /* null-terminated */
+/* 0x3 */  uint24_t          filesize;            /* big endian */
+/* 0x6 */  uint8_t          *filename;            /* null-terminated */
 };
 ```
 

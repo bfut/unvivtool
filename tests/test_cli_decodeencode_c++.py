@@ -1,20 +1,20 @@
 # unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
-
+#
 # Portions copyright, see each source file for more information.
-
+#
 # You may not redistribute this program without its source code.
 # README.md may not be removed or altered from any unvivtool redistribution.
-
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
@@ -169,38 +169,39 @@ def test_cli_decode_all_existing_dir(verbose, dry):
 Archive Size (header) = 35307 (0x89eb)
 Directory Entries (header) = 2
 Header Size (header) = 55 (0x37)
-Archive Size (parsed) = 35307 (0x89eb)
+Archive Size (fsizes) = 35252 (0x89b4)
 Header Size (parsed) = 55 (0x37)
 Directory Entries (parsed) = 2
 Endianness (parsed) = 0xe
+File offset alignment (parsed) = 0
 Number extracted: 2
 Decoder successful.
 """
     outv = \
 """Printing archive directory:
 
-   id Valid       Offset          Gap         Size Len  FnOf  Name
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-                       0                        55            header
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-    1     1           55            0        35149   7    18  LICENSE
-    2     1        35204            0          103  14    28  pyproject.toml
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-                   35307                     35252            2 files
+   id Valid       Offset Gap         Size Len  FnOf  Name
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+                       0               55            header
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+    1     1           55   0        35149   7    18  LICENSE
+    2     1        35204   0          103  14    28  pyproject.toml
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+                   35307            35252            2 files
 Number extracted: 2
 Decoder successful.
 """
     poutv = \
 """Printing archive directory:
 
-   id Valid       Offset          Gap         Size Len  FnOf  Name
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-                       0                        55            header
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-    1     1           55            0        35149   7    18  LICENSE
-    2     1        35204            0          103  14    28  pyproject.toml
- ---- ----- ------------ ------------ ------------ --- -----  -----------------------
-                   35307                     35252            2 files
+   id Valid       Offset Gap         Size Len  FnOf  Name
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+                       0               55            header
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+    1     1           55   0        35149   7    18  LICENSE
+    2     1        35204   0          103  14    28  pyproject.toml
+ ---- ----- ------------ --- ------------ --- -----  -----------------------
+                   35307            35252            2 files
 End dry run
 Decoder successful.
 """
@@ -351,12 +352,12 @@ Decoder successful.
 
 
 @pytest.mark.skipif(0, reason="")
-@pytest.mark.parametrize("verbose, _, dry",
-    [ ("", "", "-p"),
-      ("-v", "", "-p"),
-      ("", "", ""),
-      ("-v", "", ""), ])
-def test_cli_encode_with_existing(verbose, _, dry):
+@pytest.mark.parametrize("verbose, dry",
+    [ ("", "-p"),
+      ("-v", "-p"),
+      ("", ""),
+      ("-v", ""), ])
+def test_cli_encode_with_existing(verbose, dry):
     err = ""
 #     out = \
 # """Number of files to encode = 2

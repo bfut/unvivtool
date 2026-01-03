@@ -1,5 +1,5 @@
 /*
-  unvivtool.c - VIV/BIG decoder/encoder CLI
+  unvivtool.c - BIGF BIGH BIG4 0xFBC0 decoder/encoder CLI (commonly known as VIV/BIG)
   unvivtool Copyright (C) 2020 and later Benjamin Futasz <https://github.com/bfut>
 
   Portions copyright, see each source file for more information.
@@ -55,8 +55,9 @@ void Usage(void)
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -x           decode/encode to/from filenames in base16/heXadecimal\n"
-         "  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)\n");
-  printf("  -p           Print archive contents, do not write to disk (dry run)\n"
+         "  -alf<N>      encoder ALigns File offsets to <N> (allows 0, 2, 4, 8, 16)\n");
+  printf("  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)\n"
+         "  -p           Print archive contents, do not write to disk (dry run)\n"
          "  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
          "  -v           print archive contents, Verbose\n");
   fflush(stdout);
@@ -133,6 +134,7 @@ void UVT_RemoveWENCFile(const char *viv_name)
 int main(int argc, char **argv)
 {
   int retv = 0;
+  int i;
   char viv_name[LIBNFSVIV_FilenameMaxLen] = {0};  /* init's to {0} */
   char *out_dir = NULL;
   char **infiles_paths = NULL;
@@ -140,16 +142,10 @@ int main(int argc, char **argv)
   int count_infiles = 0;
   char *request_file_name = NULL;
   int request_file_idx = 0;
-  int opt_direnlenfixed = 0;
-  int opt_filenameshex = 0;
-  int opt_faithfulencode = 0;
-  char opt_requestfmt[5] = "BIGF";  /* Viv() only */
-  int opt_requestendian = 0xe;
-  int opt_dryrun = 0;
-  int opt_wenccommand = 0;
-  int opt_printlvl = 0;
-  int opt_overwrite = 0;
-  int i;
+  UVT_UnvivVivOpt opt;
+  memset(&opt, 0, sizeof(opt));
+  opt.requestendian = 0xE;
+  memcpy(opt.requestfmt, "BIGF", 5);  /* Viv() only */
 
   SCL_assert(sizeof(UVT_DirEntr) == 16);
   SCL_assert(sizeof(UVT_Directory) == 64);
@@ -167,14 +163,7 @@ int main(int argc, char **argv)
   #if SCL_DEBUG > 0
          "|debug"
   #endif
-#if 1
          "\n\n");
-#else
-         "|BufferSize:%d"
-         "|FilenameMaxLen:%d"
-         "\n\n",
-         LIBNFSVIV_BufferSize, LIBNFSVIV_FilenameMaxLen);
-#endif
 
   if (argc < 2)
   {
@@ -238,7 +227,7 @@ int main(int argc, char **argv)
     decode:
       needs viv_name
       gets out_dir from args or as parent dir of viv_name
-      opt_weenccommand and no dry-run: create file
+      opt.weenccommand and no dry-run: create file
   */
   else if (argc >= 3 && (argv[1][0] == 'd' || argv[1][0] == 'e'))
   {
@@ -301,9 +290,8 @@ int main(int argc, char **argv)
           if (sz > 4 && !strncmp(argv[i], "-dnl", 4))  /* fixed directory length (clamped) */
           {
             ptr += 4;
-            opt_direnlenfixed = (int)strtol(ptr, NULL, 10);
-            if (opt_direnlenfixed != 0)
-              opt_direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt_direnlenfixed, 1);
+            opt.direnlenfixed = (int)strtol(ptr, NULL, 10);
+            opt.direnlenfixed = LIBNFSVIV_Clamp_opt_direnlenfixed(opt.direnlenfixed, 1);
           }
           else if (/* sz > 2 && */ !request_file_name && !strncmp(argv[i], "-i", 2))  /* decode: request filename (overrides file idx request) */
           {
@@ -332,11 +320,11 @@ int main(int argc, char **argv)
           else if (sz >= 4 && argv[1][0] == 'e' && !strncmp(argv[i], "-fmt", 4))  /* encode: request encoding format */
           {
             ptr += 4;
-            LIBNFSVIV_memccpy(opt_requestfmt, ptr, '\0', sizeof(opt_requestfmt));
-            opt_requestfmt[4] = '\0';
-            if (!strcmp(opt_requestfmt, "C0FB"))  SCL_seri_uint(opt_requestfmt, 0x8000FBC0);
-            if (LIBNFSVIV_GetVivVersion_FromBuf(opt_requestfmt) > 0)
-              printf("Requested format: %.4s\n", SCL_deseri_uint(opt_requestfmt) != 0x8000FBC0 ? opt_requestfmt : "C0FB");
+            LIBNFSVIV_memccpy(opt.requestfmt, ptr, '\0', sizeof(opt.requestfmt));
+            opt.requestfmt[4] = '\0';
+            if (!memcmp(opt.requestfmt, "C0FB", 4))  SCL_seri_uint(opt.requestfmt, 0x8000FBC0);
+            if (LIBNFSVIV_GetVivVersion_FromBuf(opt.requestfmt) > 0)
+              printf("Requested format: %.4s\n", SCL_deseri_uint(opt.requestfmt) != 0x8000FBC0 ? opt.requestfmt : "C0FB");
             else
             {
               Usage();
@@ -344,33 +332,35 @@ int main(int argc, char **argv)
               break;
             }
           }
+          else if (sz >= 4 && argv[1][0] == 'e' && !strncmp(argv[i], "-alf", 4))  /* encode: request file offsets */
+          {
+            ptr += 4;
+            opt.alignfofs = (int)strtol(ptr, NULL, 10);
+          }
         }  /* (sz > 2) */
-        if (!strcmp(argv[i], "-aot"))  { opt_overwrite = 1; }
-        else if (!strcmp(argv[i], "-x"))  { opt_filenameshex = 1; }
-        else if (!strcmp(argv[i], "-p"))  { opt_dryrun = 1; opt_printlvl = 1; }
-        else if (!strcmp(argv[i], "-v"))  { opt_printlvl = 1; }
-        else if (!strcmp(argv[i], "-we"))  { opt_wenccommand = 1; }
+        if (!strcmp(argv[i], "-aot"))  { opt.overwrite = 1; }
+        else if (!strcmp(argv[i], "-x"))  { opt.filenameshex = 1; }
+        else if (!strcmp(argv[i], "-p"))  { opt.dryrun = 1; opt.verbose = 1; }
+        else if (!strcmp(argv[i], "-v"))  { opt.verbose = 1; }
+        else if (!strcmp(argv[i], "-we"))  { opt.wenccommand = 1; }
         else  continue;
       }  /* if (argv[i][0] == '-') */
     }  /* Get options: for i */
   }  /* command mode */
 
-  if (retv == 0 && argv[1][0] == 'd' && opt_wenccommand && !opt_dryrun)
+  if (retv == 0 && argv[1][0] == 'd' && opt.wenccommand && !opt.dryrun)
     retv = UVT_CreateWENCFile(argc, argv, viv_name);
 
   /** Decoder
   */
   if (retv == 0 && out_dir)
   {
-    if (!LIBNFSVIV_Unviv(viv_name, out_dir,
-                         request_file_idx, request_file_name,
-                         opt_dryrun, opt_printlvl, opt_direnlenfixed,
-                         LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed),
-                         opt_wenccommand, opt_overwrite))
+    opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
+    if (!LIBNFSVIV_Unviv(viv_name, out_dir, request_file_idx, request_file_name, &opt))
     {
       printf("Decoder failed.\n");
       retv = -1;
-      if (opt_wenccommand && !opt_dryrun)
+      if (opt.wenccommand && !opt.dryrun)
         UVT_RemoveWENCFile(viv_name);  /* cleanup */
     }
     else
@@ -381,11 +371,8 @@ int main(int argc, char **argv)
   */
   else if (retv == 0 && infiles_paths)
   {
-    if (!LIBNFSVIV_Viv(viv_name,
-                       infiles_paths, count_infiles,
-                       opt_dryrun, opt_printlvl, opt_direnlenfixed,
-                       LIBNFSVIV_Fix_opt_filenameshex(opt_filenameshex, opt_direnlenfixed),
-                       opt_requestfmt, opt_requestendian, opt_faithfulencode))
+    opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
+    if (!LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles, &opt))
     {
       printf("Encoder failed.\n");
       retv = -1;

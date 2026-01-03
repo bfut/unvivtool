@@ -29,7 +29,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.8 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
+    unvivtool 3.9 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -178,6 +178,9 @@ FUNCTIONS
         |          Use for non-printable filenames in archive. Keeps
         |          leading/embedded null bytes.
         |      faithful : bool, optional
+        |      alignfofs : int, optional
+        |          Align file offsets to given power-of-two boundary.
+        |          Defaults to 0 (no alignment). A typical value is 4.
         |
         |      Returns
         |      -------
