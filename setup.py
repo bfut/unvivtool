@@ -85,8 +85,8 @@ else:
         ("-Wdeprecated-declarations"),
         ("-Wstrict-aliasing"),
 
-        ("-msse"),
-        ("-msse2"),
+        # ("-msse"),  # clang: unsupported option for target 'arm64-apple-darwin24.6.0'
+        # ("-msse2"),  # clang: unsupported option for target 'arm64-apple-darwin24.6.0'
         # ("-msse3"),
         # ("-mssse3"),
         # ("-msse4"),
