@@ -29,7 +29,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.9 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
+    unvivtool 3.11 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)

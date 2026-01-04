@@ -178,7 +178,7 @@
 #define fprintf SCL_fprintf
 #endif
 
-#define UVTVERS "3.9"
+#define UVTVERS "3.11"
 #define UVTCOPYRIGHT "Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)"
 
 #ifdef UVTUTF8  /* optional branch: unviv() utf8-filename support */

@@ -29,7 +29,6 @@ USAGE
 
     Print info only:
     python unvivtool_script.py i </path/to/archive.viv>|</path/to/archive.big>
-    python unvivtool_script.py </path/to/archive.viv>|</path/to/archive.big>
 
 REQUIRES
     python -m pip install -U unvivtool
@@ -47,6 +46,8 @@ CONFIG = {
     "opt_requestfmt" : "BIGF",  # viv() only
     "opt_direnlenfixed" : 0,
     "opt_overwrite" : 1,
+    "opt_alignfofs" : 4,  # viv() only
+    "verbose_encode" : 1,
 }
 
 
@@ -95,7 +96,7 @@ def main():
         infiles = sorted(infiles)
         print(infiles)
         ptn = time.process_time_ns()
-        if uvt.viv(str(vivfile), infiles, format=CONFIG["opt_requestfmt"], direnlen=CONFIG["opt_direnlenfixed"]):  # encode all files in path/to/infiles
+        if uvt.viv(str(vivfile), infiles, verbose=CONFIG["verbose_encode"], format=CONFIG["opt_requestfmt"], direnlen=CONFIG["opt_direnlenfixed"], alignfofs=CONFIG["opt_alignfofs"]):  # encode all files in path/to/infiles
             print(f"unvivtool took {(float(time.process_time_ns() - ptn) / 1e6):.2f} ms")
 
 
