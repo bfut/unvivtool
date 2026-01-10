@@ -55,9 +55,11 @@
 
 /* util --------------------------------------------------------------------- */
 
-/* Returns new reference or NULL. */
+/*
+  Returns new reference at least of length minsz (must be free'd) on success or NULL on failure.
+*/
 static
-char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
+char *__UVT_PyBytes_StringAsCString(PyObject * const src, const int minsz)
 {
   if (!src)
   {
@@ -70,8 +72,8 @@ char *__UVT_PyBytes_StringToCString(char *dest, PyObject * const src)
     PyErr_SetString(PyExc_TypeError, "Argument is not a string");
     return NULL;
   }
-  const int len = LIBNFSVIV_clamp(UVT_PY_MaxPathLen, 1, (int)strlen(p) + 1);
-  dest = (char *)malloc(len * sizeof(*dest));
+  const int len = LIBNFSVIV_max(minsz, (int)strlen(p) + 1);
+  char *dest = (char *)malloc(len * sizeof(*dest));
   if (!dest)
   {
     PyErr_SetString(PyExc_MemoryError, "Cannot allocate memory");
@@ -109,7 +111,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-  viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
+  viv_name = __UVT_PyBytes_StringAsCString(viv_name_obj, 1);
   Py_DECREF(viv_name_obj);
   if (!viv_name)  return NULL;
 
@@ -118,15 +120,13 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
 
   /* Workload */
-  SCL_printf("UVT path: %s %p\n", viv_name, viv_name);
-  SCL_printf("UVT path sz: %d\n", LIBNFSVIV_GetFilesize(viv_name));
-  SCL_printf("UVT opt.verbose: %d\n", opt.verbose);
-  SCL_printf("UVT opt.direnlenfixed: %d\n", opt.direnlenfixed);
-  SCL_printf("UVT opt.filenameshex: %d\n", opt.filenameshex);
-  SCL_printf("UVT opt_invalidentries: %d\n", opt_invalidentries);
-  SCL_printf("UVT LIBNFSVIV_IsFile: %d\n", LIBNFSVIV_IsFile(viv_name));
+  SCL_log("UVT path: %s %p\n", viv_name, viv_name);
+  SCL_log("UVT path sz: %d\n", LIBNFSVIV_GetFilesize(viv_name));
+  LIBNFSVIV_PrintUnvivVivOpt(opt);
+  SCL_log("UVT opt_invalidentries: %d\n", opt_invalidentries);
+  SCL_log("UVT LIBNFSVIV_IsFile: %d\n", LIBNFSVIV_IsFile(viv_name));
   const int viv_format = LIBNFSVIV_GetVivVersion_FromPath(viv_name);
-  SCL_printf("UVT viv_format: %d\n", viv_format);
+  SCL_log("UVT viv_format: %d\n", viv_format);
   if (!viv_format)
   {
     PyErr_SetString(PyExc_FileNotFoundError, "Cannot read file");
@@ -134,7 +134,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
   }
 
   if (viv_format != 1)
-    retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, &opt, 1);
+    retv = !!LIBNFSVIV_GetVivDirectory(&vd, viv_name, &opt);
   else
     retv = !!SCL_GetwwwwInfo(&vd, viv_name, opt.verbose);
 
@@ -171,7 +171,7 @@ PyObject *get_info(PyObject *self, PyObject *args, PyObject *kwargs)
 
 #if SCL_DEBUG > 0
   LIBNFSVIV_ValidateVivDirectory(&vd);  // debug
-  SCL_printf("UVT vd.format: %s\n", LIBNFSVIV_GetVivVersionString(LIBNFSVIV_GetVivVersion_FromBuf(vd.format)));
+  SCL_log("UVT vd.format: %s\n", LIBNFSVIV_GetVivVersionString(LIBNFSVIV_GetVivVersion_FromBuf(vd.format)));
   LIBNFSVIV_UVT_DirEntrPrint(&vd, opt_invalidentries);
   fflush(0);
 #endif
@@ -353,13 +353,13 @@ PyObject *unviv(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-  viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
+  viv_name = __UVT_PyBytes_StringAsCString(viv_name_obj, LIBNFSVIV_FilenameMaxLen);
   Py_DECREF(viv_name_obj);
   if (!viv_name)  return NULL;
 
   for (;;)
   {
-    outpath = __UVT_PyBytes_StringToCString(outpath, outpath_obj);
+    outpath = __UVT_PyBytes_StringAsCString(outpath_obj, LIBNFSVIV_FilenameMaxLen);
     Py_XDECREF(outpath_obj);
     if (!outpath)  break;
 
@@ -446,7 +446,7 @@ PyObject *viv(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
 
-  viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
+  viv_name = __UVT_PyBytes_StringAsCString(viv_name_obj, 1);
   Py_DECREF(viv_name_obj);
   if (!viv_name)  return NULL;
 
@@ -639,10 +639,10 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
   static const char *keywords[] = { "inpath", "infile", "entry",
                                     "outpath",
                                     "insert", "replace_filename",
-                                    "dry", "verbose", "direnlen", "fnhex", "faithful", NULL };
+                                    "dry", "verbose", "direnlen", "fnhex", "faithful", "alignfofs", NULL };
   memset(&opt, 0, sizeof(opt));
 
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&O|$O&ipppipp:viv",
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O&O&O|$O&ipppippi:viv",
                                    (char **)keywords,
                                    PyUnicode_FSConverter, &viv_name_obj, PyUnicode_FSConverter, &infile_path_obj,
                                    &request_entry_obj,
@@ -653,23 +653,23 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
                                    &opt.replacefilename,
                                    &opt.dryrun, &opt.verbose,
                                    &opt.direnlenfixed, &opt.filenameshex,
-                                   &opt.faithfulencode))
+                                   &opt.faithfulencode, &opt.alignfofs))
   {
     return NULL;
   }
 
-  viv_name = __UVT_PyBytes_StringToCString(viv_name, viv_name_obj);
+  viv_name = __UVT_PyBytes_StringAsCString(viv_name_obj, 4096);
   Py_DECREF(viv_name_obj);
   if (!viv_name)  return NULL;
 
   for (;;)
   {
-    infile_path = __UVT_PyBytes_StringToCString(infile_path, infile_path_obj);
+    infile_path = __UVT_PyBytes_StringAsCString(infile_path_obj, 1);
     Py_DECREF(infile_path_obj);
     if (!infile_path)  return NULL;
 
-    SCL_printf("UVT viv_name: %s\n", viv_name);
-    SCL_printf("UVT infile_path: %s\n", infile_path);
+    SCL_log("UVT viv_name: %s\n", viv_name);
+    SCL_log("UVT infile_path: %s\n", infile_path);
 
     /* Get str|integer argument */
     if (PyUnicode_CheckExact(request_entry_obj))
@@ -696,18 +696,18 @@ PyObject *update(PyObject *self, PyObject *args, PyObject *kwargs)
     }
     Py_DECREF(request_entry_obj);
 
-    SCL_printf("UVT request_file_name: %s\n", request_file_name);
-    SCL_printf("UVT request_file_idx: %d\n", request_file_idx);
+    SCL_log("UVT request_file_name: %s\n", request_file_name);
+    SCL_log("UVT request_file_idx: %d\n", request_file_idx);
 
     // if (viv_name_out_obj && PyUnicode_CheckExact(viv_name_out_obj))
     if (viv_name_out_obj)
     {
-      viv_name_out = __UVT_PyBytes_StringToCString(viv_name_out, viv_name_out_obj);
+      viv_name_out = __UVT_PyBytes_StringAsCString(viv_name_out_obj, 4096);
       Py_DECREF(viv_name_out_obj);
       if (!viv_name_out)  break;
     }
-    SCL_printf("UVT viv_name_out: %s\n", viv_name_out);
-    SCL_printf("\n");
+    SCL_log("UVT viv_name_out: %s\n", viv_name_out);
+    SCL_log("\n");
 
     opt.insert = 0;  /* only replace supported */
     retv = LIBNFSVIV_Update(viv_name, viv_name_out,
@@ -764,7 +764,7 @@ PyDoc_STRVAR(
   " |      fnhex : bool, optional\n"
   " |          If True, interpret filenames as Base16/hexadecimal.\n"
   " |          Use for non-printable filenames in archive. Keeps\n"
-  " |          leading/embedding null bytes.\n"
+  " |          leading/embedded null bytes.\n"
   " |      invalid : bool, optional\n"
   " |          If True, export all directory entries, even if invalid.\n"
   " |\n"
@@ -817,6 +817,10 @@ PyDoc_STRVAR(
   " |      faithful : bool, optional\n"
   " |          If False, ignore invalid entries (default behavior).\n"
   " |          If True, replace any directory entries, even if invalid.\n"
+  " |      alignfofs : int, optional\n"
+  " |          Align file offsets to given power-of-two boundary.\n"
+  " |          Defaults to 0 (force no alignment). Otherwise takes\n"
+  " |          -1 (keep detected alignment), 2|4|8|16 (force alignment)\n"
   " |\n"
   " |      Returns\n"
   " |      -------\n"

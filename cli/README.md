@@ -1,8 +1,8 @@
 # unvivtool - command-line interface
 unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
 
-Purported VIV/BIG archives can contain faulty or manipulated header information.
-unvivtool is designed to validate and recover data as much as possible.
+Purported VIV/BIG archives can contain faulty or manipulated information.
+unvivtool is designed to validate and recover data wherever possible.
 
 ## Installation
 ### Windows
@@ -58,30 +58,39 @@ EXAMPLE 5
 EXAMPLE 6
       unvivtool d -dnl80 -x -we archive.viv archive_viv
 
-      Real-world example of an archive with an archive header of a fixed
-      directory length of 80 bytes (-dnl80). The supposed filenames are
-      non-printable characters that are represented in hexadecimal (base16)
-      on extraction to disk (-x). The archive contains a large number of files
-      that are expected in a specific order; the complete re-encoding command
-      is written to 'archive.viv.txt' (-we).
+      Decodes archive with fixed 80-byte directory entry length header (-dnl80).
+      Its filenames contain non-printable characters that are extracted to
+      hexadecimal form (base16) (-x). Because the archive contains a large
+      number of files, the complete re‑encoding command is written to
+      'archive.viv.txt' (-we) for convenience.
 
 EXAMPLE 7
       unvivtool e -alf4 car.viv car.fce car00.tga carp.txt fedata.fsh fedata.eng
 
       -alf<N>    align file offsets to given power-of-two boundary <N>
       a typical value is 4
+
+EXAMPLE 8
+      unvivtool r -alf4 car.viv path/to/file.ext
+
+      Replaces 'file.ext' (names must match) in existing archive, keeping all
+      other files intact. With '-alf4', file offsets are aligned to 4-byte
+      boundaries.  Without '-alf4', the alignment used in the original archive
+      is kept based on a guess from the original file offsets.
 ```
 
 ## Documentation
 ```
 Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
+       unvivtool r [<options>...] <path/to/archive.viv> <path/to/replacement_file>
        unvivtool <path/to/input.viv>
        unvivtool <paths/to/input_files>...
 
 Commands:
   d            Decode and extract files from VIV/BIG archive
   e            Encode files in new VIV/BIG archive
+  r            Replace existing file in VIV/BIG archive
 
 Options:
   -aot         decoder Overwrite mode: auto rename existing file
@@ -89,9 +98,9 @@ Options:
   -i<N>        decode file at 1-based Index <N>
   -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i
   -x           decode/encode to/from filenames in base16/heXadecimal
-  -alf<N>      encoder ALigns File offsets to <N> (allows 0, 2, 4, 8, 16)
+  -alf<N>      encode/replace, ALign File offsets to <N> (allows 0, 2, 4, 8, 16)
   -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)
-  -p           Print archive contents, do not write to disk (dry run)
+  -p           dry run, Print archive contents (do not write to disk)
   -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)
-  -v           print archive contents, Verbose
+  -v           Verbose, print archive contents
 ```

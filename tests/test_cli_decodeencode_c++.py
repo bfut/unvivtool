@@ -133,6 +133,7 @@ def test_cli_smoketest():
 #     out = \
 # """Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]
 #        unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...
+#        unvivtool r [<options>...] <path/to/archive.viv> <path/to/replacement_file>
 #        unvivtool <path/to/input.viv>
 #        unvivtool <paths/to/input_files>...
 # """

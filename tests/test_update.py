@@ -134,8 +134,9 @@ def test_update1():
     assert retv == 1 and vivfile.exists()
     viv_info = uvt.get_info(vivfile)
     print(viv_info)
+    assert vivfile.stat().st_size == viv_info["size"]
 
-@pytest.mark.xfail(sys.platform.startswith("win") or 'microsoft' in platform.release().lower(),
+@pytest.mark.xfail(sys.platform.startswith("win") or "microsoft" in platform.release().lower(),
                    reason="encoding issues on Windows...")
 def test_update2():
     print("Expected result: encode existing files, update idx=1, return 1")
@@ -156,11 +157,39 @@ def test_update2():
     # update
     newfile = script_path / "in/öäü"
     assert newfile.exists()
+    print(f"newfile={newfile}, sz={newfile.stat().st_size}")
     idx = 1
     retv = uvt.update(vivfile, newfile, idx, replace_filename=True, verbose=True)
+    print(f"vivfile={vivfile}, sz={vivfile.stat().st_size}")
     assert retv == 1 and vivfile.exists()
     viv_info = uvt.get_info(vivfile)
     print(viv_info)
+    assert vivfile.stat().st_size == viv_info["size"]
+
+def test_update3():
+    print('update3: infiles = ["in/LICENSE", "in/pyproject.toml", "in/ß二", "in/öäü"]'.encode())
+    print("Expected result: encode existing files, alignfofs=4, update idx=2, return 1")
+    alignfofs = 4
+    vivfile = script_path / ".out/car_out_update3.viv"
+    vivfile.unlink(True)
+    infiles = [ "in/LICENSE", "in/pyproject.toml", "in/ß二" ]
+    infiles = [str(script_path / path) for path in infiles]
+    for path in infiles:
+        assert pathlib.Path(path).is_file()
+    retv = uvt.viv(vivfile, infiles, verbose=True)
+    assert retv == 1 and vivfile.exists() and len(vivfile.read_bytes()) > 16
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+
+    # update
+    newfile = script_path / "in/car_out.viv"
+    assert newfile.exists()
+    idx = 2
+    retv = uvt.update(vivfile, newfile, idx, replace_filename=False, verbose=True, alignfofs=alignfofs)
+    assert retv == 1 and vivfile.exists()
+    viv_info = uvt.get_info(vivfile)
+    print(viv_info)
+    assert vivfile.stat().st_size == viv_info["size"]
 
 def test_tracemalloc1():
     if not UVT_USE_TRACEMALLOC:  return

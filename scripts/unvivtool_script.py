@@ -58,12 +58,10 @@ def main():
     args = parser.parse_args()
     inpath = pathlib.Path(args.cmd[0])
 
-    print(f"inpath: '{inpath}'")
-
 
     # Decode
     if inpath.is_file():
-        print(f"#{args.cmd[:]}#")
+        print(f"args: {args.cmd[:]}")
         outdir = None
         if len(args.cmd) > 1:
             outdir = pathlib.Path(args.cmd[1])
@@ -77,7 +75,7 @@ def main():
 
     # Encode
     elif inpath.is_dir():
-        print(f"#{args.cmd[:]}#")
+        print(f"args: {args.cmd[:]}")
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(args.cmd[1])
         else:
@@ -102,7 +100,7 @@ def main():
 
     # Print archive info (dry run)
     elif args.cmd[0] == "i" and len(args.cmd) > 1:
-        print(f"#{args.cmd[1:]}#")
+        print(f"args: {args.cmd[:]}")
         print( " ".join(args.cmd[1:]) ,  pathlib.Path(" ".join(args.cmd[1:]))  )
         if len(args.cmd) > 1:
             vivfile = pathlib.Path(" ".join(args.cmd[1:]))
@@ -118,8 +116,6 @@ def main():
     #
     else:
         print("Invalid command (expects {<path/to/file>, <path/to/folder>, i <path/to/file>}):", args.cmd[0])
-        # help(uvt)
 
 if __name__ == "__main__":
-    # print(CONFIG)
     main()

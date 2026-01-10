@@ -35,6 +35,7 @@
 #endif
 #define UVTUTF8
 #define UVTWWWW
+#define UVT_UNVIVTOOLCLI
 #include "./libnfsviv.h"
 
 static
@@ -42,12 +43,14 @@ void Usage(void)
 {
   printf("Usage: unvivtool d [<options>...] <path/to/input.viv> [<path/to/output_directory>]\n"
          "       unvivtool e [<options>...] <path/to/output.viv> <paths/to/input_files>...\n"
+         "       unvivtool r [<options>...] <path/to/archive.viv> <path/to/replacement_file>\n"
          "       unvivtool <path/to/input.viv>\n"
          "       unvivtool <paths/to/input_files>...\n"
          "\n");
   printf("Commands:\n"
          "  d            Decode and extract files from VIV/BIG archive\n"
          "  e            Encode files in new VIV/BIG archive\n"
+         "  r            Replace existing file in VIV/BIG archive\n"
          "\n");
   printf("Options:\n"
          "  -aot         decoder Overwrite mode: auto rename existing file\n"
@@ -55,11 +58,11 @@ void Usage(void)
          "  -i<N>        decode file at 1-based Index <N>\n"
          "  -f<name>     decode File <name> (cAse-sEnsitivE) from archive, overrides -i\n"
          "  -x           decode/encode to/from filenames in base16/heXadecimal\n"
-         "  -alf<N>      encoder ALigns File offsets to <N> (allows 0, 2, 4, 8, 16)\n");
+         "  -alf<N>      encode/replace, ALign File offsets to <N> (allows 0, 2, 4, 8, 16)\n");
   printf("  -fmt<format> encode to Format 'BIGF' (default), 'BIGH', 'BIG4', 'C0FB' or 'wwww' (w/o quotes)\n"
-         "  -p           Print archive contents, do not write to disk (dry run)\n"
+         "  -p           dry run, Print archive contents (do not write to disk)\n"
          "  -we          Write re-Encode command to path/to/input.viv.txt (keep files in order)\n"
-         "  -v           print archive contents, Verbose\n");
+         "  -v           Verbose, print archive contents\n");
   fflush(stdout);
 }
 
@@ -219,7 +222,7 @@ int main(int argc, char **argv)
   }
   /** Command mode
     strlen(argv[1]) == 1
-    argv[1] == 'd' || 'e'
+    argv[1] == 'd' || 'e' || 'r'
     argv[i>=2] == viv_name
     argv[i>=3] == out_dir or infiles_paths
     and options
@@ -229,7 +232,7 @@ int main(int argc, char **argv)
       gets out_dir from args or as parent dir of viv_name
       opt.weenccommand and no dry-run: create file
   */
-  else if (argc >= 3 && (argv[1][0] == 'd' || argv[1][0] == 'e'))
+  else if (argc >= 3 && (argv[1][0] == 'd' || argv[1][0] == 'e' || argv[1][0] == 'r'))
   {
     for (i = 2; i < argc; i++)
     {
@@ -258,7 +261,7 @@ int main(int argc, char **argv)
       else  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
     }  /* if 'd' */
     /* Encode: get input files paths */
-    else if (retv == 0 && argv[1][0] == 'e')
+    else if (retv == 0 && (argv[1][0] == 'e' || argv[1][0] == 'r'))
     {
       infiles_paths = (char **)calloc((argc - 3) * sizeof(*infiles_paths), 1);
       infiles_paths_sz = (argc - 3) * sizeof(*infiles_paths);
@@ -271,11 +274,12 @@ int main(int argc, char **argv)
           {
             infiles_paths[count_infiles] = argv[i];
             ++count_infiles;
+            if (argv[1][0] == 'r')  break;  /* only one input file for 'r' */
           }
         }
       }
       else  { fprintf(stderr, "unvivtool: Memory allocation failed.\n"); retv = -1; }
-    }  /* if 'e' */
+    }  /* if 'e' || 'r' */
 
     /** Get options
     */
@@ -332,7 +336,7 @@ int main(int argc, char **argv)
               break;
             }
           }
-          else if (sz >= 4 && argv[1][0] == 'e' && !strncmp(argv[i], "-alf", 4))  /* encode: request file offsets */
+          else if (sz >= 4 && (argv[1][0] == 'e' || argv[1][0] == 'r') && !strncmp(argv[i], "-alf", 4))  /* encode: request file offsets */
           {
             ptr += 4;
             opt.alignfofs = (int)strtol(ptr, NULL, 10);
@@ -367,18 +371,48 @@ int main(int argc, char **argv)
       printf("Decoder successful.\n");
   }
 
-  /** Encoder
-  */
   else if (retv == 0 && infiles_paths)
   {
-    opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
-    if (!LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles, &opt))
+    /** Encoder
+    */
+    if (argv[1][0] == 'e')
     {
-      printf("Encoder failed.\n");
-      retv = -1;
+      opt.filenameshex = LIBNFSVIV_Fix_opt_filenameshex(opt.filenameshex, opt.direnlenfixed);
+      if (!LIBNFSVIV_Viv(viv_name, infiles_paths, count_infiles, &opt))
+      {
+        printf("Encoder failed.\n");
+        retv = -1;
+      }
+      else
+        printf("Encoder successful.\n");
     }
-    else
-      printf("Encoder successful.\n");
+
+    /** Updater
+    */
+    else if (argv[1][0] == 'r')  /* replace */
+    {
+      char *request_file_name_ptr;
+#ifdef _WIN32
+      char buf[LIBNFSVIV_FilenameMaxLen];
+      const int sz = LIBNFSVIV_GetPathBasename2(infiles_paths[0], &request_file_name_ptr, buf, sizeof(buf));
+#else
+      const int sz = LIBNFSVIV_GetPathBasename2(infiles_paths[0], &request_file_name_ptr, NULL, 0);
+#endif
+      opt.filenameshex = 0;  /* CLI: replacement filename cannot be in hex */
+      LIBNFSVIV_PrintUnvivVivOpt(&opt);
+      if (sz <= 0 || sz + 1 > LIBNFSVIV_FilenameMaxLen / 2)
+      {
+        fprintf(stderr, "unvivtool: Invalid replacement filename\n");
+        retv = -1;
+      }
+      else if(!LIBNFSVIV_Update(viv_name, NULL, -1, request_file_name_ptr, infiles_paths[0], &opt))
+      {
+        printf("Updater failed.\n");
+        retv = -1;
+      }
+      else
+        printf("Updater successful.\n");
+    }
   }
 
   /* Print usage */

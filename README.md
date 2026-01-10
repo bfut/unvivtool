@@ -5,34 +5,32 @@ Based on a dependency-free header-only library written in C89.
 Python bindings are written in CPython.
 Supported on Windows and Linux. Tested on macOS.
 
-Purported VIV/BIG archives can contain faulty or manipulated header information.
-unvivtool is designed to validate and recover data as much as possible.
+Purported VIV/BIG archives can contain faulty or manipulated information.
+unvivtool is designed to validate and recover data wherever possible.
 The decoder performs a single pass buffered read of the archive header only; content extraction is optional.
 
-C/C++ developers can drop-in and use, the encoder/decoder and some data analysis functions from ``libnfsviv.h``.
+C/C++ developers can drop in the encoder/decoder or use data analysis functions directly from ``libnfsviv.h``.
 
 ## Features
 * memory usage typically peaks below 20 kB even for large archives; worst case ~25 MB
-* decode and encode archive
-* validate archive
-* decode entire archive
+* archive decode/encode and validation
 * encode files in specified order
-* support UTF8 names in archive
-* drag-and-drop mode for command-line interface
+* support UTF8 filenames in archive
+* drag-and-drop CLI mode
 * option: auto-rename duplicated filenames on decode
-* option: retrieve a single file from archive (by index or filename)
-* option: list archive contents without writing to disk (dry run)
-* option: encode to align file offsets to given power-of-two boundary
+* option: extracts single file from archive (by index or filename)
+* option: dry‑run archive contents listing (no disk write)
+* option: encode to align file offsets to power-of-two boundary
 * option: support non-printable filenames in archive (Base16 representation)
 * option: decode/encode with set fixed directory entry length
-* Win98 compatibility
+* Win98 compatible
 
-## File format
+## File formats
 The supported archive formats are called ``BIGF``, ``BIGH``, ``BIG4``, ``0x8000FBC0``, and ``wwww`` (equals first 4 bytes).<br/>
-The first four are variants of each other, the last is a precursor.
+The first four are variants of the same, the last is a precursor.
 All are derived from ``EA IFF 85`` (see [2]).<br/>
-Archives can be arbitrarily large and can contain arbitrarily many entries.<br/>
-Typical file extensions are ``.VIV`` and ``.BIG``.<br/>
+Archives can be arbitrarily large and may contain an unlimited number of entries.<br/>
+Common file extensions are ``.VIV`` and ``.BIG``.<br/>
 
 ## Installation / Documentation
 Command-line interface: [/cli/README.md](/cli/README.md)<br/>

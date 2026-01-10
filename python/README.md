@@ -1,8 +1,8 @@
 # unvivtool - Python extension module
 unvivtool is a VIV/BIG decoder/encoder for BIGF, BIGH, and BIG4 archives.
 
-Purported VIV/BIG archives can contain faulty or manipulated header information.
-unvivtool is designed to validate and recover data as much as possible.
+Purported VIV/BIG archives can contain faulty or manipulated information.
+unvivtool is designed to validate and recover data wherever possible.
 The decoder performs a single pass buffered read of the archive header only; content extraction is optional.
 
 ## Usage
@@ -29,7 +29,7 @@ DESCRIPTION
     update() -- replace file in archive
     viv() -- encode files in new archive
 
-    unvivtool 3.11 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
+    unvivtool 3.12 Copyright (C) 2020 and later Benjamin Futasz (GPLv3+)
 
 FUNCTIONS
     get_info(...)
@@ -47,7 +47,7 @@ FUNCTIONS
         |      fnhex : bool, optional
         |          If True, interpret filenames as Base16/hexadecimal.
         |          Use for non-printable filenames in archive. Keeps
-        |          leading/embedding null bytes.
+        |          leading/embedded null bytes.
         |      invalid : bool, optional
         |          If True, export all directory entries, even if invalid.
         |
@@ -137,6 +137,10 @@ FUNCTIONS
         |      faithful : bool, optional
         |          If False, ignore invalid entries (default behavior).
         |          If True, replace any directory entries, even if invalid.
+        |      alignfofs : int, optional
+        |          Align file offsets to given power-of-two boundary.
+        |          Defaults to 0 (force no alignment). Otherwise takes
+        |          -1 (keep detected alignment), 2|4|8|16 (force alignment)
         |
         |      Returns
         |      -------

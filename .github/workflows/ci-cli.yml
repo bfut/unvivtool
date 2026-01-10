@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Ubuntu C89/C++
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Compile
       shell: bash
       run: |
@@ -30,7 +30,7 @@ jobs:
         ls -lg
 
     - name: Store executables
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unvivtool
         path: |
@@ -43,7 +43,7 @@ jobs:
     runs-on: macos-latest
     name: macOS C89/C++
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Compile
       shell: bash
       run: |
@@ -51,7 +51,7 @@ jobs:
         clang++ -std=c++17 ${{ env.CPPFLAGS_MACOS }} "${{ env.SRC }}" -o "${{ env.DEST }}_${{ runner.os }}_c++" ${{ env.CPPDEBUGFLAGS }} ${{ env.BRANCHES }}
         ls -lg
     - name: Store executables
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unvivtool_${{ runner.os }}
         path: |
@@ -68,7 +68,7 @@ jobs:
 
     name: Windows (MSVC ${{ matrix.arch }})
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Setup Developer Command Prompt
       uses: ilammy/msvc-dev-cmd@v1
       with:
@@ -78,7 +78,7 @@ jobs:
         cl.exe /W4 /utf-8 /O2 /TC unvivtool.c /Fe:unvivtool_${{ matrix.arch }}.exe /wd4267 /wd4996
         dir
     - name: Store executable
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: unvivtool_${{ matrix.arch }}.exe
         path: unvivtool_${{ matrix.arch }}.exe
@@ -102,9 +102,9 @@ jobs:
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Download executable
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: unvivtool
     - run: ls -lg
@@ -141,9 +141,9 @@ jobs:
 
     name: Test ${{ matrix.os }} ${{ matrix.std }} (Python ${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Download executable
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: unvivtool_${{ runner.os }}
     - run: ls -lg
@@ -176,9 +176,9 @@ jobs:
 
     name: Test ${{ matrix.os }} ${{ matrix.arch }} (python-${{ matrix.python-version }})
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - name: Download executable
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: unvivtool_${{ matrix.arch }}.exe
     - name: Set up Python ${{ matrix.python-version }}
